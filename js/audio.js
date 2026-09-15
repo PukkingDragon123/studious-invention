@@ -75,6 +75,7 @@ const AudioSys = {
     this.reverbIn.connect(conv).connect(revLP).connect(this.master);
     this.ready = true;
     this.timer = setInterval(() => this.tick(), 25);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { this.resume(); this.tick(); } });
     this.resume();
   },
   resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
@@ -327,9 +328,10 @@ const AudioSys = {
   },
   tick() {
     if (!this.song) return;
-    const ahead = this.ctx.currentTime + 0.18;
+    // when the tab is hidden, timers throttle to ~1Hz, so schedule much further ahead
+    const ahead = this.ctx.currentTime + (document.hidden ? 1.6 : 0.18);
     let guard = 0;
-    while (this.stepTime(this.step) < ahead && guard++ < 64) {
+    while (this.stepTime(this.step) < ahead && guard++ < 256) {
       this.scheduleStep(this.step, this.stepTime(this.step));
       this.step++;
     }

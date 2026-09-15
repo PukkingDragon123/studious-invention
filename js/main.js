@@ -124,6 +124,7 @@ const Game = {
       UI.drawTips();
       Gfx.canvas.style.cursor = UI.hoverAny ? 'pointer' : 'default';
       // clicks (after draw so UI items are current)
+      if (Input.clicks.length) AudioSys.resume();
       for (const c of Input.clicks) {
         if (!UI.click(c.x, c.y, c.button)) { if (!this.overlay && this.scene.click) this.scene.click(c.x, c.y, c.button); }
         else if (c.button !== 2) AudioSys.sfx('click');
