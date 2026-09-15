@@ -86,6 +86,7 @@ class MapScene {
   update(dt) {
     this.t += dt; this.intro = Math.max(0, this.intro - dt);
     if (Input.wheel) { this.target += Input.wheel * 40; }
+    if (Input.dragDY) { this.target += Input.dragDY; this.scroll += Input.dragDY; }
     const maxScroll = MAP_ROWS * ROW_H - 200; this.target = clamp(this.target, -60, maxScroll);
     this.scroll = lerp(this.scroll, this.target, Math.min(1, dt * 6));
     for (const k of Input.keys) { if (k.code === 'ArrowUp' || k.code === 'KeyW') this.target += 60; if (k.code === 'ArrowDown' || k.code === 'KeyS') this.target -= 60; if (k.code === 'Escape') Game.pause(); }
@@ -143,7 +144,11 @@ class MapScene {
     Gfx.text(`ACT ${roman(act)}: ${info.name.toUpperCase()}`, 320, 27, { color: '#f6d743', align: 'center', scale: 2 });
     Gfx.text(info.sub, 320, 43, { color: '#a89aa8', align: 'center' });
     if (this.intro > 0) { Gfx.ctx.globalAlpha = Math.min(1, this.intro); Gfx.text('CHOOSE YOUR PATH', 320, 180, { color: '#ffffff', align: 'center', scale: 2, outline: true }); Gfx.ctx.globalAlpha = 1; }
-    Gfx.text('scroll: wheel / arrows', 320, H - 10, { color: '#a89aa8', align: 'center' });
+    if (Input.touch) {
+      UI.button(606, 60, 30, 30, '\u2191', () => { this.target += 120; }, { scale: 2 });
+      UI.button(606, 96, 30, 30, '\u2193', () => { this.target -= 120; }, { scale: 2 });
+      Gfx.text('drag to scroll  -  tap a node to travel', 320, H - 10, { color: '#a89aa8', align: 'center' });
+    } else Gfx.text('scroll: wheel / arrows', 320, H - 10, { color: '#a89aa8', align: 'center' });
   }
   travel(n) {
     if (this.walk) return;

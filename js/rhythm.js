@@ -19,7 +19,7 @@ class Riff {
     this.o = opts;
     this.notes = []; this.done = false; this.started = false;
     this.perfects = 0; this.goods = 0; this.misses = 0; this.combo = 0; this.maxCombo = 0;
-    this.effects = []; this.judgeText = null; this.lanePress = [0, 0, 0, 0]; this.history = [];
+    this.effects = []; this.judgeText = null; this.lanePress = [0, 0, 0, 0]; this.history = []; this.heldLanes = new Map();
     this.travel = (typeof Settings !== 'undefined' ? Settings.noteSpeed : 1.3);
     const diff = (typeof Settings !== 'undefined' ? Settings.difficulty : 'normal');
     const dm = diff === 'easy' ? 1.45 : diff === 'hard' ? 0.75 : 1;
@@ -28,11 +28,16 @@ class Riff {
     this.slide = 0; // 0..1 board slide-in
     this.build();
   }
+  static latency() {
+    const c = AudioSys.ctx; if (!c) return 0;
+    return (c.outputLatency || 0) + (typeof Settings !== 'undefined' ? Settings.offset : 0);
+  }
   static heardNow() {
     const c = AudioSys.ctx; if (!c) return 0;
-    const lat = (c.outputLatency || 0) + (typeof Settings !== 'undefined' ? Settings.offset : 0);
-    return c.currentTime - lat;
+    return c.currentTime - Riff.latency();
   }
+  // audio-clock time an input event happened, so judging does not depend on frame rate
+  static eventTime(ev, fallback) { return ev && ev.at ? ev.at - Riff.latency() : fallback; }
   build() {
     const o = this.o;
     const now = AudioSys.now();
@@ -96,7 +101,13 @@ class Riff {
   // Input processing ---------------------------------------------------------
   laneFromKey(code) { for (let i = 0; i < 4; i++) if (LANE_KEYS[i].includes(code)) return i; return -1; }
   laneFromPoint(x, y) {
-    const g = this.geom(); if (y < g.top - 10 || y > g.bottom + 30) return -1;
+    const g = this.geom();
+    if (g.frets) {
+      // fret pads own the bottom strip; the whole column above each pad also counts
+      const f0 = this.fretRect(0);
+      if (y >= f0.y - 8) { for (let i = 0; i < 4; i++) { const r = this.fretRect(i); if (x >= r.x - 2 && x < r.x + r.w + 2) return i; } return -1; }
+    }
+    if (y < g.top - 10 || y > g.bottom + 30) return -1;
     const p = clamp((y - g.top) / (g.bottom - g.top), 0, 1);
     const half = lerp(g.topW, g.botW, p) / 2;
     const rel = (x - g.cx + half) / (half * 2);
@@ -140,11 +151,14 @@ class Riff {
     this.slide = Math.min(1, this.slide + dt * 4);
     const now = Riff.heardNow();
     // keys
-    for (const k of Input.keys) { const lane = this.laneFromKey(k.code); if (lane >= 0) { const at = k.at ? k.at - ((AudioSys.ctx.outputLatency || 0) + (typeof Settings !== 'undefined' ? Settings.offset : 0)) : now; this.press(lane, at); } }
-    for (const c of Input.clicks) { const lane = this.laneFromPoint(c.x, c.y); if (lane >= 0) this.press(lane, now); }
+    for (const k of Input.keys) { const lane = this.laneFromKey(k.code); if (lane >= 0) this.press(lane, Riff.eventTime(k, now)); }
+    // pointer / finger presses (each finger is a separate click event, so chords work)
+    for (const c of Input.clicks) { const lane = this.laneFromPoint(c.x, c.y); if (lane >= 0) { this.press(lane, Riff.eventTime(c, now)); if (c.touch) this.heldLanes.set(c.id, lane); } }
+    for (const id of Input.releases) this.heldLanes.delete(id);
     // auto-miss
     for (const n of this.notes) { if (!n.judged && now > n.time + this.wGood) this.judge(n, 'miss', 0); }
     for (let i = 0; i < 4; i++) this.lanePress[i] = Math.max(0, this.lanePress[i] - dt);
+    for (const lane of this.heldLanes.values()) this.lanePress[lane] = Math.max(this.lanePress[lane], 0.05);
     for (let i = this.effects.length - 1; i >= 0; i--) { this.effects[i].t += dt; if (this.effects[i].t > 0.35) this.effects.splice(i, 1); }
     if (this.judgeText) { this.judgeText.life -= dt; if (this.judgeText.life <= 0) this.judgeText = null; }
     if (now >= this.finishTime && this.notes.every(n => n.judged)) this.finish();
@@ -159,8 +173,31 @@ class Riff {
     if (this.o.onDone) this.o.onDone(res);
   }
   // Geometry -----------------------------------------------------------------
-  geom() { return { cx: 320, top: 92, bottom: 306, topW: 96, botW: 228 }; }
+  geom() {
+    return Input.touch
+      ? { cx: 320, top: 64, bottom: 258, topW: 110, botW: 264, frets: true }
+      : { cx: 320, top: 92, bottom: 306, topW: 96, botW: 228, frets: false };
+  }
   laneX(lane, p) { const g = this.geom(); const w = lerp(g.topW, g.botW, p); return g.cx - w / 2 + (lane + 0.5) * (w / 4); }
+  // Big on-screen frets, only on touch devices
+  fretRect(lane) {
+    const pad = 4, w = (W - pad * 5) / 4;
+    return { x: pad + lane * (w + pad), y: 284, w, h: 70 };
+  }
+  // Big thumb-sized fret pads for touch play
+  drawFrets() {
+    const f0 = this.fretRect(0);
+    Gfx.rectA(0, f0.y - 10, W, H - f0.y + 10, '#12101a', 0.92);
+    for (let i = 0; i < 4; i++) {
+      const r = this.fretRect(i), pressed = this.lanePress[i] > 0;
+      Gfx.rectA(r.x + 2, r.y + 3, r.w, r.h, '#000', 0.4);
+      Gfx.rect(r.x, r.y, r.w, r.h, '#16101c');
+      Gfx.rect(r.x + 2, r.y + 2, r.w - 4, r.h - 4, pressed ? LANE_COLORS[i] : '#2a2030');
+      Gfx.outline(r.x + 1, r.y + 1, r.w - 2, r.h - 2, pressed ? '#ffffff' : LANE_COLORS[i]);
+      Gfx.sprite(LANE_GEMS[i], r.x + r.w / 2, r.y + r.h / 2 - 4, { anchor: 'c', scale: pressed ? 3.4 : 2.8, alpha: pressed ? 1 : 0.85 });
+      Gfx.text(LANE_LABELS[i], r.x + r.w / 2, r.y + r.h - 12, { color: pressed ? '#16101c' : LANE_COLORS[i], align: 'center', outline: pressed ? false : true });
+    }
+  }
   // Drawing -------------------------------------------------------------------
   draw() {
     const g = this.geom(); const ctx = Gfx.ctx; const now = Riff.heardNow();
@@ -196,8 +233,9 @@ class Riff {
       const x = this.laneX(i, 1);
       const pressed = this.lanePress[i] > 0;
       Gfx.sprite(LANE_GEMS[i], x, g.bottom, { anchor: 'c', scale: pressed ? 1.6 : 1.3, alpha: pressed ? 1 : 0.45 });
-      Gfx.text(LANE_LABELS[i], x, g.bottom + 17, { color: LANE_COLORS[i], align: 'center', outline: true });
+      if (!g.frets) Gfx.text(LANE_LABELS[i], x, g.bottom + 17, { color: LANE_COLORS[i], align: 'center', outline: true });
     }
+    if (g.frets) this.drawFrets();
     // notes
     for (const n of this.notes) {
       if (n.judged && n.hit) continue;
@@ -222,14 +260,14 @@ class Riff {
     // judgement text
     if (this.judgeText) { const k = 1 - this.judgeText.life / 0.5; Gfx.text(this.judgeText.t, g.cx, g.bottom - 60 - k * 10, { color: this.judgeText.c, align: 'center', scale: 2, outline: true }); }
     // combo
-    if (this.combo >= 2) { Gfx.text(`${this.combo}`, g.cx + g.botW / 2 + 30, g.bottom - 70, { color: '#f5a3c7', align: 'center', scale: 3, outline: true }); Gfx.text('COMBO', g.cx + g.botW / 2 + 30, g.bottom - 46, { color: '#f5a3c7', align: 'center', outline: true }); }
+    if (this.combo >= 2) { const cx = Math.min(g.cx + g.botW / 2 + 30, W - 34); Gfx.text(`${this.combo}`, cx, g.bottom - 70, { color: '#f5a3c7', align: 'center', scale: 3, outline: true }); Gfx.text('COMBO', cx, g.bottom - 46, { color: '#f5a3c7', align: 'center', outline: true }); }
     // get ready
     if (now < this.notes[0].time - this.travel * 0.55 && !this.notes.some(n => n.judged)) {
       const beats = Math.ceil((this.startTime - now) / bd);
       Gfx.text(beats > 4 ? 'GET READY...' : beats > 0 ? String(beats) : 'GO!', g.cx, g.top + 60, { color: '#ffffff', align: 'center', scale: 2, outline: true });
     }
     // stats
-    Gfx.text(`P ${this.perfects}  G ${this.goods}  M ${this.misses}`, g.cx - g.botW / 2 - 30, g.top + 10, { color: '#a89aa8', align: 'right' });
+    Gfx.text(`P ${this.perfects}  G ${this.goods}  M ${this.misses}`, g.frets ? 6 : g.cx - g.botW / 2 - 30, g.top + 10, { color: '#a89aa8', align: g.frets ? 'left' : 'right' });
     ctx.restore();
   }
 }

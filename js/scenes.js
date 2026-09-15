@@ -36,7 +36,7 @@ class BootScene {
   enter() { } exit() { }
   update(dt) { this.t += dt; if (Input.clicks.length || Input.keys.length) { AudioSys.init(); Game.go(new TitleScene()); } }
   click() { }
-  draw() { drawVillageNight(this.t, {}); Gfx.rectA(0, 0, W, H, '#0b0710', 0.5); Gfx.text('ONGA BONGA', 320, 120, { color: '#f6d743', align: 'center', scale: 5, outline: true }); Gfx.ctx.globalAlpha = 0.6 + 0.4 * Math.sin(this.t * 4); Gfx.text('CLICK OR PRESS ANY KEY TO START', 320, 220, { color: '#ffffff', align: 'center', scale: 1, outline: true }); Gfx.ctx.globalAlpha = 1; Gfx.text('turn your sound on!  ♪', 320, 240, { color: '#a89aa8', align: 'center' }); }
+  draw() { drawVillageNight(this.t, {}); Gfx.rectA(0, 0, W, H, '#0b0710', 0.5); Gfx.text('ONGA BONGA', 320, 120, { color: '#f6d743', align: 'center', scale: 5, outline: true }); Gfx.ctx.globalAlpha = 0.6 + 0.4 * Math.sin(this.t * 4); Gfx.text(Input.touch ? 'TAP TO START' : 'CLICK OR PRESS ANY KEY TO START', 320, 220, { color: '#ffffff', align: 'center', scale: 1, outline: true }); Gfx.ctx.globalAlpha = 1; Gfx.text('turn your sound on!  ♪', 320, 240, { color: '#a89aa8', align: 'center' }); }
 }
 
 // ---------------------------------------------------------------------- Title
@@ -61,7 +61,7 @@ class TitleScene {
     UI.button(80, y, 140, 24, Game.hasSave() ? 'NEW RUN' : 'START', () => Game.newRun()); y += 30;
     UI.button(80, y, 140, 24, 'HOW TO PLAY', () => Game.overlay = new HowToOverlay()); y += 30;
     UI.button(80, y, 140, 24, 'SETTINGS', () => Game.overlay = new PauseOverlay(true)); y += 30;
-    Gfx.text('D F J K  or  arrow keys to play riffs', 320, H - 12, { color: '#a89aa8', align: 'center' });
+    Gfx.text(Input.touch ? 'tap the four frets to play riffs' : 'D F J K  or  arrow keys to play riffs', 320, H - 12, { color: '#a89aa8', align: 'center' });
   }
 }
 
@@ -75,7 +75,7 @@ const STORY = {
     { bg: 3, speaker: 'KING REX', portrait: 'trex', text: 'WHO DARES MAKE NOISE LOUDER THAN MY ROAR?! I will take your princess AND your band. Let us see you rock ALONE, little caveman!', rex: true, roar: true },
     { bg: 'village_dark', text: "Rex's horde tore through the festival. Bonga was dragged off to Thunder Tricera's plateau. Ugg sank into the Swamp Queen's tar. Zog fled into the ash clouds... and Princess Petra was carried away to Volcano Peak." },
     { bg: 'village_dark', speaker: 'ONGA', portrait: 'onga', text: "They took my band. They took Petra. But they can't take THE BEAT. Rock-Axe... it's time to rally the tribe and get everyone home.", onga: true },
-    { bg: 'village_dark', speaker: 'HOW TO FIGHT', text: 'Play RIFF cards to attack. Each riff starts a rhythm solo: hit the falling notes with {y}D F J K{/} (or arrow keys) as they reach the bone. {y}PERFECT{/} notes deal bonus damage. Blocks and rallies resolve instantly. Fill the {p}HYPE{/} meter for an {p}ENCORE{/}!', onga: true },
+    { bg: 'village_dark', speaker: 'HOW TO FIGHT', text: 'Play RIFF cards to attack. Each riff starts a rhythm solo: hit the falling notes as they reach the bone, with {y}D F J K{/} or the four fret pads. {y}PERFECT{/} notes deal bonus damage. Blocks and rallies resolve instantly. Fill the {p}HYPE{/} meter for an {p}ENCORE{/}!', onga: true },
   ],
   act1_clear: [
     { bg: 1, text: 'Thunder Tricera crashes down. Behind the dust, a bone cage rattles... and a familiar voice starts drumming on the bars.', cage: true },
@@ -226,9 +226,9 @@ class HowToOverlay {
     const pages = [
       ['{y}THE QUEST{/}', 'King Rex kidnapped Princess Petra and scattered your band. Climb three acts of the map, defeat the bosses, free your bandmates and save the princess.', '',
         '{y}THE MAP{/}', 'Pick a path node by node like in Slay the Spire: {r}combat{/}, {o}elites{/} (relics!), {c}mystery events{/}, {g}rest sites{/}, {y}shops{/} and {y}treasure{/}. Each act ends in a boss fight.'],
-      ['{y}COMBAT{/}', 'You have {c}3 Energy{/} each turn and draw 5 cards. Cards cost energy. {b}Block{/} absorbs damage until your next turn. Enemies show their intent above their head: claws mean an attack for the number shown.', '',
-        '{y}RIFFS{/}', 'Attack cards marked ♪ start a rhythm solo. Notes fall down four lanes toward the bone bar. Press {g}D{/} {r}F{/} {y}J{/} {b}K{/} (or arrow keys, or click the lane) when a note reaches the bar. {y}PERFECT{/} = 1.5x damage, GOOD = 1x, MISS = nothing.'],
-      ['{y}HYPE & ENCORE{/}', 'Every hit note and every rally card fills your {p}HYPE{/} meter. At 100 Hype, press {p}SPACE{/} or the ENCORE button for a free epic solo that hits ALL enemies for every note you land.', '',
+      ['{y}COMBAT{/}', 'You have {c}3 Energy{/} each turn and draw 5 cards. Cards cost energy. {b}Block{/} absorbs damage until your next turn. Enemies show their intent above their head: claws mean an attack for the number shown.' + (Input.touch ? ' Tap a card once to read it, tap again to play it, then tap a dinosaur to aim.' : ''), '',
+        '{y}RIFFS{/}', Input.touch ? 'Attack cards marked ♪ start a rhythm solo. Notes fall down four lanes toward the bone bar. Tap the matching {y}fret pad{/} at the bottom of the screen the moment a note reaches the bar. Two fingers at once play chords. {y}PERFECT{/} = 1.5x damage, GOOD = 1x, MISS = nothing.' : 'Attack cards marked ♪ start a rhythm solo. Notes fall down four lanes toward the bone bar. Press {g}D{/} {r}F{/} {y}J{/} {b}K{/} (or arrow keys, or click the lane) when a note reaches the bar. {y}PERFECT{/} = 1.5x damage, GOOD = 1x, MISS = nothing.'],
+      ['{y}HYPE & ENCORE{/}', 'Every hit note and every rally card fills your {p}HYPE{/} meter. At 100 Hype, hit the {p}ENCORE{/} button (or {p}SPACE{/}) for a free epic solo that hits ALL enemies for every note you land.', '',
         '{y}THE BAND{/}', 'Rescued bandmates fight beside you: Bonga drums on a random enemy each turn, Ugg grants Block, Zog widens your hit windows and heals you. Rallying tribes at events gives permanent starting Hype.', '',
         '{y}RELICS{/}', 'Passive treasures found at elites, bosses, shops and events, like the mighty T-Rex Head.'],
     ];
@@ -243,7 +243,7 @@ class HowToOverlay {
 
 class DeckOverlay {
   constructor(cards, title, o = {}) { this.cards = cards; this.title = title; this.o = o; this.scroll = 0; }
-  update(dt) { this.scroll = clamp(this.scroll + Input.wheel * 40, 0, Math.max(0, Math.ceil(this.cards.length / 6) * 118 - 270)); for (const k of Input.keys) if (k.code === 'Escape') this.close(); }
+  update(dt) { this.scroll = clamp(this.scroll + Input.wheel * 40 - Input.dragDY, 0, Math.max(0, Math.ceil(this.cards.length / 6) * 118 - 270)); for (const k of Input.keys) if (k.code === 'Escape') this.close(); }
   close() { Game.overlay = null; if (this.o.onClose) this.o.onClose(); }
   draw() {
     Gfx.rectA(0, 0, W, H, '#0b0710', 0.85);

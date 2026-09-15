@@ -59,7 +59,7 @@ class Combat {
     this.px = 135; this.py = GROUND_Y; this.pAnim = { lunge: 0, hurt: 0, strum: 0 };
     this.band = (this.run ? this.run.band : []).slice();
     this.player = { st: { str: 0, weak: 0, vuln: 0, thorns: 0, regen: 0 }, block: 0 };
-    this.log = []; this.deathQueue = []; this.bandCheer = 0; this.encoreCard = null; this.handSlide = 0; this.won = false;
+    this.log = []; this.deathQueue = []; this.bandCheer = 0; this.encoreCard = null; this.handSlide = 0; this.won = false; this.previewCard = null;
   }
   get hp() { return this.run.hp; } set hp(v) { this.run.hp = v; }
   get maxHp() { return this.run.maxHp; }
@@ -119,7 +119,7 @@ class Combat {
     if (!this.alive().length) { yield* this.victoryCo(); return; }
     this.busy = false;
   }
-  endTurn() { if (this.busy || this.phase !== 'player') return; this.selected = null; Co.run(this.endTurnCo(), this); }
+  endTurn() { if (this.busy || this.phase !== 'player') return; this.selected = null; this.previewCard = null; Co.run(this.endTurnCo(), this); }
   *endTurnCo() {
     this.busy = true; this.phase = 'enemy'; AudioSys.sfx('whoosh');
     if (this.powers.thickHide) this.gainBlock(this.powers.thickHide);
@@ -194,7 +194,7 @@ class Combat {
     Co.run(this.playCardCo(card, target), this);
   }
   *playCardCo(card, target) {
-    this.busy = true; this.energy -= card.cost; this.cardsPlayedThisTurn++;
+    this.busy = true; this.previewCard = null; this.energy -= card.cost; this.cardsPlayedThisTurn++;
     const hi = this.hand.indexOf(card); if (hi >= 0) this.hand.splice(hi, 1);
     AudioSys.sfx('card');
     this.playing = card;
@@ -360,6 +360,13 @@ class Combat {
       else if (/^Digit[1-9]$/.test(k.code) && this.phase === 'player' && !this.busy) { const i = +k.code.slice(5) - 1; const c = this.hand[i]; if (c) this.selectCard(c); }
     }
   }
+  // Touch: tap once to read the card, tap again to play it. Mouse: play immediately.
+  tapCard(c) {
+    if (!Input.touch) return this.selectCard(c);
+    if (this.previewCard !== c) { this.previewCard = c; AudioSys.sfx('hover'); return; }
+    this.previewCard = null;
+    this.selectCard(c);
+  }
   selectCard(c) {
     if (!this.canPlay(c)) { if (c.cost > this.energy) { AudioSys.sfx('error'); Popups.add(320, 250, 'NOT ENOUGH ENERGY', '#ff6b6b'); } return; }
     if (c.def.target === 'enemy') {
@@ -503,8 +510,9 @@ class Combat {
     Gfx.rect(x, y + h - 1 - Math.round((h - 2) * thr / 100), w, 1, '#f6d743');
     Gfx.text(`${Math.floor(this.hype)}`, x + w / 2, y + h + 3, { color: '#f5a3c7', align: 'center' });
     if (UI.hovered(x - 4, y - 10, w + 8, h + 20)) UI.tooltip(x + 16, y + 20, ['Hype', `Hitting notes and rally cards build Hype. At ${thr} you can unleash an {p}ENCORE{/}: a free epic riff that hits ALL enemies.`], { width: 150 });
+    if (this.riff) return; // the fret pads own the bottom of the screen while a riff plays
     if (this.encoreReady && this.phase === 'player' && !this.busy) {
-      UI.button(2, 244, 66, 14, 'ENCORE!', () => this.playEncore(), { fill: '#c95c93', hover: '#f5a3c7', border: '#ffffff', color: '#fff' });
+      UI.button(2, Input.touch ? 238 : 244, Input.touch ? 78 : 66, Input.touch ? 20 : 14, 'ENCORE!', () => this.playEncore(), { fill: '#c95c93', hover: '#f5a3c7', border: '#ffffff', color: '#fff' });
     }
     // energy orb
     const ex = 36, ey = 282;
@@ -512,7 +520,7 @@ class Combat {
     Gfx.text(`${this.energy}/${this.maxEnergy + Relics.mod('extraEnergy') + (this.powers.groove || 0)}`, ex, ey - 3, { color: '#fff', align: 'center', scale: 1, outline: true });
     Gfx.text('ENERGY', ex, ey + 20, { color: '#5ee0f0', align: 'center' });
     // end turn
-    if (!this.riff) UI.button(560, 270, 74, 22, 'END TURN (E)', () => this.endTurn(), { disabled: this.busy || this.phase !== 'player' });
+    UI.button(556, 266, 80, 26, Input.touch ? 'END TURN' : 'END TURN (E)', () => this.endTurn(), { disabled: this.busy || this.phase !== 'player' });
   }
   drawHand() {
     if (this.handSlide > 0.98) return;
@@ -521,8 +529,11 @@ class Combat {
     const total = spacing * (n - 1) + CARD_W; const x0 = 320 - total / 2;
     const slideY = this.handSlide * 130;
     let hovIdx = -1;
-    if (!this.busy && !this.riff) for (let i = n - 1; i >= 0; i--) { const cx = x0 + i * spacing; if (inRect(Input.mx, Input.my, cx, HAND_Y - 20, i === n - 1 ? CARD_W : spacing, CARD_H + 20)) { hovIdx = i; break; } }
-    if (hovIdx < 0 && !this.busy && !this.riff) for (let i = n - 1; i >= 0; i--) { const cx = x0 + i * spacing; if (inRect(Input.mx, Input.my, cx, HAND_Y, CARD_W, CARD_H)) { hovIdx = i; break; } }
+    if (Input.touch) hovIdx = this.previewCard ? this.hand.indexOf(this.previewCard) : -1;
+    else {
+      if (!this.busy && !this.riff) for (let i = n - 1; i >= 0; i--) { const cx = x0 + i * spacing; if (inRect(Input.mx, Input.my, cx, HAND_Y - 20, i === n - 1 ? CARD_W : spacing, CARD_H + 20)) { hovIdx = i; break; } }
+      if (hovIdx < 0 && !this.busy && !this.riff) for (let i = n - 1; i >= 0; i--) { const cx = x0 + i * spacing; if (inRect(Input.mx, Input.my, cx, HAND_Y, CARD_W, CARD_H)) { hovIdx = i; break; } }
+    }
     this.hoverCard = hovIdx;
     for (let i = 0; i < n; i++) {
       if (i === hovIdx) continue;
@@ -530,21 +541,33 @@ class Combat {
       if (c.drawT > 0) cy += c.drawT * 200;
       const wob = Math.sin(this.t * 2 + i) * 1.5;
       Cards.draw(c, cx, cy + wob, { playable: this.canPlay(c) && !this.busy, energy: this.energy, combat: this, selected: c === this.selected });
-      UI.hit(cx, cy, i === n - 1 ? CARD_W : spacing, CARD_H, () => this.selectCard(c), { noCursor: true });
+      UI.hit(cx, cy, i === n - 1 ? CARD_W : spacing, CARD_H, () => this.tapCard(c), { noCursor: true });
     }
     if (hovIdx >= 0) {
       const c = this.hand[hovIdx]; const cx = x0 + hovIdx * spacing;
       const s = 1.45; const hx = clamp(cx - (CARD_W * s - CARD_W) / 2, 4, W - CARD_W * s - 4), hy = H - CARD_H * s - 4;
       Cards.draw(c, hx, hy, { scale: s, hover: true, playable: this.canPlay(c), energy: this.energy, combat: this, selected: c === this.selected });
-      UI.hit(hx, hy, CARD_W * s, CARD_H * s, () => this.selectCard(c));
+      if (Input.touch && this.previewCard === c) {
+        const hint = this.canPlay(c) ? (c.def.target === 'enemy' && this.alive().length > 1 ? 'TAP AGAIN, THEN PICK A TARGET' : 'TAP AGAIN TO PLAY') : 'NOT ENOUGH ENERGY';
+        const hw = Gfx.measure(hint, 1) + 10;
+        Gfx.rectA(hx + CARD_W * s / 2 - hw / 2, hy - 13, hw, 11, '#16101c', 0.9);
+        Gfx.text(hint, hx + CARD_W * s / 2, hy - 11, { color: this.canPlay(c) ? '#f6d743' : '#ff6b6b', align: 'center' });
+      }
+      UI.hit(hx, hy, CARD_W * s, CARD_H * s, () => this.tapCard(c));
     }
   }
   drawTargeting() {
     const c = this.selected; const ctx = Gfx.ctx;
-    const from = { x: 320, y: HAND_Y - 10 }; const to = { x: Input.mx, y: Input.my };
-    ctx.strokeStyle = '#f6d743'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.lineDashOffset = -this.t * 30;
-    ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.quadraticCurveTo(from.x, to.y - 40, to.x, to.y); ctx.stroke(); ctx.setLineDash([]);
-    Gfx.text(`${c.name}: choose a target  (right-click to cancel)`, 320, 236, { color: '#f6d743', align: 'center', outline: true });
+    if (!Input.touch) {
+      const from = { x: 320, y: HAND_Y - 10 }; const to = { x: Input.mx, y: Input.my };
+      ctx.strokeStyle = '#f6d743'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.lineDashOffset = -this.t * 30;
+      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.quadraticCurveTo(from.x, to.y - 40, to.x, to.y); ctx.stroke(); ctx.setLineDash([]);
+    } else {
+      // pulsing rings mark every valid target
+      for (const e of this.alive()) { const r = this.enemyRect(e); const k = 0.5 + 0.5 * Math.sin(this.t * 6); Gfx.outline(r.x - 4, r.y - 4, r.w + 8, r.h + 8, k > 0.5 ? '#f6d743' : '#ffffff'); }
+      UI.button(560, 236, 74, 20, 'CANCEL', () => { this.selected = null; AudioSys.sfx('back'); });
+    }
+    Gfx.text(`${c.name}: tap a dinosaur${Input.touch ? '' : '  (right-click to cancel)'}`, 320, 236, { color: '#f6d743', align: 'center', outline: true });
   }
   drawBanner() {
     const b = this.banner; const k = b.t / b.life; const a = k < 0.15 ? k / 0.15 : k > 0.8 ? (1 - k) / 0.2 : 1;

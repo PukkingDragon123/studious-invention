@@ -214,30 +214,64 @@ const Gfx = {
 // ---------------------------------------------------------------------------
 const Input = {
   mx: -1, my: -1, down: false, clicks: [], keys: [], held: {}, wheel: 0,
+  touch: false,          // true once any touch is seen: switches the game to touch UI
+  touches: new Map(),    // identifier -> {x, y} for every finger currently down
+  dragDX: 0, dragDY: 0,  // movement of the primary finger this frame (for scrolling)
+  releases: [],          // touch/mouse releases this frame (used to release held frets)
+  audioNow() { return (typeof AudioSys !== 'undefined' && AudioSys.ctx) ? AudioSys.ctx.currentTime : 0; },
   init(canvas) {
-    const pos = e => {
+    this.canvas = canvas;
+    const pt = (clientX, clientY) => {
       const r = canvas.getBoundingClientRect();
-      const t = e.touches ? e.touches[0] || e.changedTouches[0] : e;
-      return { x: (t.clientX - r.left) * W / r.width, y: (t.clientY - r.top) * H / r.height };
+      return { x: (clientX - r.left) * W / r.width, y: (clientY - r.top) * H / r.height };
     };
-    canvas.addEventListener('mousemove', e => { const p = pos(e); this.mx = p.x; this.my = p.y; });
-    canvas.addEventListener('mousedown', e => { const p = pos(e); this.mx = p.x; this.my = p.y; this.down = true; this.clicks.push({ x: p.x, y: p.y, button: e.button, t: performance.now() }); e.preventDefault(); });
-    canvas.addEventListener('mouseup', () => { this.down = false; });
+    canvas.addEventListener('mousemove', e => { if (this.touch) return; const p = pt(e.clientX, e.clientY); this.mx = p.x; this.my = p.y; });
+    canvas.addEventListener('mousedown', e => {
+      if (this.touch) return;
+      const p = pt(e.clientX, e.clientY); this.mx = p.x; this.my = p.y; this.down = true;
+      this.clicks.push({ x: p.x, y: p.y, button: e.button, t: performance.now(), at: this.audioNow(), id: 'mouse' });
+      e.preventDefault();
+    });
+    canvas.addEventListener('mouseup', () => { if (this.touch) return; this.down = false; this.releases.push('mouse'); });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     canvas.addEventListener('wheel', e => { this.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
-    canvas.addEventListener('touchstart', e => { const p = pos(e); this.mx = p.x; this.my = p.y; this.down = true; this.clicks.push({ x: p.x, y: p.y, button: 0, t: performance.now(), touch: true }); e.preventDefault(); }, { passive: false });
-    canvas.addEventListener('touchmove', e => { const p = pos(e); this.mx = p.x; this.my = p.y; e.preventDefault(); }, { passive: false });
-    canvas.addEventListener('touchend', e => { this.down = false; e.preventDefault(); }, { passive: false });
+    // --- multi-touch: every finger is its own press, so chords and fast alternating taps work
+    canvas.addEventListener('touchstart', e => {
+      this.touch = true; this.down = true;
+      const at = this.audioNow(), t = performance.now();
+      for (const T of e.changedTouches) {
+        const p = pt(T.clientX, T.clientY);
+        this.touches.set(T.identifier, p);
+        this.mx = p.x; this.my = p.y;
+        this.clicks.push({ x: p.x, y: p.y, button: 0, t, at, touch: true, id: T.identifier });
+      }
+      e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener('touchmove', e => {
+      for (const T of e.changedTouches) {
+        const p = pt(T.clientX, T.clientY), prev = this.touches.get(T.identifier);
+        if (prev && T.identifier === this.touches.keys().next().value) { this.dragDX += p.x - prev.x; this.dragDY += p.y - prev.y; }
+        this.touches.set(T.identifier, p); this.mx = p.x; this.my = p.y;
+      }
+      e.preventDefault();
+    }, { passive: false });
+    const endTouch = e => {
+      for (const T of e.changedTouches) { this.touches.delete(T.identifier); this.releases.push(T.identifier); }
+      if (!this.touches.size) { this.down = false; this.mx = -9999; this.my = -9999; }
+      e.preventDefault();
+    };
+    canvas.addEventListener('touchend', endTouch, { passive: false });
+    canvas.addEventListener('touchcancel', endTouch, { passive: false });
     window.addEventListener('keydown', e => {
       if (e.repeat) return;
       this.held[e.code] = true;
-      this.keys.push({ code: e.code, key: e.key, t: performance.now(), at: (typeof AudioSys !== 'undefined' && AudioSys.ctx) ? AudioSys.ctx.currentTime : 0 });
+      this.keys.push({ code: e.code, key: e.key, t: performance.now(), at: this.audioNow() });
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     });
     window.addEventListener('keyup', e => { this.held[e.code] = false; });
-    window.addEventListener('blur', () => { this.held = {}; this.down = false; });
+    window.addEventListener('blur', () => { this.held = {}; this.down = false; this.touches.clear(); });
   },
-  flush() { this.clicks.length = 0; this.keys.length = 0; this.wheel = 0; }
+  flush() { this.clicks.length = 0; this.keys.length = 0; this.wheel = 0; this.releases.length = 0; this.dragDX = 0; this.dragDY = 0; }
 };
 
 // ---------------------------------------------------------------------------

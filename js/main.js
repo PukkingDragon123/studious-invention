@@ -103,6 +103,21 @@ const Game = {
     Gfx.text(`F${run.floor}`, 600, 7, { color: '#a89aa8' });
     UI.iconButton(618, 3, 18, 16, 'intent_unknown', () => this.pause(), { tip: 'Menu (Esc)' });
   },
+  // Phones held upright letterbox the 16:9 canvas down to a sliver, so ask for landscape.
+  drawRotateHint() {
+    if (!Input.touch || this.rotateDismissed || window.innerHeight <= window.innerWidth * 1.15) return;
+    UI.locked = false;
+    Gfx.rectA(0, 0, W, H, '#0b0710', 0.9);
+    const wob = Math.sin(this.t * 2) * 0.35;
+    Gfx.ctx.save(); Gfx.ctx.translate(320, 150); Gfx.ctx.rotate(wob);
+    Gfx.rect(-26, -44, 52, 88, '#a89aa8'); Gfx.rect(-23, -38, 46, 76, '#16101c');
+    Gfx.rect(-8, 36, 16, 3, '#55555f');
+    Gfx.ctx.restore();
+    Gfx.sprite('arrow_right', 380, 150, { anchor: 'c', scale: 2 });
+    Gfx.text('TURN YOUR DEVICE', 320, 216, { color: '#f6d743', align: 'center', scale: 2 });
+    Gfx.text('Onga Bonga rocks hardest in landscape.', 320, 240, { color: '#ece6dc', align: 'center' });
+    UI.button(260, 262, 120, 26, 'PLAY ANYWAY', () => { this.rotateDismissed = true; });
+  },
   // ------------------------------------------------------------- loop
   loop(ts) {
     requestAnimationFrame(t => this.loop(t));
@@ -122,7 +137,8 @@ const Game = {
       ctx.restore();
       if (this.overlay) { UI.locked = false; this.overlay.draw(); }
       UI.drawTips();
-      Gfx.canvas.style.cursor = UI.hoverAny ? 'pointer' : 'default';
+      this.drawRotateHint();
+      Gfx.canvas.style.cursor = Input.touch ? 'none' : (UI.hoverAny ? 'pointer' : 'default');
       // clicks (after draw so UI items are current)
       if (Input.clicks.length) AudioSys.resume();
       for (const c of Input.clicks) {
