@@ -204,9 +204,9 @@ const CARDS = {
     effect: function* (c, card) { c.applyToPlayer('regen', card.v.heal); yield 0.2; } },
   // ---------- special: Encore (not in deck) -------------------------------------
   encore: { name: 'ENCORE!', type: 'special', cost: 0, rarity: 'special', art: 'art_star', target: 'all', riff: RIFF.epic, exhaust: true,
-    v: { per: 3 }, up: v => { },
-    desc: v => `The crowd goes wild! Epic riff. Deal {y}${v.per}{/} damage to ALL enemies per note hit.`,
-    effect: function* (c, card, t, riff) { const dmg = card.v.per * (riff ? riff.perfects + riff.goods : 4); Flash.add('#f5a3c7', 0.6, 3); Shake.add(6, 0.5); AudioSys.sfx('encore'); yield* c.dealDamageAll(dmg, { heavy: true }); } },
+    v: { per: 2 }, up: v => { },
+    desc: v => `The crowd goes wild! Epic riff. Deal {y}${v.per}{/} damage to ALL enemies per note hit ({y}${v.per + 1}{/} per PERFECT).`,
+    effect: function* (c, card, t, riff) { const dmg = riff ? card.v.per * riff.goods + (card.v.per + 1) * riff.perfects : card.v.per * 4; Flash.add('#f5a3c7', 0.6, 3); Shake.add(6, 0.5); AudioSys.sfx('encore'); yield* c.dealDamageAll(dmg, { heavy: true }); } },
 };
 
 const Cards = {

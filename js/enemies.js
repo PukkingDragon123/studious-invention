@@ -123,7 +123,7 @@ const Enemies = {
   // Create an enemy instance
   make(id, rng) {
     const d = ENEMIES[id];
-    const hp = rng.int(d.hp[0], d.hp[1]);
+    const hp = Math.round(rng.int(d.hp[0], d.hp[1]) * 1.15);
     return { id, def: d, name: d.name, hp, maxHp: hp, block: 0, st: { str: 0, weak: 0, vuln: 0, burn: 0, stun: 0 }, alive: true,
       turnCount: 0, lastMove: null, intent: null, x: 0, y: 0, scale: d.scale, anim: { t: rnd(0, 3), hit: 0, lunge: 0, dieT: 0 }, phase2: false };
   },
@@ -135,7 +135,9 @@ const Enemies = {
     if (d.noRepeat && key === e.lastMove && Object.keys(d.moves).length > 1) {
       const keys = Object.keys(d.moves).filter(k => k !== key); key = rng.pick(keys);
     }
-    return Object.assign({ key }, d.moves[key]);
+    const mv = Object.assign({ key }, d.moves[key]);
+    if (mv.dmg) mv.dmg += mv.dmg >= 15 ? 2 : mv.dmg >= 8 ? 1 : 0; // difficulty tuning
+    return mv;
   },
   // Describe intent for UI
   intentInfo(e, c) {
