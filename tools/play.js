@@ -52,6 +52,7 @@ const cc = (x, y) => ({ x: x * S, y: y * S });
   await page.screenshot({ path: `${OUT}/09_riff2.png` });
   await page.waitForTimeout(3000);
   console.log('after riff:', await page.evaluate(() => { const s = Game.scene; return JSON.stringify({ phase: s.phase, busy: s.busy, energy: s.energy, hype: s.hype, enemies: s.enemies.map(e => e.name + ':' + e.hp + '/' + e.maxHp), stats: Game.run.stats }); }));
+  console.log('riff history:', await page.evaluate(() => JSON.stringify(Game.scene.lastRiff ? Game.scene.lastRiff.history : null)));
   await page.screenshot({ path: `${OUT}/10_after_riff.png` });
   // play remaining cards & end turn
   await page.evaluate(() => { const s = Game.scene; const c = s.hand.find(c => c.def.type === 'skill'); if (c) s.selectCard(c); });
@@ -61,6 +62,22 @@ const cc = (x, y) => ({ x: x * S, y: y * S });
   await page.waitForTimeout(2500);
   console.log('turn 2:', await page.evaluate(() => { const s = Game.scene; return JSON.stringify({ phase: s.phase, turn: s.turn, hp: Game.run.hp, block: s.player.block, hand: s.hand.map(c => c.name), enemies: s.enemies.map(e => e.name + ':' + e.hp + ' intent=' + (e.intent && e.intent.name)) }); }));
   await page.screenshot({ path: `${OUT}/12_turn2.png` });
+  // mouse targeting: select an attack card via keyboard digit, then click an enemy
+  const tinfo = await page.evaluate(() => { const s = Game.scene; const i = s.hand.findIndex(c => c.def.type === 'attack'); if (i < 0) return null; window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit' + (i + 1) })); return { i }; });
+  await page.waitForTimeout(300);
+  const sel = await page.evaluate(() => { const s = Game.scene; const e = s.alive()[0]; const r = s.enemyRect(e); return { selected: !!s.selected, single: s.alive().length === 1, ex: r.x + r.w / 2, ey: r.y + r.h / 2, name: e.name }; });
+  console.log('targeting state:', JSON.stringify(sel));
+  if (sel.selected) { await page.screenshot({ path: `${OUT}/13_targeting.png` }); p = cc(sel.ex, sel.ey); await page.mouse.click(p.x, p.y); await page.waitForTimeout(400); console.log('after target click: riff active =', await page.evaluate(() => !!Game.scene.riff)); await page.waitForTimeout(6000); }
+  else await page.waitForTimeout(6000);
+  console.log('post:', await page.evaluate(() => JSON.stringify({ phase: Game.scene.phase, enemies: Game.scene.enemies.map(e => e.name + ':' + e.hp) })));
+  // save / continue
+  await page.evaluate(() => { Game.run.gold = 999; Game.save(); });
+  await page.reload(); await page.waitForTimeout(500); await page.mouse.click(640, 360); await page.waitForTimeout(600);
+  const hasSave = await page.evaluate(() => Game.hasSave()); console.log('hasSave after reload:', hasSave);
+  p = cc(150, 162); await page.mouse.click(p.x, p.y); await page.waitForTimeout(800);
+  console.log('continued:', await page.evaluate(() => Game.scene.constructor.name + ' gold=' + (Game.run && Game.run.gold) + ' deck=' + (Game.run && Game.run.deck.length) + ' floor=' + (Game.run && Game.run.floor)));
+  await page.screenshot({ path: `${OUT}/14_continued.png` });
+  await page.evaluate(() => Game.clearSave());
   console.log('errors:', errors.length);
   await browser.close();
 })();

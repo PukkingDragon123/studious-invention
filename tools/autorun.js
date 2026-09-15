@@ -2,6 +2,7 @@
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const fastAfter = +(process.argv[2] || 2); // combats to play with real timing before switching to instant riffs
 const seedArg = process.argv[3];
+const humanize = process.argv[4] === 'human';
 (async () => {
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
@@ -10,18 +11,19 @@ const seedArg = process.argv[3];
   page.on('pageerror', e => { errors.push(e.message); console.log('[pageerror]', e.message); });
   await page.goto('http://127.0.0.1:8765/index.html'); await page.waitForTimeout(300);
   await page.mouse.click(640, 360); await page.waitForTimeout(300);
-  await page.evaluate((seed) => {
+  await page.evaluate(({ seed, humanize }) => {
+    window.__humanize = humanize;
     Game.newRun(); if (seed) { Game.run.seed = +seed; Game.run.map = MapGen.generate(1, +seed); }
     Game.go(new MapScene());
     window.__combats = 0; window.__log = [];
     window.__auto = setInterval(() => {
       const s = Game.scene; if (!s || !s.riff || s.riff.done) return;
       const r = s.riff;
-      if (window.__fast) { for (const n of r.notes) if (!n.judged) { n.judged = true; n.hit = true; n.j = 'perfect'; r.perfects++; r.combo++; r.maxCombo = Math.max(r.maxCombo, r.combo); if (r.o.onNote) r.o.onNote('perfect', n, r); } r.finish(); return; }
+      if (window.__fast) { for (const n of r.notes) if (!n.judged) { const q = Math.random(); const j = window.__humanize ? (q < 0.6 ? 'perfect' : q < 0.9 ? 'good' : 'miss') : 'perfect'; n.judged = true; n.hit = j !== 'miss'; n.j = j; if (j === 'perfect') r.perfects++; else if (j === 'good') r.goods++; else r.misses++; if (j === 'miss') r.combo = 0; else { r.combo++; r.maxCombo = Math.max(r.maxCombo, r.combo); } if (r.o.onNote) r.o.onNote(j, n, r); } r.finish(); return; }
       const now = Riff.heardNow();
       for (const n of r.notes) if (!n.judged && !n.pressed && now >= n.time - 0.004) { n.pressed = true; window.dispatchEvent(new KeyboardEvent('keydown', { code: LANE_KEYS[n.lane][0] })); }
     }, 3);
-  }, seedArg);
+  }, { seed: seedArg, humanize });
   const step = () => page.evaluate((fastAfter) => {
     const s = Game.scene, name = s.constructor.name, run = Game.run;
     const log = m => window.__log.push(m);
@@ -29,6 +31,7 @@ const seedArg = process.argv[3];
     if (name === 'MapScene') { if (s.walk) return 'walking'; const av = MapGen.available(run.map); if (!av.length) return 'no nodes'; const pref = av.find(n => n.type === 'event') || av.find(n => n.type === 'rest' && run.hp < run.maxHp * 0.6) || av[Math.floor(Math.random() * av.length)]; s.travel(pref); return 'travel ' + pref.type; }
     if (name === 'Combat') {
       if (s.busy || s.phase !== 'player') return 'combat busy ' + s.phase;
+      if (s.turn !== s.__lastTurn) { s.__lastTurn = s.turn; if (s.turn > 1) log(`  turn ${s.turn} hp ${run.hp} block ${s.player.block} enemies ${s.alive().map(e => e.name + ':' + e.hp).join(',')}`); }
       if (!s.__counted) { s.__counted = true; window.__combats++; window.__fast = window.__combats > fastAfter; log(`combat ${window.__combats} floor ${run.floor} act ${run.act}: ${s.enemies.map(e => e.name).join(',')} hp ${run.hp}`); }
       if (s.encoreReady) { s.playEncore(); return 'encore'; }
       const alive = s.alive(); if (!alive.length) return 'no enemies';

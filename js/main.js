@@ -29,13 +29,13 @@ const Game = {
   hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } },
   save() {
     if (!this.run) return;
-    const r = this.run; const data = Object.assign({}, r, { deck: r.deck.map(Cards.toSave) });
+    const r = this.run; const data = Object.assign({}, r, { deck: r.deck.map(c => Cards.toSave(c)) });
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { }
   },
   continueRun() {
     try {
       const d = JSON.parse(localStorage.getItem(SAVE_KEY)); if (!d) return this.newRun();
-      d.deck = d.deck.map(Cards.fromSave); this.run = d;
+      d.deck = d.deck.map(s => Cards.fromSave(s)); this.run = d;
       this.go(new MapScene());
     } catch (e) { console.error(e); this.newRun(); }
   },

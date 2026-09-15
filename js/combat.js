@@ -233,7 +233,7 @@ class Combat {
     Popups.add(g.cx, g.top + 70, `${r.grade} RANK  x${r.mult.toFixed(2)}`, r.grade === 'S' ? '#f6d743' : r.grade === 'A' ? '#a3e04a' : r.grade === 'F' ? '#ff6b6b' : '#ffffff', { scale: 2, life: 1.2, vy: -20 });
     if (r.grade === 'S') { AudioSys.sfx('cheer'); this.bandCheer = 1.5; }
     yield 0.45;
-    this.riff = null; this.phase = 'player';
+    this.lastRiff = this.riff; this.riff = null; this.phase = 'player';
     this.run.stats.notes += r.notes; this.run.stats.perfects += r.perfects;
     return r;
   }

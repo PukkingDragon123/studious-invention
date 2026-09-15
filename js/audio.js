@@ -116,7 +116,7 @@ const AudioSys = {
     const c = this.ctx; dest = dest || this.musicBus;
     const o = c.createOscillator(); o.type = 'sine';
     o.frequency.setValueAtTime(165, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.09);
-    const g = c.createGain(); g.gain.setValueAtTime(1.1 * vel, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+    const g = c.createGain(); g.gain.setValueAtTime(0.9 * vel, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
     const ws = this.shaper(1.5);
     o.connect(ws).connect(g).connect(dest); o.start(t); o.stop(t + 0.4);
     const ng = c.createGain(); ng.gain.setValueAtTime(0.5 * vel, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
@@ -250,7 +250,7 @@ const AudioSys = {
   pad(t, midi, dur, vel = 1, dest) {
     const c = this.ctx; dest = dest || this.musicBus; const f = midiToFreq(midi);
     const end = t + dur + 0.7;
-    const g = this.env(t, 0.35, 0.3, 0.9, 0.5, dur, 0.09 * vel, dest);
+    const g = this.env(t, 0.35, 0.3, 0.9, 0.5, dur, 0.14 * vel, dest);
     const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(500, t); lp.frequency.linearRampToValueAtTime(1300, t + 0.6); lp.Q.value = 1;
     for (const d of [-9, 0, 9]) this.osc('sawtooth', f, t, end, d).connect(lp);
     lp.connect(g); this.send(g, 0.6);
@@ -259,7 +259,7 @@ const AudioSys = {
     const c = this.ctx; dest = dest || this.musicBus; const f = midiToFreq(midi);
     const end = t + dur + 0.4;
     const formants = { oo: [[330, 8], [870, 10], [2300, 12]], ah: [[720, 6], [1220, 8], [2600, 12]], oh: [[520, 7], [1000, 9], [2500, 12]], eh: [[560, 7], [1750, 9], [2600, 12]] }[vowel] || [[330, 8], [870, 10], [2300, 12]];
-    const g = this.env(t, 0.09, 0.2, 0.85, 0.22, dur, 0.22 * vel, dest);
+    const g = this.env(t, 0.09, 0.2, 0.85, 0.22, dur, 0.7 * vel, dest);
     const src = c.createGain();
     const o1 = this.osc('sawtooth', f, t, end, -4); const o2 = this.osc('sawtooth', f, t, end, 4);
     const lfo = this.osc('sine', 4.8, t, end); const lg = c.createGain(); lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.008, t + 0.3); lfo.connect(lg); lg.connect(o1.frequency); lg.connect(o2.frequency);
