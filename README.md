@@ -7,6 +7,9 @@ reassemble the band and save the princess.
 
 **Play it:** open `index.html` in any modern browser (Chrome, Firefox, Edge, Safari).
 No build step, no dependencies, works offline. Turn your sound on.
+It is also published as a playable Artifact at https://claude.ai/artifact/MYXyLPKGDvBpSymnj7V2Dh
+(`artifact/page.html` is the wrapper page for that; the Artifact host supplies its
+doctype and head, so it is not a standalone file).
 
 ## How it plays
 
@@ -27,6 +30,9 @@ No build step, no dependencies, works offline. Turn your sound on.
   permanent starting Hype.
 
 Controls: mouse for everything, `E` end turn, `1-9` pick cards, `Space` encore, `Esc` menu.
+On a phone or tablet: four thumb-sized fret pads appear under the fretboard during a
+riff (two fingers at once play chords), cards are tap-to-read then tap-to-play with a
+tap-a-dinosaur targeting step, and the map scrolls by dragging.
 Settings include music/SFX volume, note travel speed, timing offset and hit-window difficulty.
 Runs auto-save; continue from the title screen.
 

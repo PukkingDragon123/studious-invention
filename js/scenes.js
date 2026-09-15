@@ -11,7 +11,7 @@ function drawVillageNight(t, o = {}) {
   Gfx.circle(540, 50, 26, '#f5eed3'); Gfx.circle(530, 44, 6, '#c9bc90'); Gfx.circle(550, 60, 4, '#c9bc90');
   if (!o.noVolcano) Gfx.sprite('lm_volcano', 90, 176, { anchor: 'bc', scale: 3, alpha: 0.6, frame: Math.floor(t * 2) % 2 });
   const ctx = Gfx.ctx; ctx.fillStyle = '#2f3a2a'; ctx.beginPath(); ctx.moveTo(0, 170); for (let x = 0; x <= W; x += 16) ctx.lineTo(x, 150 + Math.sin(x * 0.03) * 10); ctx.lineTo(W, 230); ctx.lineTo(0, 230); ctx.fill();
-  Gfx.rect(0, GROUND_Y - 6, W, 60, '#4a3a2a'); Gfx.rect(0, GROUND_Y - 6, W, 3, '#6a5a3a');
+  Gfx.rect(0, GROUND_Y - 6, W, H - GROUND_Y + 6, '#4a3a2a'); Gfx.rect(0, GROUND_Y - 6, W, 3, '#6a5a3a');
   if (!o.noVillage) { Gfx.sprite('lm_hut', 470, GROUND_Y, { anchor: 'bc', scale: 3 }); Gfx.sprite('lm_hut', 590, GROUND_Y - 6, { anchor: 'bc', scale: 2 }); Gfx.sprite('lm_totem', 400, GROUND_Y, { anchor: 'bc', scale: 2 }); }
   Gfx.sprite('lm_palm', 30, GROUND_Y, { anchor: 'bc', scale: 2 });
   // pteros

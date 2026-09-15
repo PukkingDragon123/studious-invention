@@ -20,14 +20,14 @@ const Backgrounds = {
       Gfx.sprite('lm_volcano', 380, 168, { anchor: 'bl', scale: 2, alpha: 0.5 });
       Gfx.sprite('lm_palm', 560, 190, { anchor: 'bl', scale: 2 }); Gfx.sprite('lm_tree', 20, 186, { anchor: 'bl', scale: 2 });
       Gfx.sprite('lm_ribs', 250, 186, { anchor: 'bl', scale: 2 }); Gfx.sprite('lm_rock', 300, 200, { anchor: 'bl', scale: 2 });
-      Gfx.rect(0, GROUND_Y - 6, W, 60, '#a06a3a'); Gfx.rect(0, GROUND_Y - 6, W, 4, '#c9a15a'); Gfx.rect(0, GROUND_Y + 10, W, 2, '#8a5a2b');
+      Gfx.rect(0, GROUND_Y - 6, W, H - GROUND_Y + 6, '#a06a3a'); Gfx.rect(0, GROUND_Y - 6, W, 4, '#c9a15a'); Gfx.rect(0, GROUND_Y + 10, W, 2, '#8a5a2b');
       for (let i = 0; i < 12; i++) Gfx.sprite('lm_grass', (i * 61 + 13) % W, GROUND_Y - 6, { anchor: 'bl', scale: 2 });
     } else if (act === 2) {
       Gfx.bands(0, 0, W, 150, ['#2f7a30', '#3a8a48', '#5a9a5a', '#7aaa6a', '#8ab070']);
       this.clouds(t, ['#c8d8c0'], 0.5);
       ctx.fillStyle = '#1e5a2a'; ctx.beginPath(); ctx.moveTo(0, 150); for (let x = 0; x <= W; x += 16) ctx.lineTo(x, 120 + Math.sin(x * 0.04) * 14); ctx.lineTo(W, 200); ctx.lineTo(0, 200); ctx.fill();
       for (let i = 0; i < 9; i++) Gfx.sprite(i % 2 ? 'lm_palm' : 'lm_tree', (i * 78 + 10) % W, 176 + (i % 3) * 4, { anchor: 'bl', scale: 2, alpha: 0.85 });
-      Gfx.rect(0, GROUND_Y - 6, W, 60, '#4a5c22'); Gfx.rect(0, GROUND_Y - 6, W, 4, '#7a8f3a');
+      Gfx.rect(0, GROUND_Y - 6, W, H - GROUND_Y + 6, '#4a5c22'); Gfx.rect(0, GROUND_Y - 6, W, 4, '#7a8f3a');
       Gfx.sprite('lm_tarpit', 200, GROUND_Y + 4, { anchor: 'bl', scale: 2 }); Gfx.sprite('lm_mushroom', 330, GROUND_Y - 2, { anchor: 'bl', scale: 2 });
       Gfx.sprite('lm_fern', 280, GROUND_Y - 4, { anchor: 'bl', scale: 2 }); Gfx.sprite('lm_fern', 600, GROUND_Y - 4, { anchor: 'bl', scale: 2 });
       // fireflies
@@ -37,7 +37,7 @@ const Backgrounds = {
       Gfx.sprite('lm_volcano', 300, 176, { anchor: 'bc', scale: 4, frame: Math.floor(t * 2) % 2 });
       for (let i = 0; i < 6; i++) { const k = (t * 0.15 + i * 0.17) % 1; Gfx.rectA(340 + Math.sin(k * 6 + i) * 20, 60 - k * 60, 6 + k * 14, 6 + k * 14, '#55555f', 0.5 * (1 - k)); }
       ctx.fillStyle = '#2a1a1a'; ctx.beginPath(); ctx.moveTo(0, 150); for (let x = 0; x <= W; x += 16) ctx.lineTo(x, 140 + Math.sin(x * 0.05) * 10); ctx.lineTo(W, 200); ctx.lineTo(0, 200); ctx.fill();
-      Gfx.rect(0, GROUND_Y - 6, W, 60, '#3a2c3f'); Gfx.rect(0, GROUND_Y - 6, W, 4, '#55555f');
+      Gfx.rect(0, GROUND_Y - 6, W, H - GROUND_Y + 6, '#3a2c3f'); Gfx.rect(0, GROUND_Y - 6, W, 4, '#55555f');
       Gfx.sprite('lm_lavapool', 220, GROUND_Y + 8, { anchor: 'bl', scale: 2, frame: Math.floor(t * 3) % 2 }); Gfx.sprite('lm_lavapool', 470, GROUND_Y + 12, { anchor: 'bl', scale: 2, frame: Math.floor(t * 3 + 1) % 2 });
       Gfx.sprite('lm_dskull', 60, GROUND_Y - 4, { anchor: 'bl', scale: 2 }); Gfx.sprite('lm_pillar', 600, GROUND_Y - 2, { anchor: 'bl', scale: 2 });
       for (let i = 0; i < 14; i++) { const k = (t * 0.3 + i * 0.071) % 1; Gfx.rectA((i * 47) % W, GROUND_Y - k * 200, 2, 2, '#ff5c00', 0.8 * (1 - k)); }
