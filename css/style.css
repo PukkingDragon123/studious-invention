@@ -1,0 +1,22 @@
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: #0b0710;
+  overflow: hidden;
+  font-family: monospace;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#wrap {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+canvas#game {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+  background: #0b0710;
+  cursor: default;
+  outline: none;
+}

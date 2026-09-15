@@ -1,0 +1,45 @@
+// Screenshot tour of every scene using debug hooks.
+const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const OUT = process.argv[2] || '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca-98b85064c1db/scratchpad/tour';
+require('fs').mkdirSync(OUT, { recursive: true });
+(async () => {
+  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const errors = [];
+  page.on('console', m => { if (m.type() === 'error') console.log('[console]', m.text().split('\n')[0]); });
+  page.on('pageerror', e => { errors.push(e.message); console.log('[pageerror]', e.message); });
+  await page.goto('http://127.0.0.1:8765/index.html'); await page.waitForTimeout(400);
+  await page.mouse.click(640, 360); await page.waitForTimeout(500);
+  // create a run silently
+  await page.evaluate(() => { Game.newRun(); Game.run.gold = 300; Game.go(new MapScene()); });
+  const shot = async (name, ms = 700) => { await page.waitForTimeout(ms); await page.screenshot({ path: `${OUT}/${name}.png` }); console.log('shot', name, '| scene:', await page.evaluate(() => Game.scene.constructor.name)); };
+  await page.evaluate(() => Game.go(new ShopScene())); await shot('shop');
+  await page.mouse.move(560, 200); await shot('shop_hover', 300);
+  await page.evaluate(() => Game.go(new EventScene('ooga_tribe'))); await shot('event_ooga');
+  await page.evaluate(() => Game.go(new EventScene('sleeping_bronto'))); await shot('event_bronto');
+  await page.evaluate(() => Game.go(new EventScene('cave_painting'))); await shot('event_cave');
+  await page.evaluate(() => Game.go(new RestScene())); await shot('rest');
+  await page.evaluate(() => Game.go(new TreasureScene())); await shot('treasure');
+  await page.evaluate(() => { Game.scene.opened = true; }); await shot('treasure_open');
+  await page.evaluate(() => Game.go(new RewardScene({ gold: 23, cards: Cards.randomReward(new RNG(5), 3), relics: ['trex_head'], kind: 'elite' }))); await shot('reward');
+  await page.mouse.move(640, 400); await shot('reward_hover', 300);
+  await page.evaluate(() => { Game.overlay = new DeckOverlay(Game.run.deck, 'YOUR DECK', { allowClose: true }); }); await shot('deck');
+  await page.evaluate(() => { Game.overlay = new PauseOverlay(); }); await shot('pause');
+  await page.evaluate(() => { Game.overlay = new PauseOverlay(true); }); await shot('settings');
+  await page.evaluate(() => { Game.overlay = new HowToOverlay(); }); await shot('howto');
+  await page.evaluate(() => { Game.overlay = null; Game.run.act = 2; Game.run.band = ['bonga']; Game.go(new Combat(['dilo', 'ptero', 'tarblob'], { kind: 'normal', act: 2 })); }); await shot('combat_act2', 3500);
+  await page.evaluate(() => { Game.run.act = 3; Game.run.band = ['bonga', 'ugg', 'zog']; Game.go(new Combat(['trex'], { kind: 'boss', act: 3 })); }); await shot('boss_trex', 2500);
+  await shot('boss_trex2', 2500);
+  await page.evaluate(() => { Game.run.act = 1; Game.go(new Combat(['tricera_king'], { kind: 'boss', act: 1 })); }); await shot('boss_tricera', 4500);
+  await page.evaluate(() => { Game.run.act = 2; Game.go(new Combat(['spino'], { kind: 'boss', act: 2 })); }); await shot('boss_spino', 4500);
+  await page.evaluate(() => { Game.run.act = 3; Game.go(new Combat(['giga'], { kind: 'elite', act: 3 })); }); await shot('elite_giga', 3500);
+  await page.evaluate(() => { Game.run.act = 2; Game.run.map = MapGen.generate(2, 77); Game.run.map.current = -1; Game.go(new MapScene()); }); await shot('map_act2', 1500);
+  await page.evaluate(() => { Game.run.act = 3; Game.run.map = MapGen.generate(3, 78); Game.run.map.current = -1; Game.go(new MapScene()); }); await shot('map_act3', 1500);
+  await page.evaluate(() => { Game.go(new StoryScene(STORY.act1_clear, () => {}, { music: 'victory' })); }); await shot('story_act1', 1500);
+  await page.evaluate(() => { Game.scene.i = 3; Game.scene.startPage(); }); await shot('story_act1_join', 1500);
+  await page.evaluate(() => { Game.go(new StoryScene(STORY.ending, () => {}, {})); Game.scene.i = 1; Game.scene.startPage(); }); await shot('story_ending', 1500);
+  await page.evaluate(() => { Game.go(new EndingScene()); }); await shot('ending', 1500);
+  await page.evaluate(() => { Game.go(new GameOverScene()); }); await shot('gameover', 1000);
+  console.log('errors:', errors.length);
+  await browser.close();
+})();

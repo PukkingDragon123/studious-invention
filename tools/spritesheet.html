@@ -1,0 +1,25 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;background:#3a4a5a}canvas{image-rendering:pixelated}</style></head>
+<body><canvas id="game" width="640" height="360"></canvas>
+<script src="../js/util.js"></script><script src="../js/font.js"></script><script src="../js/gfx.js"></script><script src="../js/sprites.js"></script>
+<script>
+Gfx.init();
+const names = Object.keys(SPRITES);
+const filter = new URLSearchParams(location.search).get('f') || '';
+const scale = +(new URLSearchParams(location.search).get('s') || 3);
+const list = names.filter(n => !filter || n.startsWith(filter));
+// layout
+let x = 4, y = 4, rowH = 0, maxW = 1280;
+const cv = document.getElementById('game');
+const placements = [];
+for (const n of list) {
+  const s = Gfx.spr(n); const w = s.w * scale, h = s.h * scale + 10;
+  if (x + w > maxW) { x = 4; y += rowH + 6; rowH = 0; }
+  placements.push({ n, x, y, w, h }); x += w + 8; rowH = Math.max(rowH, h);
+}
+cv.width = maxW; cv.height = y + rowH + 8; Gfx.ctx.imageSmoothingEnabled = false;
+Gfx.clear('#3a4a5a');
+for (const p of placements) {
+  Gfx.sprite(p.n, p.x, p.y, { scale, frame: 0 });
+  Gfx.text(p.n.slice(0, Math.max(3, Math.floor(p.w / 6))), p.x, p.y + p.h - 8, { color: '#fff', scale: 1 });
+}
+</script></body></html>
