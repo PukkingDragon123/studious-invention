@@ -273,7 +273,8 @@ class Combat {
     this.cam.zoomTo(1.55); this.cam.lookAt(this.bronk.x + 40, 330);
     Juice.punch(0.05);
     yield 0.34;
-    this.cam.zoomTo(1.02); this.cam.lookAt(W / 2, 300);
+    Juice.letterbox(false);
+    this.cam.zoomTo(1.06); this.cam.lookAt(W / 2, 372);
     const windowMul = 1 + Relics.mod('window') + (this.band.includes('roxy') ? 0.12 : 0) + (this.flags.tuned ? 0.75 : 0);
     this.flags.tuned = false;
     let done = false, result = null;
@@ -432,7 +433,7 @@ class Combat {
   // ------------------------------------------------------------------ update
   update(dt) {
     this.t += dt;
-    if (this.riff) this.riff.update(dt);
+    if (this.riff) { this.riff.update(dt); this.bronk.play(this.riff.chanting ? 'sing' : 'play'); }
     this.bronk.update(dt);
     for (const e of this.enemies) {
       e.actor.update(dt);
@@ -455,7 +456,7 @@ class Combat {
     this.cam.update(dt);
     if (!this.riff) {
       if (Input.pressed('KeyE', 'Enter')) this.endTurn();
-      if (Input.pressed('Space')) this.playEncore();
+      if (Input.pressed('KeyR', 'Space')) this.playEncore();   // R, since SPACE is the chant during a riff
       if (Input.pressed('Escape')) { if (this.selected) this.selected = null; else Game.pause(); }
       for (const k of Input.keys) if (/^Digit[1-9]$/.test(k.code) && this.phase === 'player' && !this.busy) { const c = this.hand[+k.code.slice(5) - 1]; if (c) this.tapCard(c); }
     }

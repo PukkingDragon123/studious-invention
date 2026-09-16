@@ -1237,5 +1237,19 @@
   "frames": 2,
   "note": "a bold question mark for suspicion.",
   "file": "art_ui"
+ },
+ "bronk_dash": {
+  "w": 40,
+  "h": 56,
+  "frames": 4,
+  "note": "sprinting flat out, body thrown forward, speed lines behind.",
+  "file": "art_chars"
+ },
+ "bronk_sleep": {
+  "w": 52,
+  "h": 30,
+  "frames": 2,
+  "note": "asleep on his back, mouth open, fur pulled over the belly.",
+  "file": "art_chars"
  }
 }

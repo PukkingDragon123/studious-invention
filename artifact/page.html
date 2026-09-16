@@ -192,13 +192,14 @@
     <section>
       <p class="label">The valley</p>
       <h3>Walk it, don't pick it</h3>
-      <p>The ruins are a tile map, not a row of nodes. Beasts patrol with cones of vision: keep out of them, duck into a bush, or take the fight. Running burns stamina Bronk does not have.</p>
-      <p>Campfires restore you. Black fog hides an encounter. The shop is a mammoth carrying other people's belongings, wandering its own route.</p>
+      <p>The ruins are a wide, mostly empty tile map, and the goal is the gate at the far end. Beasts patrol with cones of vision: keep out of them, duck into a bush, roll past, or take the fight. Running burns stamina Bronk does not have.</p>
+      <p>Campfires restore you. Black fog hides an encounter. The shop is a mammoth in a striped awning and a feathered headdress who turns up where he feels like it and is gone by the time you look again.</p>
     </section>
     <section>
       <p class="label">The fight</p>
       <h3>Play the riff yourself</h3>
-      <p>A deck of riffs, three energy a turn. Play a card marked with a note and the camera cuts to a close-up: four arrow lanes, <span class="perfect">SICK</span> timing, sustains to hold, and a crowd meter tugging between you and the beast.</p>
+      <p>A deck of riffs, three energy a turn. Play a card marked with a note and the camera cuts in: the Rock-Axe lies across the bottom of the screen and rune-stones slide right to left down four strings into a bone strum bar. Strike the string the stone lands on and it rings. <span class="perfect">SICK</span> timing, sustains to hold.</p>
+      <p>In the gaps the song hands you the vocal. An ember ribbon swoops down from the top: hold the chant and steer your voice along it, and the synth sings whatever pitch you are actually on. Strings carry the damage, the voice carries the crowd.</p>
       <p>Duel cards are call and answer. The beast plays a phrase, then you play it back.</p>
     </section>
   </div>
@@ -207,13 +208,15 @@
     <p class="label">Controls</p>
     <dl class="keys for-keys">
       <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt>
-      <dd>Walk the valley. Arrow keys work too. <kbd>SHIFT</kbd> runs, <kbd>E</kbd> interacts, <kbd>M</kbd> opens the map.</dd>
-      <dt><kbd class="lane-d">&larr;</kbd><kbd class="lane-f">&darr;</kbd><kbd class="lane-j">&uarr;</kbd><kbd class="lane-k">&rarr;</kbd></dt>
-      <dd>The four lanes during a riff. <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> are the same four. Hold for sustains.</dd>
+      <dd>Walk the valley. Arrow keys work too. <kbd>SHIFT</kbd> runs, <kbd>SPACE</kbd> rolls, <kbd>E</kbd> interacts, <kbd>M</kbd> opens the map.</dd>
+      <dt><kbd class="lane-d">A</kbd><kbd class="lane-f">S</kbd><kbd class="lane-j">D</kbd><kbd class="lane-k">F</kbd></dt>
+      <dd>The four strings, top to bottom. <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> and the arrows are the same four. Hold for sustains.</dd>
+      <dt><kbd>SPACE</kbd> + mouse</dt>
+      <dd>Sing. Hold it while the ember ribbon is up and steer your voice with the mouse.</dd>
       <dt><kbd>1</kbd>&ndash;<kbd>9</kbd></dt>
       <dd>Play the card in that slot, then click the beast you are aiming at.</dd>
-      <dt><kbd>SPACE</kbd></dt>
-      <dd>Encore, once the Hype column is full.</dd>
+      <dt><kbd>R</kbd></dt>
+      <dd>Encore, once the Hype column is full. <kbd>SPACE</kbd> does it too, outside a riff.</dd>
       <dt><kbd>E</kbd></dt>
       <dd>End your turn.</dd>
       <dt><kbd>ESC</kbd></dt>
@@ -221,11 +224,13 @@
     </dl>
     <dl class="keys for-touch">
       <dt><span class="pad">WALK</span></dt>
-      <dd>Drag the stick in the lower left. ACT interacts, RUN sprints.</dd>
+      <dd>Drag the stick in the lower left. ACT interacts, RUN sprints, DODGE rolls.</dd>
       <dt><span class="pad">CARDS</span></dt>
       <dd>Tap a card once to read it, tap again to play it, then tap the beast you are aiming at.</dd>
       <dt><span class="pad">RIFFS</span></dt>
-      <dd>Four pads fill the bottom of the screen. Two fingers at once play a chord.</dd>
+      <dd>Tap the string a stone lands on &mdash; the whole band across the neck is its pad. Two fingers at once play a chord.</dd>
+      <dt><span class="pad">VOICE</span></dt>
+      <dd>When the ember ribbon drops in, hold the left edge of the screen and slide your thumb up and down to follow it.</dd>
     </dl>
   </section>
 
@@ -277,6 +282,7 @@
 <script src="js2/art_world.js"></script>
 <script src="js2/art_ui.js"></script>
 <script src="js2/anim.js"></script>
+<script src="js2/world.js"></script>
 <script src="js2/audio.js"></script>
 <script src="js2/songs.js"></script>
 <script src="js2/dialogue.js"></script>

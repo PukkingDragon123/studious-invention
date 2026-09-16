@@ -1,4 +1,4 @@
-// Touch test for the rebuild: stick, interact, card taps, fret pads.
+// Touch test for the rebuild: stick, interact, card taps, guitar strings.
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca-98b85064c1db/scratchpad/v2';
 (async () => {
@@ -66,7 +66,7 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
       const now = Riff.now();
       for (const n of r.mine) if (!n.judged && !n.tapped && now >= n.time - 0.004) {
         n.tapped = true; window.__taps++;
-        const rect = r.fretRect(n.lane), cv = document.getElementById('game'), b = cv.getBoundingClientRect();
+        const rect = r.stringRect(n.lane), cv = document.getElementById('game'), b = cv.getBoundingClientRect();
         const cx = b.x + (rect.x + rect.w / 2) * b.width / 960, cy = b.y + (rect.y + rect.h / 2) * b.height / 540;
         const T = { identifier: 200 + n.lane, clientX: cx, clientY: cy, target: cv };
         cv.dispatchEvent(new TouchEvent('touchstart', { changedTouches: [new Touch(T)], touches: [new Touch(T)], bubbles: true, cancelable: true }));
@@ -75,7 +75,10 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
     }, 4);
   });
   await page.waitForTimeout(5000);
-  console.log('riff result:', await page.evaluate(() => { const r = Game.scene.lastRiff || (Game.scene.riff && Game.scene.riff.result); return JSON.stringify({ taps: window.__taps, hist: (Game.scene.riff ? Game.scene.riff.history : []).slice(0, 5) }); }));
+  console.log('riff result:', await page.evaluate(() => {
+    const r = Game.scene.riff;
+    return JSON.stringify({ taps: window.__taps, hits: r ? r.hits : null, misses: r ? r.misses : null, combo: r ? r.maxCombo : null, chantPhrases: r ? r.phrases.length : null });
+  }));
   await page.screenshot({ path: `${OUT}/m_after.png` });
   console.log('errors:', errs.length, errs.slice(0, 4));
   await browser.close();

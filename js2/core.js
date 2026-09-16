@@ -83,7 +83,7 @@ const Co = {
     let guard = 0;
     while (guard++ < 2000) {
       let r;
-      try { r = h.it.next(); } catch (e) { console.error('coroutine error', e); h.done = true; return; }
+      try { r = h.it.next(); } catch (e) { console.error('coroutine error', (e && e.stack) || e); h.done = true; return; }
       if (r.done) { h.done = true; return; }
       const v = r.value;
       // a number always yields the frame: > 0 waits that long, 0 waits one frame

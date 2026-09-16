@@ -8,7 +8,7 @@
 const ZONES = {
   1: {
     name: 'BEDROCK VILLAGE', sub: 'what the fire left behind', music: 'village',
-    w: 58, h: 44, base: ['tile_grass', 'tile_grass', 'tile_grass2'], rough: 'tile_dirt', path: 'tile_path',
+    goal: 'THE VILLAGE GATE', w: 92, h: 66, base: ['tile_grass', 'tile_grass', 'tile_grass2'], rough: 'tile_dirt', path: 'tile_path',
     scatter: ['prop_bush', 'prop_fern', 'prop_rock', 'prop_tree', 'prop_bones'],
     trees: ['prop_tree', 'prop_palm'], hide: ['prop_bush'],
     enemies: ['compy', 'dodo', 'boar'], elite: 'raptor', encounters: 1,
@@ -16,7 +16,7 @@ const ZONES = {
   },
   2: {
     name: 'TAR JUNGLE', sub: 'sticky, steaming, full of teeth', music: 'village',
-    w: 62, h: 46, base: ['tile_moss', 'tile_grass', 'tile_moss'], rough: 'tile_dirt2', path: 'tile_dirt',
+    goal: 'THE TAR GATE', w: 96, h: 70, base: ['tile_moss', 'tile_grass', 'tile_moss'], rough: 'tile_dirt2', path: 'tile_dirt',
     scatter: ['prop_fern', 'prop_mushroom', 'prop_bush', 'prop_palm', 'prop_skull'],
     trees: ['prop_palm', 'prop_tree'], hide: ['prop_bush', 'prop_fern'],
     enemies: ['raptor', 'ptero', 'tarblob', 'lizard'], elite: 'tricera', encounters: 2,
@@ -24,7 +24,7 @@ const ZONES = {
   },
   3: {
     name: 'VOLCANO SLOPE', sub: "the raptor's road home", music: 'village',
-    w: 60, h: 46, base: ['tile_ash', 'tile_stone', 'tile_ash'], rough: 'tile_rubble', path: 'tile_stone',
+    goal: 'THE ASH GATE', w: 94, h: 70, base: ['tile_ash', 'tile_stone', 'tile_ash'], rough: 'tile_rubble', path: 'tile_stone',
     scatter: ['prop_rock', 'prop_deadtree', 'prop_bones', 'prop_skull'],
     trees: ['prop_deadtree'], hide: ['prop_rock'],
     enemies: ['lizard', 'brute', 'stego', 'raptor'], elite: 'trex', encounters: 3,
@@ -70,8 +70,8 @@ class Zone {
     const lane = (fx, fy) => ({ x: Math.floor(4 + fx * (this.w - 10)), y: Math.floor(4 + fy * (this.h - 10)) });
     this.start = lane(0.06, 0.5);
     pois.push(this.start);
-    const midCount = 6;
-    for (let i = 0; i < midCount; i++) pois.push(lane(0.14 + i * 0.12, r.float(0.16, 0.84)));
+    const midCount = 8;
+    for (let i = 0; i < midCount; i++) pois.push(lane(0.12 + i * 0.095, r.float(0.14, 0.86)));
     this.bossSpot = lane(0.93, 0.5);
     pois.push(this.bossSpot);
     // carve paths between consecutive points of interest
@@ -89,11 +89,11 @@ class Zone {
     this.addProp(sq.x * TILE + 16, (sq.y + 3) * TILE, 'prop_totem', { footW: 1, footH: 1 });
 
     // scenery: dense woods at the rim, open ground along the paths and squares
-    const tries = Math.floor(this.w * this.h * 0.3);
+    const tries = Math.floor(this.w * this.h * 0.14);   // sparse: the ruin should feel abandoned, not overgrown
     const openness = (x, y) => {
       let d2 = 1e9;
       for (const p of pois) d2 = Math.min(d2, (p.x - x) ** 2 + (p.y - y) ** 2);
-      return clamp(Math.sqrt(d2) / 9, 0, 1);       // 0 at a landmark, 1 far away
+      return clamp(Math.sqrt(d2) / 15, 0, 1);      // 0 at a landmark, 1 far away
     };
     for (let i = 0; i < tries; i++) {
       const x = r.int(2, this.w - 3), y = r.int(2, this.h - 3);
@@ -102,7 +102,7 @@ class Zone {
       for (let oy = -1; oy <= 1 && !near; oy++) for (let ox = -1; ox <= 1; ox++) if (this.inside(x + ox, y + oy) && this.tiles[this.idx(x + ox, y + oy)] === d.path) { near = true; break; }
       if (near) continue;
       const open = openness(x, y);
-      if (open < 0.35 && r.chance(0.72)) continue;   // keep the squares clear
+      if (open < 0.45 && r.chance(0.86)) continue;   // keep the squares and roads clear
       const roll = r.next();
       if (roll < 0.22 * open + 0.04) this.addProp(x * TILE + 16, y * TILE + 26, r.pick(d.trees), { footW: 1, footH: 1 });
       else if (roll < 0.55) this.addProp(x * TILE + 16, y * TILE + 26, r.pick(d.scatter), { footW: 1, footH: 1, solid: roll > 0.44 });
@@ -210,10 +210,10 @@ class Zone {
     }
     // the wandering mammoth trader walks its own circuit
     this.trader = new Trader(P[2].x * TILE + 16, P[2].y * TILE + 60);
-    this.trader.route = P.slice(1, P.length - 1).map(p => ({ x: p.x * TILE + 16, y: p.y * TILE + 40 }));
+    this.trader.spots = P.slice(1, P.length - 1).map(p => ({ x: p.x * TILE + 16, y: p.y * TILE + 40 }));
     this.entities.push(this.trader);
-    // the boss / exit
-    this.entities.push(new ZoneGoal(this.bossSpot.x * TILE + 16, this.bossSpot.y * TILE + 16, this.act));
+    // the way out of the valley
+    this.entities.push(new ZoneGoal(this.bossSpot.x * TILE + 16, this.bossSpot.y * TILE + 16, this.act, this.def.goal));
   }
 }
 
@@ -286,31 +286,114 @@ class Trader extends Entity {
   constructor(x, y) {
     super(x, y);
     this.actor = new Actor({ base: 'mammoth', x, y, scale: 1, clip: 'trader' });
-    this.prompt = 'TRADE'; this.leg = 0; this.wait = 0; this.r = 40;
+    this.prompt = 'TRADE'; this.leg = 0; this.wait = 0; this.r = 46;
+    this.here = 1; this.stay = rnd(16, 26); this.gone = 0; this.spots = null;
   }
-  update(dt) {
-    if (!this.route) return;
-    if (this.wait > 0) { this.wait -= dt; this.actor.play('trader'); }
-    else {
-      const t = this.route[this.leg % this.route.length];
-      this.actor.play('walk');
-      if (this.actor.moveTo(t.x, t.y, dt, 22)) { this.leg++; this.wait = rnd(4, 9); }
-    }
-    this.x = this.actor.x; this.y = this.actor.y;
+  // he does not walk a route. he is simply somewhere, and then he is not.
+  arrive(V) {
+    const near = this.spots && this.spots.length
+      ? this.spots.filter(p => dist(p.x, p.y, V.player.x, V.player.y) > 300 && dist(p.x, p.y, V.player.x, V.player.y) < 1100)
+      : [];
+    const p = near.length ? pick(near) : (this.spots ? pick(this.spots) : { x: this.x, y: this.y });
+    this.actor.x = this.x = p.x; this.actor.y = this.y = p.y;
+    this.here = 0; this.stay = rnd(18, 30); this.gone = 0;
+    AudioSys.sfx('horn', { vol: 0.5 });
+    Particles.dust(this.x, this.y, 18);
+  }
+  update(dt, V) {
+    this.actor.play('trader');
     this.actor.update(dt);
-    if (chance(dt * 0.12)) { AudioSys.sfx('pickup'); Dialogue.float(this.actor, pick(['Bell says: bargains!', 'Trunk-picked goods!', 'Ooo-ga! Best prices!'])); }
+    if (this.gone > 0) {
+      this.here = damp(this.here, 0, 5, dt);
+      this.gone -= dt;
+      if (this.gone <= 0 && V) this.arrive(V);
+      return;
+    }
+    this.here = damp(this.here, 1, 4, dt);
+    this.stay -= dt;
+    const far = V ? dist(this.x, this.y, V.player.x, V.player.y) > 260 : true;
+    if (this.stay <= 0 && far) {                      // packs up, but never in front of you
+      this.gone = rnd(9, 16);
+      Particles.dust(this.x, this.y, 14);
+      AudioSys.sfx('whoosh', { vol: 0.4 });
+    }
+    if (chance(dt * 0.14)) Dialogue.float(this.actor, pick(['Bell says: bargains!', 'Trunk-picked goods!', 'Ooo-ga! Best prices!', 'Two shells. No haggling.', 'Fresh off the tusk!']));
   }
-  draw() { this.actor.draw(); }
-  *interact(V) { Game.openShop(); yield 0; }
+  // the outfit: a trade awning, a loaded pack, beads, hoops and a headdress
+  draw() {
+    const a = clamp(this.here, 0, 1);
+    if (a < 0.02) return;
+    const ctx = Gfx.ctx, x = this.x, y = this.y, t = Time.t;
+    ctx.globalAlpha = a;
+    this.actor.draw({ alpha: a });
+    const top = y - 66;
+    // striped awning on four bone poles, swaying
+    const sway = Math.sin(t * 1.6) * 2;
+    for (const px of [-40, 34]) { Gfx.rect(x + px, top - 4, 4, 30, '#8a7f68'); Gfx.rect(x + px, top - 4, 2, 30, '#e8dfc6'); }
+    Gfx.round(x - 50, top - 20, 96, 12, 4, '#3a2415');
+    for (let i = 0; i < 6; i++) Gfx.rect(x - 48 + i * 16 + sway * 0.3, top - 18, 8, 9, i % 2 ? '#c2333c' : '#e8dfc6');
+    for (let i = 0; i < 5; i++) { const fx = x - 44 + i * 19 + sway; Gfx.round(fx, top - 9, 9, 7, 3, i % 2 ? '#2cb3a2' : '#ffa832'); }
+    // pack of wares strapped across the back
+    Gfx.round(x - 26, y - 62, 46, 24, 6, '#5c3a20');
+    Gfx.round(x - 24, y - 60, 42, 9, 4, '#85562f');
+    Gfx.sprite('prop_pot', x - 14, y - 60, { anchor: 'bc', scale: 0.5 });
+    Gfx.sprite('icon_coin', x + 4, y - 66, { anchor: 'c', scale: 0.8 });
+    Gfx.sprite('art_club', x + 18, y - 62, { anchor: 'bc', scale: 0.7, rot: 0.5 });
+    // shell beads round the neck, gold hoops on the tusks, feathers up top
+    for (let i = 0; i < 7; i++) {
+      const bx = x + 22 + i * 4, by = y - 44 + Math.abs(i - 3) * 2.2;
+      Gfx.circle(bx, by, 2.6, i % 2 ? '#ffe98a' : '#86e8d2');
+    }
+    Gfx.ring(x + 46, y - 22, 6, '#e0b93a', 2);
+    Gfx.ring(x + 52, y - 14, 5, '#e0b93a', 2);
+    for (let i = 0; i < 3; i++) {
+      const fa = -0.5 + i * 0.42 + Math.sin(t * 2 + i) * 0.06;
+      const bx = x + 28, by = y - 74;
+      Gfx.line(bx, by, bx + Math.cos(fa - 1.6) * 16, by + Math.sin(fa - 1.6) * 16, ['#c2333c', '#2cb3a2', '#ffa832'][i], 3);
+    }
+    Gfx.round(x + 20, y - 80, 18, 8, 3, '#7c3eb2');
+    // a lantern, so you can spot him across the ruin
+    Gfx.glow(x - 46, y - 34, 40, '#ffe98a', 0.26 * a);
+    Gfx.circle(x - 46, y - 34, 5, '#ffe98a');
+    if (a > 0.9 && chance(0.06)) Particles.sparkle(x + rnd(-40, 40), y - 50, 1, ['#ffe98a']);
+    ctx.globalAlpha = 1;
+  }
+  *interact(V) { if (this.here > 0.6) Game.openShop(); yield 0; }
 }
 
 class ZoneGoal extends Entity {
-  constructor(x, y, act) { super(x, y); this.act = act; this.prompt = 'CONFRONT'; this.t = 0; this.r = 30; }
-  update(dt) { this.t += dt; if (chance(dt * 4)) Particles.fire(this.x + rnd(-18, 18), this.y - 10, 1); }
+  constructor(x, y, act, label) {
+    super(x, y);
+    this.act = act; this.label = label || 'THE GATE';
+    this.prompt = 'GO THROUGH'; this.t = 0; this.r = 42;
+  }
+  update(dt) { this.t += dt; if (chance(dt * 3)) Particles.fire(this.x + rnd(-44, 44), this.y - 6, 1); }
   draw() {
-    Gfx.sprite('blaze_idle', this.x, this.y + 8, { anchor: 'bc', frame: Math.floor(this.t * 6) % 2, scale: 1 });
-    const k = 0.6 + Math.sin(this.t * 4) * 0.4;
-    Gfx.text('▶ BLAZE', this.x, this.y - 74, { color: k > 0.6 ? '#ffa832' : '#ffe08a', align: 'center', outline: true, scale: 1.2 });
+    const x = this.x, y = this.y + 10, t = this.t;
+    // two standing stones and a lintel, lashed with rope and hung with skulls
+    Gfx.shadow(x, y + 2, 150, 0.3);
+    for (const sx of [-54, 54]) {
+      Gfx.round(x + sx - 17, y - 104, 34, 106, 6, '#2e2b38');
+      Gfx.round(x + sx - 14, y - 101, 28, 100, 5, '#4d4a5c');
+      Gfx.round(x + sx - 14, y - 101, 11, 98, 5, '#6e6b80');
+      for (let i = 0; i < 3; i++) Gfx.rectA(x + sx - 10, y - 88 + i * 30, 20, 3, '#2e2b38', 0.6);
+    }
+    Gfx.round(x - 74, y - 128, 148, 30, 7, '#2e2b38');
+    Gfx.round(x - 70, y - 125, 140, 24, 6, '#6e6b80');
+    Gfx.round(x - 70, y - 125, 140, 9, 6, '#9391a6');
+    // rope binding and trophy skulls
+    for (const sx of [-54, 54]) for (let i = 0; i < 4; i++) Gfx.rectA(x + sx - 16, y - 100 + i * 5, 32, 3, '#85562f', 0.8);
+    Gfx.sprite('prop_skull', x, y - 126, { anchor: 'bc', scale: 0.62 });
+    Gfx.sprite('icon_skull', x - 40, y - 108, { anchor: 'c', scale: 1 });
+    Gfx.sprite('icon_skull', x + 40, y - 108, { anchor: 'c', scale: 1 });
+    // whatever is beyond it, glowing
+    const k = 0.55 + Math.sin(t * 2.2) * 0.45;
+    Gfx.glow(x, y - 54, 70, '#e06a1b', 0.16 + k * 0.14);
+    Gfx.ctx.globalAlpha = 0.30 + k * 0.16;
+    Gfx.round(x - 40, y - 100, 80, 100, 8, '#e06a1b');
+    Gfx.ctx.globalAlpha = 1;
+    Gfx.text(this.label, x, y - 156, { color: k > 0.6 ? '#ffa832' : '#ffe08a', align: 'center', outline: true, outlineWidth: 2, scale: 1.3 });
+    Gfx.text('the raptor went this way', x, y - 138, { color: '#a79bb4', align: 'center', scale: 1 });
   }
   *interact(V) { Game.enterBoss(); yield 0; }
 }
@@ -444,6 +527,7 @@ class VillageScene {
     this.player.sprinting = false;
     this.cam.follow = this.player; this.cam.lookAt(this.player.x, this.player.y, true);
     this.footT = 0; this.puffT = 0; this.bellyPhase = 0;
+    this.dodgeT = 0; this.dodgeCool = 0; this.dodgeDir = { x: 1, y: 0 };
     this.birds = []; this.ambientT = 3; this.showMap = false;
   }
   enter() {
@@ -470,14 +554,39 @@ class VillageScene {
     }
     const mag = Math.hypot(ix, iy);
     if (mag > 1) { ix /= mag; iy /= mag; }
+    // ---- the dodge roll: a short shove in the last direction you leaned,
+    // during which nothing can get a good look at you
+    this.dodgeT = Math.max(0, this.dodgeT - dt);
+    this.dodgeCool = Math.max(0, this.dodgeCool - dt);
+    const wantDodge = !this.locked && (Input.pressed('Space') || this.dodgeTap);
+    this.dodgeTap = false;
+    if (wantDodge && this.dodgeT <= 0 && this.dodgeCool <= 0 && run.stamina > 12) {
+      this.dodgeT = 0.34; this.dodgeCool = 0.62;
+      run.stamina = clamp(run.stamina - 12, 0, run.maxStamina);
+      this.dodgeDir = mag > 0.1 ? { x: ix, y: iy } : { x: p.facing, y: 0 };
+      p.vx = this.dodgeDir.x * 430; p.vy = this.dodgeDir.y * 430;
+      p.squash(0.3);
+      AudioSys.sfx('whoosh', { vol: 0.6 });
+      Particles.dust(p.x, p.y, 12);
+      Juice.shake(2.5, 0.1);
+    }
+    const rolling = this.dodgeT > 0;
     const wantSprint = (Input.isDown('ShiftLeft', 'ShiftRight') || this.sprintHeld) && run.stamina > 1;
     p.sprinting = wantSprint && mag > 0.1;
     const tired = run.stamina <= 0.5;
     const maxSpeed = (p.sprinting ? 216 : 138) * (tired ? 0.52 : 1);
     // deliberately loose control: heavy acceleration and a little slide
     const accel = mag > 0.1 ? 900 : 620;
-    p.vx = damp(p.vx, ix * maxSpeed, accel / 90, dt);
-    p.vy = damp(p.vy, iy * maxSpeed, accel / 90, dt);
+    if (rolling) {
+      p.vx = damp(p.vx, this.dodgeDir.x * 150, 3, dt);
+      p.vy = damp(p.vy, this.dodgeDir.y * 150, 3, dt);
+      p.rot = (p.rot || 0) + dt * 13 * (this.dodgeDir.x >= 0 ? 1 : -1);
+      if (chance(dt * 40)) Particles.dust(p.x, p.y, 1);
+    } else {
+      p.rot = 0;
+      p.vx = damp(p.vx, ix * maxSpeed, accel / 90, dt);
+      p.vy = damp(p.vy, iy * maxSpeed, accel / 90, dt);
+    }
     const spd = Math.hypot(p.vx, p.vy);
     // collide on each axis so walls slide instead of sticking
     const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
@@ -491,7 +600,7 @@ class VillageScene {
     else run.stamina = clamp(run.stamina + dt * 7.5, 0, run.maxStamina);
     if (tired && chance(dt * 1.4)) { Emotes.show(p, 'sweat', 0.9); if (chance(0.3)) AudioSys.sfx('stamina_low'); }
     // animation: the belly leads, the body follows
-    p.play(spd > 20 ? (p.sprinting ? 'run' : 'walk') : 'idle');
+    p.play(rolling ? 'dash' : spd > 20 ? (p.sprinting ? 'run' : 'walk') : 'idle');
     this.bellyPhase += dt * (4 + spd * 0.045);
     const wob = Math.sin(this.bellyPhase);
     p.sx = 1 + wob * (0.035 + spd * 0.00035) + (tired ? 0.02 : 0);
@@ -508,7 +617,7 @@ class VillageScene {
       }
     }
     // hiding
-    this.hidden = false;
+    this.hidden = rolling;
     for (const o of this.zone.objects) if (o.hide && dist2(o.x, o.y, p.x, p.y) < 26 * 26) this.hidden = true;
     // entities
     for (const e of this.zone.entities) e.update(dt, this);
@@ -714,7 +823,7 @@ class VillageScene {
     }
     if (this.showMap) this.drawMinimap();
     if (Input.touch) this.drawTouchControls();
-    else Gfx.text('WASD / arrows to move  -  SHIFT to run  -  E to interact  -  M for the map', W / 2, H - 22, { color: '#7a6d8a', align: 'center' });
+    else Gfx.text('WASD to move  -  SHIFT to run  -  SPACE to dodge  -  E to interact  -  M for the map', W / 2, H - 22, { color: '#7a6d8a', align: 'center' });
     UI.iconButton(W - 40, 12, 28, 26, 'icon_menu', () => Game.pause(), { tip: 'Menu (Esc)' });
   }
   drawTouchControls() {
@@ -725,9 +834,11 @@ class VillageScene {
     Gfx.ctx.globalAlpha = 0.8; Gfx.circle(k.x, k.y, 26, '#5c3a20'); Gfx.ring(k.x, k.y, 26, '#ffe98a', 2);
     Gfx.ctx.globalAlpha = 1;
     UI.button(W - 130, H - 150, 112, 46, this.prompt ? this.prompt.prompt : 'ACT', () => { this.interactTapped = true; }, { disabled: !this.prompt, scale: 1.2 });
-    const spr = UI.button(W - 130, H - 94, 112, 46, 'RUN', () => { }, { fill: this.sprintHeld ? '#85562f' : '#3b3048', scale: 1.2 });
+    UI.button(W - 130, H - 94, 112, 46, 'RUN', () => { }, { fill: this.sprintHeld ? '#85562f' : '#3b3048', scale: 1.2 });
     if (Input.down && UI.hovered(W - 130, H - 94, 112, 46)) this.sprintHeld = true;
     if (!Input.down) this.sprintHeld = false;
+    UI.button(W - 130, H - 38, 112, 32, 'DODGE', () => { this.dodgeTap = true; },
+      { fill: this.dodgeCool > 0 ? '#3b3048' : '#4b2070', disabled: this.dodgeCool > 0, scale: 1.1 });
   }
   click() { }
 }

@@ -397,6 +397,8 @@ const AudioSys = {
     return out;
   },
   playLeadNote(midi, dur, vel = 1) { if (this.ready) this.lead(this.now(), midi, dur, vel, this.songGain || this.musicBus); },
+  // the player's own voice, pitched wherever they are actually holding the chant
+  singNow(midi, dur = 0.3, vel = 1, vowel = 'ah') { if (this.ready) this.chant(this.now(), midi, dur, vel, this.songGain || this.musicBus, vowel); },
   playChordNow(midis, dur, vel = 1) { if (this.ready) this.chord(this.now(), midis, dur, vel, this.songGain || this.musicBus); },
 
   // --- SFX -----------------------------------------------------------------
@@ -456,6 +458,8 @@ const AudioSys = {
       case 'coinflip': tone('sine', 2400, 2400, 0.05, 0.12); tone('sine', 3200, 3200, 0.08, 0.1, 0.05); break;
       case 'cage': nz('bandpass', 1800, 6, 0.3, 0.4); tone('triangle', 400, 380, 0.3, 0.15); tone('triangle', 800, 760, 0.2, 0.1, 0.05); break;
       // ---- rebuilt game: rhythm, dialogue and world sounds -----------------
+      case 'strum': nz('bandpass', 2600, 1.2, 0.055, 0.14 * (p.vol ?? 1)); tone('triangle', 520, 300, 0.07, 0.05 * (p.vol ?? 1)); break;
+      case 'miss': tone('sawtooth', 190, 92, 0.16, 0.10 * (p.vol ?? 1)); nz('lowpass', 500, 0.8, 0.12, 0.06 * (p.vol ?? 1)); break;
       case 'sick': tone('sine', 1760, 2637, 0.09, 0.13); tone('sine', 2637, 3136, 0.13, 0.07, 0.03); tone('triangle', 3520, 3520, 0.06, 0.04, 0.06); break;
       case 'good': tone('sine', 1320, 1568, 0.07, 0.09); break;
       case 'ghost': nz('bandpass', 420, 2, 0.07, 0.22); tone('sine', 150, 96, 0.08, 0.18); break;

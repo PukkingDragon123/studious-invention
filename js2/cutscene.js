@@ -1,88 +1,16 @@
 // ---------------------------------------------------------------------------
-// cutscene.js - the cinematic opening: sets, staged actors, camera work and
-// the four mini-games, all driven by one coroutine script.
+// cutscene.js - the opening: one morning at the Rockbottoms', staged across
+// the World strips, with the interactive beats handed off to mini-games.
 // ---------------------------------------------------------------------------
 'use strict';
-
-// A "set" is a painted backdrop in world coordinates the camera moves around.
-const Sets = {
-  house_ext(t, o = {}, cam) {
-    const L = cam ? cam.x - W : -400, R = cam ? cam.x + W : 1600;
-    const dawn = o.dusk
-      ? ['#2a1430', '#5c1f3d', '#a03a68', '#e06a1b', '#ffa832']
-      : ['#1d3d72', '#3570c0', '#6aa9ee', '#ffb0cf', '#ffe08a'];
-    Gfx.bands(L - 200, -520, (R - L) + 400, 700, dawn);
-    if (!o.dusk) { Gfx.circle(520, 30, 26, '#ffe98a'); Gfx.glow(520, 30, 130, '#ffe98a', 0.3); }
-    else { Gfx.circle(1120, 10, 30, '#ef6a5e'); Gfx.glow(1120, 10, 220, '#e06a1b', 0.3); }
-    const ctx = Gfx.ctx;
-    const step = 40, x0 = Math.floor((L - 200) / step) * step, x1 = R + 200;
-    ctx.fillStyle = o.dusk ? '#3f0e18' : '#27632f';
-    ctx.beginPath(); ctx.moveTo(x0, 140);
-    for (let x = x0; x <= x1; x += step) ctx.lineTo(x, 80 + Math.sin(x * 0.006) * 46 + Math.sin(x * 0.017) * 18);
-    ctx.lineTo(x1, 300); ctx.lineTo(x0, 300); ctx.fill();
-    ctx.fillStyle = o.dusk ? '#58203c' : '#3f9a45';
-    ctx.beginPath(); ctx.moveTo(x0, 170);
-    for (let x = x0; x <= x1; x += step) ctx.lineTo(x, 132 + Math.sin(x * 0.01 + 2) * 26);
-    ctx.lineTo(x1, 320); ctx.lineTo(x0, 320); ctx.fill();
-    Gfx.rect(x0, 176, x1 - x0, 400, o.dusk ? '#3a2415' : '#5c3a20');
-    Gfx.rect(x0, 176, x1 - x0, 5, o.dusk ? '#5c3a20' : '#85562f');
-    for (let x = Math.floor(x0 / 64) * 64; x < x1; x += 64) Gfx.sprite(((x / 64) | 0) % 3 === 0 ? 'prop_bush' : 'prop_fern', x, 186, { anchor: 'bc', alpha: 0.9 });
-    for (let x = Math.floor(x0 / 260) * 260; x < x1; x += 260) if (((x / 260) | 0) % 3) Gfx.sprite(((x / 260) | 0) % 2 ? 'prop_palm' : 'prop_tree', x + 40, 184, { anchor: 'bc', alpha: 0.85 });
-    Gfx.sprite('prop_palm', 80, 182, { anchor: 'bc' });
-    Gfx.sprite('prop_tree', 760, 184, { anchor: 'bc' });
-    Gfx.sprite(o.wreck ? 'prop_hut_ruin' : 'prop_hut', 420, 190, { anchor: 'bc', scale: 2 });
-    Gfx.sprite('prop_totem', 250, 188, { anchor: 'bc' });
-    if (!o.wreck) for (let i = 0; i < 2; i++) if (chance(0.3)) Particles.spawn(420 + rnd(-6, 6), 20, { n: 1, color: ['#9391a6', '#7a6d8a'], speed: 10, gravity: -18, life: 2.4, size: 4, sizeEnd: 0 });
-    if (o.wreck) {
-      for (let i = 0; i < 3; i++) if (chance(0.5)) Particles.fire(420 + rnd(-70, 70), 180 + rnd(-30, 10), 1);
-      for (let i = 0; i < 2; i++) if (chance(0.4)) Particles.spawn(420 + rnd(-80, 80), 120, { n: 1, color: ['#3b3048', '#574a66'], speed: 12, gravity: -20, life: 3, size: 7, sizeEnd: 0 });
-    }
-  },
-  house_int(t, o = {}) {
-    // wall above, floor below, a clear skirting line between them
-    Gfx.rect(-200, -300, 1400, 500, '#241c2e');
-    for (let y = -160; y < 190; y += 40) for (let x = -200; x < 1200; x += 32) Gfx.sprite('house_wall', x, y, { anchor: 'tl' });
-    Gfx.rectA(-200, -300, 1400, 500, '#120c16', 0.42);       // walls sit in shadow
-    for (let y = 190; y < 460; y += 32) for (let x = -200; x < 1200; x += 32) Gfx.sprite('house_floor', x, y, { anchor: 'tl' });
-    // beaten earth over the stone, so the floor is not the same surface as the wall
-    Gfx.rectA(-200, 190, 1400, 270, '#5c3a20', 0.52);
-    const g = Gfx.ctx.createLinearGradient(0, 190, 0, 460);
-    g.addColorStop(0, 'rgba(6,3,10,0.70)'); g.addColorStop(0.4, 'rgba(6,3,10,0.15)'); g.addColorStop(1, 'rgba(6,3,10,0.5)');
-    Gfx.ctx.fillStyle = g; Gfx.ctx.fillRect(-200, 190, 1400, 270);
-    Gfx.rect(-200, 180, 1400, 10, '#120c16');
-    Gfx.rectA(-200, 176, 1400, 4, '#b07a45', 0.5);
-    Gfx.rectA(-200, 190, 1400, 16, '#000000', 0.45);
-    Gfx.ctx.globalAlpha = 0.3; Gfx.round(330, 272, 320, 46, 8, '#58203c'); Gfx.ctx.globalAlpha = 1;
-    Gfx.sprite('house_shelf', 330, 178, { anchor: 'bc' });
-    Gfx.sprite('prop_skull', 585, 172, { anchor: 'bc', scale: 0.8, alpha: 0.9 });
-    Gfx.sprite('house_bed', 930, 268, { anchor: 'bc' });
-    Gfx.sprite('house_table', 470, 272, { anchor: 'bc' });
-    Gfx.sprite('stove_pit', 720, 250, { anchor: 'bc' });
-    Gfx.sprite('prop_pot', 215, 252, { anchor: 'bc' });
-    Gfx.sprite('prop_barrel', 60, 254, { anchor: 'bc' });
-    if (o.fire > 0) {
-      for (let i = 0; i < 3; i++) if (chance(o.fire)) Particles.fire(720 + rnd(-26, 26), 228, 1);
-      Gfx.glow(720, 210, 240, '#ff9a20', 0.22 * o.fire * (0.85 + Math.sin(t * 9) * 0.15));
-    }
-  },
-  shower(t) {
-    Gfx.bands(-200, -300, 1600, 480, ['#1d3d72', '#3570c0', '#6aa9ee', '#a8d8ff']);
-    Gfx.rect(-200, 176, 1600, 300, '#5c3a20');
-    Gfx.rect(-200, 176, 1600, 5, '#85562f');
-    for (let x = -160; x < 1300; x += 96) Gfx.sprite('prop_fern', x, 188, { anchor: 'bc', alpha: 0.9 });
-    Gfx.sprite('shower_frame', 470, 196, { anchor: 'bc' });
-    Gfx.sprite('prop_palm', 220, 186, { anchor: 'bc' });
-    Gfx.sprite('prop_palm', 760, 190, { anchor: 'bc', flip: true });
-  },
-};
 
 class CutsceneScene {
   constructor(script, o = {}) {
     this.scriptFn = script; this.o = o;
     this.cam = new Camera(); this.cam.zoom = 1.6;
-    this.actors = {}; this.set = 'house_ext'; this.setOpt = {};
+    this.actors = {}; this.set = 'home'; this.setOpt = {};
     this.t = 0; this.fade = 1; this.fadeTarget = 0; this.title = null; this.skipT = 0;
-    this.done = false; this.hud = null;
+    this.done = false; this.hud = null; this.overlay = null;
   }
   enter() {
     Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
@@ -93,6 +21,8 @@ class CutsceneScene {
   // ---------------------------------------------------------------- helpers
   add(key, o) { const a = new Actor(o); this.actors[key] = a; return a; }
   get(key) { return this.actors[key]; }
+  show(...keys) { for (const k of keys) if (this.actors[k]) this.actors[k].visible = true; }
+  hide(...keys) { for (const k of keys) if (this.actors[k]) this.actors[k].visible = false; }
   *say(who, text, o = {}) {
     const at = o.at === undefined ? this.actors[who.toLowerCase()] : o.at;
     yield* Dialogue.say(who, text, Object.assign({ at }, o));
@@ -105,11 +35,22 @@ class CutsceneScene {
   *fadeOut(d = 0.6) { this.fadeTarget = 1; yield d; }
   *fadeIn(d = 0.6) { this.fadeTarget = 0; yield d; }
   *cut(set, opt = {}) { this.set = set; this.setOpt = opt; yield 0; }
+  // A mini-game draws over the whole screen, so the scene fade has to be down
+  // while it runs or the stage is simply black behind it.
+  *mini(game) {
+    const f = this.fade, ft = this.fadeTarget;
+    this.fade = 0; this.fadeTarget = 0;
+    const r = yield* game.run();
+    this.fade = f; this.fadeTarget = ft;
+    return r;
+  }
   *walk(key, x, y, speed) {
     const a = this.actors[key]; a.play('walk');
     while (!a.moveTo(x, y ?? a.y, Time.dt, speed || a.speed)) yield 0;
     a.play('idle');
   }
+  *pan(x, y, zoom, hold = 0) { this.cam.lookAt(x, y); if (zoom) this.cam.zoomTo(zoom); if (hold) yield hold; else yield 0; }
+  camX() { return this.cam.x - W / (2 * this.cam.zoom); }
   // --------------------------------------------------------------- lifecycle
   update(dt) {
     this.t += dt;
@@ -118,8 +59,6 @@ class CutsceneScene {
     for (const k in this.actors) this.actors[k].update(dt);
     Dialogue.update();
     if (this.title) this.title.t += dt;
-    if (Game.mini) Game.mini.step && null;
-    // skip: hold to fast-forward the whole opening
     if (Input.isDown('Escape') || (Input.touch && UI.hovered(W - 130, 12, 116, 34) && Input.down)) {
       this.skipT += dt;
       if (this.skipT > 0.9 && this.o.onSkip) { this.skipT = -99; this.o.onSkip(); }
@@ -128,7 +67,7 @@ class CutsceneScene {
   draw() {
     Gfx.clear('#120c16');
     this.cam.apply(Gfx.ctx);
-    (Sets[this.set] || Sets.house_ext)(this.t, this.setOpt, this.cam);
+    (World[this.set] || World.home)(this.t, this.setOpt, this.camX());
     const list = Object.values(this.actors).filter(a => a.visible).map(a => ({ y: a.y, a }));
     list.sort((p, q) => p.y - q.y);
     for (const it of list) it.a.draw();
@@ -137,11 +76,13 @@ class CutsceneScene {
     Popups.draw(true);
     Emotes.draw();
     Floaters.draw();
+    if (this.overlay) this.overlay(true);
     this.cam.restore(Gfx.ctx);
     Particles.draw(Gfx.ctx, false);
     FX.draw(false);
     Popups.draw(false);
     if (Game.mini) Game.mini.draw();
+    if (this.overlay) this.overlay(false);
     if (this.hud) this.hud();
     Dialogue.draw();
     if (this.title) {
@@ -169,201 +110,390 @@ class CutsceneScene {
 // ---------------------------------------------------------------------------
 function* introScript(S) {
   const run = Game.run;
-  // ------------------------------------------------------------ 1. dawn
-  S.set = 'house_ext'; S.setOpt = {};
-  S.cam.zoom = 2.2; S.cam.lookAt(420, 120, true);
-  AudioSys.play('home', { fade: 1.2 });
-  yield* S.fadeIn(1.2);
-  yield 0.6;
-  yield* S.titleCard('ROCK BOTTOM', '10,000 BC. a tuesday.', 2.8);
-  S.cam.zoomTo(1.5); S.cam.lookAt(420, 110);
-  const pt = S.add('ptero', { base: 'ptero', x: -60, y: -30, scale: 1, shadow: false });
-  pt.clipName = ''; pt.play('fly');
-  Co.run(function* () { for (let i = 0; i < 300; i++) { pt.x += Time.dt * 260; pt.y = -40 + Math.sin(Time.t * 3) * 14; yield 0; } }());
-  yield 0.5; AudioSys.sfx('roar', { pitch: 420, vol: 0.5, len: 0.5 });
-  yield 1.6;
-  pt.visible = false;
-  yield* S.fadeOut(0.5);
+  const setOpt = o => { S.setOpt = Object.assign({}, S.setOpt, o); };
 
-  // ------------------------------------------------------------ 2. kitchen
-  yield* S.cut('house_int', { fire: 0 });
-  S.cam.zoom = 1.42; S.cam.lookAt(500, 218, true);
-  const bronk = S.add('bronk', { base: 'bronk', x: 300, y: 300, scale: 1 });
-  const vela = S.add('vela', { base: 'vela', x: 520, y: 300, scale: 1, facing: 1 });
-  const blaze = S.add('blaze', { base: 'blaze', x: 726, y: 298, scale: 1, facing: -1 });
-  blaze.play('idle');
-  yield* S.fadeIn(0.6);
-  yield 0.5;
-  yield* S.say('VELA', "Bronk. The stove's gone out. Again.", { at: vela });
-  bronk.play('idle'); bronk.facing = 1;
-  yield* S.say('BRONK', "That stove is the laziest animal in this valley.", { at: bronk });
-  S.cam.lookAt(700, 226); S.cam.zoomTo(1.8);
-  yield 0.7;
-  Emotes.show(blaze, 'anger', 1.6); AudioSys.sfx('detect');
-  yield* S.say('', "BLAZE the cook-fire raptor has been chained to this pit for six years. He has opinions about it.", { at: blaze, portrait: 'blaze_idle' });
-  S.cam.zoomTo(1.45); S.cam.lookAt(540, 226);
-  yield 0.3;
-  // --- minigame 1
-  const bell = yield* new BellowsGame({}).run();
-  S.setOpt = { fire: bell && bell.win ? 1 : 0.4 };
-  blaze.flash('#ffa832', 0.3);
-  Juice.flash('#ffa832', 0.45, 3);
-  AudioSys.sfx('fire_whoosh');
-  Particles.fire(720, 228, 26);
-  if (bell && bell.win) yield* S.say('VELA', "There he goes. Breakfast in two shakes.", { at: vela });
-  else yield* S.say('VELA', "Half a flame. Half a breakfast. Well done.", { at: vela });
-  Emotes.show(blaze, 'anger', 2);
-  yield 0.4;
-
-  // ------------------------------------------------------------ 3. breakfast
-  S.cam.lookAt(500, 230); S.cam.zoomTo(1.6);
-  const kidA = S.add('kida', { base: 'kid_a', x: 382, y: 302, scale: 1 });
-  const kidB = S.add('kidb', { base: 'kid_b', x: 560, y: 304, scale: 1, facing: -1 });
-  yield* S.say('VELA', "BREAKFAST! Sit down before these two eat the bone as well.", { at: vela });
-  bronk.x = 470; bronk.y = 306; vela.x = 620; vela.facing = -1; bronk.play('eat'); kidA.play('eat'); kidB.play('eat');
-  const feast = yield* new FeastGame({}).run();
-  bronk.play('idle'); kidA.play('idle'); kidB.play('idle');
-  AudioSys.sfx('burp'); Juice.shake(6, 0.4);
-  Popups.add(bronk.x, bronk.top - 10, 'BUUURP', '#a8e878', { scale: 2, life: 1.4 });
-  yield 0.9;
-  yield* S.say('VELA', "Charming. The children are watching.", { at: vela });
-  yield* S.say('PEBBLE', "Do it again, dad!", { at: kidA });
-  run.gold += Math.round((feast ? feast.eaten : 0.5) * 30);
-  yield 0.3;
-
-  // ------------------------------------------------------------ 4. shower
-  yield* S.fadeOut(0.5);
-  yield* S.cut('shower', {});
-  for (const k of ['vela', 'kida', 'kidb', 'blaze']) S.get(k).visible = false;
-  bronk.x = 452; bronk.y = 194; bronk.play('idle'); bronk.facing = 1;
-  const mam = S.add('mam', { base: 'mammoth', x: 660, y: 196, scale: 1, facing: -1, clip: 'shower' });
-  S.cam.zoom = 1.45; S.cam.lookAt(540, 118, true);
-  yield* S.fadeIn(0.6);
-  yield* S.say('BRONK', "Morning, Trunks. Warm one today, eh?", { at: bronk });
-  const show = yield* new ShowerGame({}).run();
-  Particles.splash(470, 240, 30);
-  AudioSys.sfx('spray');
-  yield 0.5;
-  if (show && show.win) { run.hp = Math.min(run.maxHp, run.hp + 6); Popups.add(bronk.x, bronk.top, 'SQUEAKY CLEAN +6 HP', '#86e8d2', { scale: 1.2, life: 1.6 }); }
-  yield 0.8;
-
-  // ------------------------------------------------------------ 5. the drive
-  yield* S.fadeOut(0.5);
-  yield* S.cut('house_ext', {});
-  mam.visible = false;
-  for (const k of ['vela', 'kida', 'kidb']) { S.get(k).visible = true; }
-  vela.x = 500; vela.y = 200; vela.facing = 1;
-  kidA.x = 545; kidA.y = 202; kidB.x = 575; kidB.y = 200;
-  bronk.x = 360; bronk.y = 200; bronk.facing = -1;
-  S.cam.zoom = 1.7; S.cam.lookAt(460, 130, true);
-  yield* S.fadeIn(0.6);
-  yield* S.say('VELA', "Quarry. Rocks. Home by dark. Try not to be eaten.", { at: vela });
-  yield* S.say('BRONK', "Love you too.", { at: bronk });
-  bronk.facing = 1;
-  AudioSys.sfx('car_start');
-  yield 0.6;
-  yield* S.fadeOut(0.45);
-  AudioSys.play('drive', { fade: 0.3 });
-  S.fade = 0; S.fadeTarget = 0;
-  const drive = yield* new DriveGame({ goal: 2000 }).run();
-  S.fade = 1; S.fadeTarget = 1;
-  run.gold += (drive ? drive.shells : 0) * 4;
-  // --- the T-rex
-  S.set = 'house_ext'; S.setOpt = {};
-  S.cam.zoom = 1.4; S.cam.lookAt(470, 110, true);
-  bronk.visible = true; bronk.x = 300; bronk.y = 200; bronk.play('drive'); bronk.facing = 1;
-  for (const k of ['vela', 'kida', 'kidb']) S.get(k).visible = false;
-  const trex = S.add('trex', { base: 'trex', x: 980, y: 210, scale: 1, facing: -1 });
-  trex.play('roar');
-  yield* S.fadeIn(0.5);
-  yield 0.3;
-  AudioSys.sfx('roar', { pitch: 48, vol: 1, len: 1.7 });
-  Juice.shake(14, 1.1); Juice.flash('#ffffff', 0.35, 4);
-  S.cam.zoomTo(2.1); S.cam.lookAt(860, 130);
-  yield 1.5;
-  bronk.play('shock');
-  S.cam.lookAt(360, 120); S.cam.zoomTo(2.4);
-  yield* S.say('BRONK', "NOPE. NOPE. NOPE.", { at: bronk });
-  bronk.facing = -1; bronk.play('drive');
-  AudioSys.play('chase', { fade: 0.2 });
-  Co.run(function* () { for (let i = 0; i < 240; i++) { bronk.x -= Time.dt * 420; trex.x += Time.dt * 60; Particles.dust(bronk.x + 30, bronk.y, 1); yield 0; } }());
-  S.cam.zoomTo(1.5); S.cam.lookAt(200, 120);
-  yield 1.4;
-  yield* S.fadeOut(0.7);
-  trex.visible = false;
-
-  // ------------------------------------------------------------ 6. the wreck
-  yield* S.cut('house_ext', { dusk: true, wreck: true });
-  bronk.visible = true; bronk.x = 180; bronk.y = 200; bronk.play('shock'); bronk.facing = 1;
-  S.cam.zoom = 1.5; S.cam.lookAt(420, 120, true);
-  AudioSys.stop(0.4);
-  yield* S.fadeIn(1.0);
-  AudioSys.sfx('rumble', { vol: 0.7, len: 1.4 });
-  yield 1.2;
-  yield* S.say('BRONK', "...Vela? PEBBLE? ROXY?", { at: bronk });
-  // Blaze flees along the ridge with the family
-  blaze.visible = true; blaze.x = 700; blaze.y = 196; blaze.facing = 1; blaze.play('walk', { fps: 14 });
-  vela.visible = true; vela.x = 760; vela.y = 190; vela.play('cry'); vela.scale = 0.8;
-  kidA.visible = true; kidA.x = 790; kidA.y = 188; kidA.scale = 0.8;
-  kidB.visible = true; kidB.x = 812; kidB.y = 188; kidB.scale = 0.8;
-  S.cam.lookAt(760, 110); S.cam.zoomTo(1.9);
-  AudioSys.play('chase', { fade: 0.2, intensity: 2 });
-  yield 0.6;
-  yield* S.say('VELA', "BRONK! It came for the CHAIN, Bronk! It came for the CHAIN!", { at: vela });
-  Emotes.show(blaze, 'anger', 1.4);
-  yield* S.say('BLAZE', "Six years of your breakfasts. Six years. Now you can chase ME for a while.", { at: blaze });
-  // --- the futile chase: the bar drains no matter how hard you mash
-  bronk.play('walk', { fps: 16 });
-  let stam = 1, mash = 0;
-  S.hud = () => {
-    Gfx.rectA(W / 2 - 200, H - 120, 400, 56, '#120c16', 0.8);
-    Gfx.text('MASH TO RUN', W / 2, H - 114, { color: '#ffe98a', align: 'center', scale: 1.3 });
-    Gfx.bar(W / 2 - 180, H - 88, 360, 16, stam, stam > 0.35 ? '#6cc95c' : '#ef6a5e', { bg: '#14331e' });
-    Gfx.text('STAMINA', W / 2, H - 66, { color: '#7a6d8a', align: 'center' });
-  };
-  S.cam.zoomTo(1.6);
-  const chaseCo = Co.run(function* () {
-    let t = 0;
-    while (t < 6.2) {
-      yield 0; t += Time.dt;
-      const pressed = Input.pressed('Space', 'KeyE', 'Enter') || Input.clicks.length;
-      if (pressed) { mash++; stam = Math.max(0, stam - 0.012); bronk.x += 16; Particles.dust(bronk.x - 14, bronk.y, 2); AudioSys.sfx('step'); }
-      stam = Math.max(0, stam - Time.dt * 0.17);
-      blaze.x += Time.dt * 96; vela.x += Time.dt * 96; kidA.x += Time.dt * 96; kidB.x += Time.dt * 96;
-      bronk.x += Time.dt * (40 + stam * 70);
-      S.cam.lookAt(bronk.x + 120, 120);
-      if (chance(Time.dt * 3)) Emotes.show(bronk, 'sweat', 0.7);
-      if (stam <= 0) break;
+  // ====================================================== 1. THE ALARM DODO
+  S.set = 'home'; S.setOpt = { night: true, fire: 0 };
+  S.cam.zoom = 2.1; S.cam.lookAt(HOME.bed + 60, 320, true);
+  AudioSys.play('home', { fade: 1.4 });
+  yield* S.fadeIn(1.4);
+  const bronk = S.add('bronk', { base: 'bronk', x: HOME.bed + 10, y: GY, scale: 1, facing: 1 });
+  bronk.play('sleep');
+  const dodo = S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 58, scale: 0.9, facing: -1 });
+  yield 1.0;
+  // snoring z's
+  Co.run(function* () {
+    for (let i = 0; i < 160; i++) {
+      if (bronk.clipName !== 'sleep') return;
+      Popups.add(bronk.x + 22, bronk.y - 44, 'Z', '#a79bb4', { scale: 1.4, life: 1.6, vy: -26 });
+      yield 0.85;
     }
   }());
-  yield () => chaseCo.done;
-  S.hud = null;
-  bronk.play('hurt'); bronk.squash(0.3);
-  AudioSys.sfx('thud'); Juice.shake(8, 0.4);
-  Particles.dust(bronk.x, bronk.y, 14);
-  S.cam.zoomTo(2.4); S.cam.lookAt(bronk.x, bronk.y - 40);
-  yield 1.0;
-  blaze.visible = vela.visible = kidA.visible = kidB.visible = false;
-  AudioSys.stop(0.8);
-  yield* S.say('BRONK', "...too...much...breakfast...", { at: bronk });
+  yield* S.titleCard('ROCK BOTTOM', '10,000 BC. a tuesday.', 2.6);
+  yield 0.4;
+  // the dodo goes off
+  S.cam.lookAt(HOME.perch - 10, 316); S.cam.zoomTo(2.4);
+  dodo.play('walk');
+  AudioSys.sfx('roar', { pitch: 560, vol: 0.7, len: 0.4 });
+  Emotes.show(dodo, '!', 1.2);
+  Juice.shake(5, 0.3);
+  yield 0.7;
+  yield* S.say('', 'The dodo has gone off every morning for four years. It has never once been thanked.', { at: dodo, portrait: 'dodo_idle' });
+  // --- mini-game: swat it
+  S.cam.zoomTo(1.0); S.cam.lookAt(HOME.perch, 300);
+  const smack = yield* S.mini(new SmackGame({ rounds: 3, paint: () => { Gfx.clear('#120c16'); const ctx = Gfx.ctx; ctx.save(); ctx.translate(-(HOME.perch - W / 2), 0); World.home(S.t, S.setOpt, HOME.perch - W / 2); ctx.restore(); Gfx.rectA(0, 0, W, H, '#120c16', 0.35); } }));
+  dodo.visible = false;
+  S.cam.zoomTo(2.2); S.cam.lookAt(HOME.bed + 40, 320);
+  bronk.play('sleep'); bronk.squash(0.2);
+  AudioSys.sfx('thud');
+  yield 0.6;
+  yield* S.say('BRONK', 'mmnnh. five more... centuries...', { at: bronk });
   yield 0.6;
 
-  // ------------------------------------------------------------ 7. the hook
-  const elder = S.add('elder', { base: 'elder', x: bronk.x - 90, y: 202, scale: 1, facing: 1 });
-  AudioSys.play('village', { fade: 1.2 });
-  yield 0.8;
-  yield* S.say('ELDER', "Legs will not catch that thing, Bronk. It runs on anger. You will need something louder.", { at: elder });
-  yield* S.say('BRONK', "Louder than a raptor?", { at: bronk });
-  yield* S.say('ELDER', "Louder than a raptor. Get up. Take the Rock-Axe. Rally what is left of this valley and go and get your family back.", { at: elder });
-  bronk.play('idle');
+  // ==================================================== 2. VELA, AND PANCAKES
+  const vela = S.add('vela', { base: 'vela', x: HOME.rug + 60, y: GY, scale: 1, facing: -1 });
+  vela.play('walk');
+  S.cam.zoomTo(1.7); S.cam.lookAt(HOME.bed + 130, 318);
+  while (!vela.moveTo(HOME.bed + 96, GY, Time.dt, 90)) yield 0;
+  vela.play('idle'); vela.facing = -1;
+  yield 0.3;
+  yield* S.say('VELA', 'Bronk. Up.', { at: vela });
+  yield* S.say('BRONK', '...', { at: bronk });
+  yield* S.say('VELA', 'BRONK.', { at: vela });
+  yield* S.say('BRONK', 'I am listening with my eyes closed. It is a skill.', { at: bronk });
+  yield 0.3;
+  yield* S.say('VELA', "Fine. I'll just let the pancakes go cold.", { at: vela });
+  // the nose knows
+  S.cam.zoomTo(3.0); S.cam.lookAt(bronk.x + 6, bronk.y - 44);
+  AudioSys.sfx('gasp');
+  yield 0.5;
+  bronk.play('shock'); bronk.stretch(0.35);
+  Juice.flash('#ffe98a', 0.3, 3); Juice.punch(0.06);
+  AudioSys.sfx('detect');
+  Particles.sparkle(bronk.x, bronk.y - 50, 16, ['#ffe98a', '#ffffff']);
+  yield 0.5;
+  yield* S.say('BRONK', 'PANCAKES.', { at: bronk });
+  yield 0.2;
+  vela.visible = false;
+  // --- side-scroll: the dash
+  S.cam.zoomTo(1.0);
+  const dash = yield* S.mini(new SideScroll({
+    base: 'bronk', moveClip: 'dash', idleClip: 'idle', scale: 1.7,
+    startX: HOME.bed + 10, goal: HOME.table - 40, speed: 330, grip: 9,
+    paint: Scroll('home', { night: true, fire: 0 }),
+    title: 'PANCAKES', sub: 'this way',
+    props: [{ spr: 'vela_idle', x: HOME.table + 60, scale: 1.7, flip: true }],
+  }));
+  run.gold += 10;
+
+  // ==================================================== 3. THE ORDER
+  setOpt({ night: true, fire: 0 });
+  S.cam.zoom = 1.6; S.cam.lookAt(HOME.table + 30, 316, true);
+  bronk.x = HOME.table - 50; bronk.y = GY; bronk.play('idle'); bronk.facing = 1;
+  vela.visible = true; vela.x = HOME.table + 70; vela.facing = -1; vela.play('idle');
+  const blaze = S.add('blaze', { base: 'blaze', x: HOME.stove + 6, y: GY - 8, scale: 1, facing: -1 });
+  yield 0.5;
+  yield* S.say('BRONK', 'Where are they. I can smell them. I can smell them in my TEETH.', { at: bronk });
+  yield* S.say('VELA', "There are no pancakes, Bronk.", { at: vela });
+  yield* S.say('BRONK', '...', { at: bronk });
+  yield* S.say('VELA', 'There is, however, a dodo nest forty paces from this door. Go and get me an egg and there will be.', { at: vela });
+  Emotes.show(bronk, 'sweat', 1.2);
+  yield* S.say('BRONK', 'That bird and I have history.', { at: bronk });
+  yield* S.say('VELA', 'I know. You started it.', { at: vela });
+  yield 0.4;
+
+  // ==================================================== 4. THE EGG
+  S.cam.zoomTo(1.0);
+  yield* S.mini(new SideScroll({
+    base: 'bronk', scale: 1.7, startX: HOME.table - 50, goal: HOME.nest - 60, speed: 250,
+    paint: Scroll('home', { fire: 0 }),
+    title: 'THE NEST', sub: 'forty paces',
+  }));
+  setOpt({ night: false, fire: 0 });
+  S.cam.zoom = 1.8; S.cam.lookAt(HOME.nest - 20, 330, true);
+  bronk.x = HOME.nest - 70; bronk.facing = 1; bronk.play('idle');
+  vela.visible = false; blaze.visible = false;
+  yield 0.5;
+  yield* S.say('BRONK', 'Morning. Lovely nest. Just going to borrow one of these.', { at: bronk });
+  yield 0.4;
+  Emotes.show(bronk, '!', 0.8);
+  AudioSys.sfx('roar', { pitch: 520, vol: 0.8, len: 0.5 });
+  Juice.shake(9, 0.4);
+  yield 0.7;
+  // --- mini-game: the wrestle. no words, just clicking.
+  const egg = yield* S.mini(new EggGame({ paint: () => { Gfx.clear('#120c16'); const c = HOME.nest - W / 2; const ctx = Gfx.ctx; ctx.save(); ctx.translate(-c, 0); World.home(S.t, { fire: 0 }, c); ctx.restore(); Gfx.rectA(0, 0, W, H, '#120c16', 0.25); } }));
+  setOpt({ eggGone: true });
+  Popups.add(W / 2, 200, 'ONE (1) EGG', '#ffe98a', { world: false, scale: 2, life: 1.6 });
   AudioSys.sfx('unlock');
-  Particles.sparkle(bronk.x, bronk.top, 22, ['#ffe98a', '#ffffff']);
-  Popups.add(bronk.x, bronk.top - 20, 'THE ROCK-AXE', '#ffe98a', { scale: 2, life: 2 });
-  yield 1.4;
+  yield 1.2;
+  yield* S.say('BRONK', 'Worth it.', { at: bronk });
+  yield 0.3;
+
+  // ==================================================== 5. COOKING BY RAPTOR
+  yield* S.fadeOut(0.5);
+  setOpt({ night: false, fire: 0.2 });
+  S.cam.zoom = 1.7; S.cam.lookAt(HOME.stove - 20, 322, true);
+  bronk.x = HOME.stove - 90; bronk.facing = 1;
+  blaze.visible = true; blaze.play('idle');
+  vela.visible = true; vela.x = HOME.table - 20; vela.facing = 1;
+  yield* S.fadeIn(0.6);
+  yield 0.4;
+  yield* S.say('', 'BLAZE the cook-fire raptor has been chained to this pit for six years. He has views.', { at: blaze, portrait: 'blaze_idle' });
+  Emotes.show(blaze, 'anger', 1.6); AudioSys.sfx('detect');
+  yield* S.say('BRONK', "Don't give me that. You get fed. You get a roof. You get to sit down all day.", { at: bronk });
+  S.cam.zoomTo(1.0);
+  const cook = yield* S.mini(new KickGame({ paint: () => { Gfx.clear('#120c16'); const c = HOME.stove - W / 2; const ctx = Gfx.ctx; ctx.save(); ctx.translate(-c, 0); World.home(S.t, { fire: 0.8 }, c); ctx.restore(); Gfx.rectA(0, 0, W, H, '#120c16', 0.3); } }));
+  setOpt({ fire: 1 });
+  Juice.flash('#ffa832', 0.4, 3); AudioSys.sfx('fire_whoosh');
+  Particles.fire(HOME.stove, GY - 40, 24);
+  S.cam.zoom = 1.7; S.cam.lookAt(HOME.stove - 40, 322, true);
+  if (cook && cook.win) { run.hp = Math.min(run.maxHp, run.hp + 8); yield* S.say('VELA', "Perfect. See? He responds to encouragement.", { at: vela }); }
+  else yield* S.say('VELA', "It's black, Bronk. You have cooked a stone.", { at: vela });
+  Emotes.show(blaze, 'anger', 2);
+  yield 0.5;
+
+  // ==================================================== 6. THE MAMMOTH SHOWER
+  yield* S.fadeOut(0.5);
+  setOpt({ night: false, fire: 1, showerOn: true });
+  S.cam.zoom = 1.5; S.cam.lookAt(HOME.shower + 20, 300, true);
+  bronk.x = HOME.shower - 16; bronk.y = GY; bronk.facing = 1; bronk.play('idle');
+  vela.visible = false; blaze.visible = false;
+  const mam = S.add('mam', { base: 'mammoth', x: HOME.shower + 150, y: GY, scale: 1, facing: -1, clip: 'shower' });
+  yield* S.fadeIn(0.6);
+  yield 0.4;
+  yield* S.say('BRONK', 'Morning, Trunks. Warm one today, eh?', { at: bronk });
+  yield* S.say('', 'Trunks charges one bucket of nuts a week and has never once got the temperature right.', { at: mam, portrait: 'mammoth_idle' });
+  S.cam.zoomTo(1.0);
+  const wash = yield* S.mini(new ShowerGame({}));
+  Particles.splash(W / 2, 300, 30); AudioSys.sfx('spray');
+  S.cam.zoom = 1.5; S.cam.lookAt(HOME.shower + 20, 300, true);
+  if (wash && wash.win) { run.hp = Math.min(run.maxHp, run.hp + 6); Popups.add(bronk.x, bronk.top, 'SQUEAKY CLEAN  +6 HP', '#86e8d2', { scale: 1.2, life: 1.8 }); }
+  yield 0.9;
+
+  // ==================================================== 7. OFF TO WORK
+  const kidA = S.add('kida', { base: 'kid_a', x: HOME.door + 90, y: GY, scale: 0.9 });
+  const kidB = S.add('kidb', { base: 'kid_b', x: HOME.door + 130, y: GY, scale: 0.9, facing: -1 });
+  vela.visible = true; vela.x = HOME.door + 60; vela.y = GY; vela.facing = 1; vela.play('idle');
+  S.cam.lookAt(HOME.door + 120, 310); S.cam.zoomTo(1.6);
+  yield 0.5;
+  yield* S.say('VELA', 'Quarry. Rocks. Home by dark. Try not to be eaten.', { at: vela });
+  yield* S.say('PEBBLE', 'Bring back a rock shaped like a face!', { at: kidA });
+  yield* S.say('BRONK', 'Every rock is shaped like a face if you work at the quarry long enough.', { at: bronk });
+  yield 0.3;
+  setOpt({ showerOn: false });
+  S.cam.zoomTo(1.0);
+  // walk past the shower, to the car
+  yield* S.mini(new SideScroll({
+    base: 'bronk', scale: 1.7, startX: HOME.shower - 120, goal: HOME.car - 50, speed: 240,
+    paint: Scroll('home', { fire: 1, eggGone: true }),
+    title: 'TO WORK', sub: 'the car is past the shower',
+  }));
+  S.cam.zoom = 1.5; S.cam.lookAt(HOME.car, 320, true);
+  bronk.x = HOME.car - 46; bronk.facing = 1; bronk.play('idle');
+  S.hide('vela', 'kida', 'kidb', 'mam');
+  yield 0.5;
+  AudioSys.sfx('car_start');
+  bronk.play('drive');
+  yield 0.8;
+
+  // ==================================================== 8. THE CHILL DRIVE
+  AudioSys.play('drive', { fade: 0.4 });
+  const drive = yield* S.mini(new SideScroll({
+    base: 'bronk', moveClip: 'drive', idleClip: 'drive', scale: 1.8,
+    startX: 0, goal: 3000, speed: 120, auto: 150, grip: 3,
+    paint: Scroll('road'),
+    title: 'THE COMMUTE', sub: 'no rush',
+    pickups: Array.from({ length: 9 }, (_, i) => ({ x: 340 + i * 290, spr: 'icon_coin', label: '+1 shell' })),
+  }));
+  run.gold += (drive ? drive.got : 0) * 5;
+
+  // ==================================================== 9. THE QUARRY
+  yield* S.cut('quarry', {});
+  S.cam.zoom = 1.5; S.cam.lookAt(500, 300, true);
+  bronk.x = 380; bronk.y = GY; bronk.facing = 1; bronk.play('idle');
+  AudioSys.play('drive', { fade: 0.6 });
+  yield* S.fadeIn(0.7);
+  yield 0.6;
+  yield* S.say('BRONK', 'Another beautiful day of hitting a big rock until it is small rocks.', { at: bronk });
+  yield 0.3;
+  // something comes out of the mine
+  const trex = S.add('trex', { base: 'trex', x: 820, y: GY, scale: 1.1, facing: -1 });
+  trex.play('roar');
+  const vic = S.add('vic', { base: 'villager', x: 700, y: GY, scale: 0.9, facing: -1 });
+  const vic2 = S.add('vic2', { base: 'villager2', x: 660, y: GY, scale: 0.9, facing: -1 });
+  S.cam.lookAt(760, 280); S.cam.zoomTo(1.9);
+  AudioSys.play('chase', { fade: 0.4, intensity: 2 });
+  AudioSys.sfx('rumble', { vol: 0.9, len: 1.4 });
+  Juice.shake(10, 0.9);
+  yield 0.9;
+  AudioSys.sfx('roar', { pitch: 46, vol: 1, len: 1.8 });
+  Juice.shake(16, 1.2); Juice.flash('#ffffff', 0.35, 4);
+  Emotes.show(vic, '!', 1.2); Emotes.show(vic2, '!', 1.2);
+  yield 0.8;
+  // the workforce leaves. one of them leaves vertically.
+  vic.play('walk'); vic2.play('walk');
+  Co.run(function* () {
+    for (let i = 0; i < 300; i++) { vic.x -= Time.dt * 210; vic2.x -= Time.dt * 190; yield 0; }
+  }());
+  yield 0.5;
+  const vic3 = S.add('vic3', { base: 'villager', x: 900, y: GY, scale: 0.9 });
+  AudioSys.sfx('chomp');
+  Juice.shake(8, 0.3);
+  Popups.add(900, GY - 120, 'NOM', '#ef6a5e', { scale: 2.4, life: 1.4, vy: -30 });
+  vic3.visible = false;
+  Particles.spawn(900, GY - 60, { n: 14, color: ['#d8a86b', '#b07a45'], speed: 200, spread: 6.28, life: 0.9, size: 5, sizeEnd: 0, gravity: 300 });
+  yield 0.7;
+  yield* S.say('', 'That is Gary. Gary is fine. Gary is mostly fine.', { at: trex, portrait: 'trex_idle' });
+  yield* S.say('BRONK', "Right. RIGHT. I am the Employee of the Week. This is an Employee of the Week problem.", { at: bronk });
+  yield 0.4;
+  // --- chase the trex
+  S.cam.zoomTo(1.0);
+  trex.visible = false; vic.visible = false; vic2.visible = false;
+  yield* S.mini(new SideScroll({
+    base: 'bronk', moveClip: 'run', scale: 1.7, startX: 0, goal: 2000, speed: 300,
+    paint: Scroll('quarry'),
+    ahead: { spr: 'trex_walk', gap: 520, speed: 250, scale: 1.5, flip: false },
+    title: 'AFTER IT', sub: 'this is not in the job description',
+  }));
+  yield* S.fadeOut(0.7);
+
+  // ==================================================== 10. HOME, AT DUSK
+  yield* S.cut('home', { dusk: true, fire: 0, eggGone: true, carGone: true });
+  S.cam.zoom = 1.6; S.cam.lookAt(HOME.door + 40, 310, true);
+  bronk.x = HOME.door - 60; bronk.play('idle'); bronk.facing = 1;
+  AudioSys.stop(0.5);
+  yield* S.fadeIn(1.0);
+  yield 1.0;
+  yield* S.say('BRONK', '...Vela? PEBBLE? ROXY?', { at: bronk });
+  yield 0.5;
+  blaze.visible = true; blaze.x = HOME.shower + 120; blaze.y = GY; blaze.facing = 1; blaze.play('walk', { fps: 14 });
+  vela.visible = true; vela.x = HOME.shower + 176; vela.y = GY - 30; vela.scale = 0.8; vela.play('cry');
+  S.show('kida', 'kidb');
+  kidA.x = HOME.shower + 206; kidA.y = GY - 26; kidA.scale = 0.7;
+  kidB.x = HOME.shower + 230; kidB.y = GY - 26; kidB.scale = 0.7;
+  S.cam.lookAt(HOME.shower + 180, 290); S.cam.zoomTo(1.9);
+  AudioSys.play('chase', { fade: 0.2, intensity: 2 });
+  yield 0.7;
+  Emotes.show(blaze, 'anger', 1.6);
+  yield* S.say('BLAZE', 'SIX YEARS of your breakfasts. Six. Years. Now you can chase ME for a while.', { at: blaze });
+  yield* S.say('VELA', "BRONK! He unchained himself! He had HANDS the whole time!", { at: vela });
+  yield* S.say('BRONK', 'HE HAD WHAT', { at: bronk });
+  yield 0.3;
+  // and the thing from the quarry followed him home
+  AudioSys.sfx('roar', { pitch: 44, vol: 1, len: 1.8 });
+  Juice.shake(16, 1.1);
+  S.cam.lookAt(HOME.door - 160, 290);
+  trex.visible = true; trex.x = HOME.door - 300; trex.y = GY; trex.facing = 1; trex.play('walk');
+  yield 1.0;
+  yield* S.say('BRONK', 'Oh, come ON.', { at: bronk });
+  yield 0.3;
+  S.cam.zoomTo(1.0);
+  // --- the big one: chase the raptor, with the tyrant on your heels
+  const chase = yield* S.mini(new SideScroll({
+    base: 'bronk', moveClip: 'run', scale: 1.7, startX: 0, goal: 2600, speed: 315,
+    paint: Scroll('canyon', { embers: true }),
+    ahead: { spr: 'blaze_walk', gap: 560, speed: 268, scale: 1.4, carry: 'vela_cry' },
+    pursuer: { spr: 'trex_walk', gap: 520, speed: 252, scale: 1.7 },
+    pursuerRamp: 34, leash: 760, catchTime: 3.0,
+    title: 'ONE IN FRONT, ONE BEHIND', sub: 'a normal tuesday',
+  }));
+
+  // ==================================================== 11. THE BREAKDOWN
+  yield* S.fadeOut(0.5);
+  yield* S.cut('canyon', { embers: true });
+  S.cam.zoom = 1.7; S.cam.lookAt(420, 300, true);
+  bronk.x = 380; bronk.y = GY; bronk.facing = 1; bronk.play('hurt');
+  S.hide('vela', 'kida', 'kidb', 'blaze');
+  trex.visible = true; trex.x = 720; trex.y = GY; trex.facing = -1; trex.play('walk');
+  S.overlay = world => { if (!world) return; Gfx.sprite('car', 330, GY + 2, { anchor: 'bc', frame: 0, rot: 0.12 }); };
+  yield* S.fadeIn(0.8);
+  AudioSys.sfx('thud'); Juice.shake(10, 0.5);
+  for (let i = 0; i < 16; i++) Particles.spawn(330, GY - 40, { n: 1, color: ['#3b3048', '#574a66'], speed: 60, gravity: -40, life: 2.2, size: 6, sizeEnd: 0 });
+  yield 1.0;
+  yield* S.say('BRONK', 'No. No no no. Not the wheel. NOT THE WHEEL.', { at: bronk });
+  trex.play('roar');
+  S.cam.lookAt(620, 270); S.cam.zoomTo(2.3);
+  AudioSys.sfx('roar', { pitch: 40, vol: 1, len: 2 });
+  Juice.shake(18, 1.4);
+  Co.run(function* () { for (let i = 0; i < 300; i++) { if (trex.x > 470) trex.x -= Time.dt * 52; yield 0; } }());
+  yield 1.6;
+  bronk.play('shock');
+  yield* S.say('BRONK', "...alright. Alright. It's been a good run. Tell the kids I said the rock looked like a face.", { at: bronk });
+  yield 0.6;
+
+  // ==================================================== 12. THE BEAM
+  AudioSys.stop(0.2);
+  yield 0.5;
+  const beamX = trex.x;
+  let beam = 0;
+  S.overlay = world => {
+    if (!world) return;
+    Gfx.sprite('car', 330, GY + 2, { anchor: 'bc', frame: 0, rot: 0.12 });
+    if (beam <= 0) return;
+    const ctx = Gfx.ctx, w = 26 + beam * 66;
+    ctx.globalAlpha = clamp(beam, 0, 1) * 0.9;
+    const g = ctx.createLinearGradient(0, -400, 0, GY);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,233,138,0.85)'); g.addColorStop(1, 'rgba(255,255,255,0.95)');
+    ctx.fillStyle = g; ctx.fillRect(beamX - w / 2, -420, w, GY + 420);
+    ctx.globalAlpha = 1;
+    Gfx.glow(beamX, GY - 60, 200 * beam, '#ffe98a', 0.5 * beam);
+  };
+  AudioSys.sfx('thunder');
+  Co.run(function* () { for (let i = 0; i < 60; i++) { beam = Math.min(1.6, beam + Time.dt * 5); yield 0; } }());
+  Juice.flash('#ffffff', 0.7, 6); Juice.shake(20, 0.9); Juice.punch(0.12);
+  S.cam.zoomTo(1.5); S.cam.lookAt(520, 280);
+  yield 0.9;
+  trex.play('roar'); trex.flash('#ffffff', 0.5);
+  AudioSys.sfx('roar', { pitch: 300, vol: 0.9, len: 1.2 });
+  Co.run(function* () { for (let i = 0; i < 400; i++) { trex.x += Time.dt * 420; Particles.dust(trex.x - 40, GY, 1); yield 0; } }());
+  yield 1.2;
+  trex.visible = false;
+  Co.run(function* () { for (let i = 0; i < 80; i++) { beam = Math.max(0, beam - Time.dt * 2.2); yield 0; } }());
+  yield 0.8;
+
+  // ==================================================== 13. THE ROCKSTAR ELDER
+  AudioSys.play('village', { fade: 1.4 });
+  const elder = S.add('elder', { base: 'elder', x: beamX, y: GY, scale: 1, facing: -1 });
+  elder.alpha = 0;
+  Co.run(function* () { for (let i = 0; i < 60; i++) { elder.alpha = Math.min(1, elder.alpha + Time.dt * 2); yield 0; } }());
+  S.cam.zoomTo(1.8); S.cam.lookAt((bronk.x + elder.x) / 2, 300);
+  yield 1.0;
+  yield* S.say('ELDER', 'Legs will not catch that raptor, Bronk. It runs on spite. You will need something louder.', { at: elder });
+  yield* S.say('BRONK', 'Louder than a raptor.', { at: bronk });
+  yield* S.say('ELDER', 'Louder than the sky.', { at: elder });
+  // the handoff
+  S.cam.zoomTo(2.4); S.cam.lookAt(bronk.x + 40, 300);
+  AudioSys.sfx('unlock');
+  Particles.sparkle(bronk.x + 20, GY - 70, 26, ['#ffe98a', '#ffffff']);
+  FX.burst(bronk.x + 20, GY - 70, { scale: 1.6 });
+  yield 0.5;
+  S.overlay = world => {
+    if (!world) return;
+    Gfx.sprite('car', 330, GY + 2, { anchor: 'bc', frame: 0, rot: 0.12 });
+    Gfx.glow(bronk.x + 22, GY - 74, 80, '#ffe98a', 0.35 + Math.sin(Time.t * 6) * 0.08);
+    Gfx.sprite('art_bass', bronk.x + 22, GY - 74, { anchor: 'c', scale: 1.8, rot: -0.3 });
+  };
+  Popups.add(bronk.x + 20, GY - 130, 'THE ROCK-AXE', '#ffe98a', { scale: 2.2, life: 2.2 });
+  bronk.play('idle');
+  yield 1.6;
+  yield* S.say('ELDER', 'Rally what is left of this valley. Then go and get them back.', { at: elder });
+  yield* S.say('BRONK', "I don't know how to play this.", { at: bronk });
+  yield* S.say('ELDER', 'Neither did I.', { at: elder });
+  // and he is gone
+  AudioSys.sfx('ghost');
+  Particles.sparkle(elder.x, GY - 60, 24, ['#ffe98a', '#b177e6']);
+  Co.run(function* () { for (let i = 0; i < 60; i++) { elder.alpha = Math.max(0, elder.alpha - Time.dt * 2.4); yield 0; } }());
+  yield 1.0;
+  elder.visible = false;
+  yield* S.say('BRONK', 'Cool. Cool cool cool.', { at: bronk });
+  yield 0.4;
   bronk.play('play');
   S.cam.zoomTo(2.0);
+  AudioSys.sfx('encore');
+  Juice.flash('#ffe98a', 0.4, 3);
   yield 1.6;
   yield* S.titleCard('ONGA BONGA', 'go and get them back', 3.0);
   yield* S.fadeOut(0.9);
+  S.overlay = null;
   Game.startVillage();
 }

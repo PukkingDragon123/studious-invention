@@ -15,6 +15,8 @@ function defClips(base, table) {
 defClips('bronk', {
   idle: { fps: 2.4 }, walk: { fps: 10 }, run: { spr: 'bronk_walk', fps: 16 },
   eat: { fps: 7 }, play: { fps: 8 }, shock: { fps: 6 }, drive: { fps: 8 },
+  sing: { spr: 'bronk_play', fps: 5 }, sleep: { spr: 'bronk_sleep', fps: 1.2 },
+  dash: { spr: 'bronk_dash', fps: 15 }, kick: { spr: 'bronk_walk', fps: 12 },
   hurt: { spr: 'bronk_hurt', fps: 1, loop: false },
 });
 defClips('vela', { idle: { fps: 2.2 }, walk: { fps: 10 }, cook: { fps: 6 }, cry: { fps: 5 } });

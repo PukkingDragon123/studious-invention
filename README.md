@@ -2,8 +2,9 @@
 
 A 2D pixel-art game where a flaming raptor steals your family and you get them
 back with music. Walk a ruined valley, dodge or fight the beasts patrolling it,
-and settle every fight by playing riffs in a Friday-Night-Funkin' style note
-field. No build step, no dependencies: open `index.html` in a browser.
+and settle every fight on the Rock-Axe: rune-stones sliding down four guitar
+strings into a strum bar, and a vocal line you steer with your own voice.
+No build step, no dependencies: open `index.html` in a browser.
 
 **Play it:** open `index.html`, or the published Artifact at
 https://claude.ai/artifact/MYXyLPKGDvBpSymnj7V2Dh
@@ -14,9 +15,18 @@ Turn your sound on. Landscape on a phone.
 BLAZE, a fire-breathing raptor, spent six years chained in Bronk's kitchen as
 the family stove. One Tuesday he snapped the chain and took Bronk's wife and
 children with him. Bronk is not fast and he is not fit, but he is extremely
-loud. The opening plays out as a cinematic with four mini-games: work the
-bellows to light the stove, eat breakfast before the children do, run the
-mammoth shower, and drive the stone car to work until a T-Rex changes your mind.
+loud.
+
+The opening is a playable morning. A dodo alarm goes off and you swat it. Your
+wife wakes you and the word "pancakes" gets you out of bed at a sprint, which
+is the first of three side-scrolling stages. You are sent to rob a dodo nest
+and have to wrestle the egg off its mother. You cook it by booting the raptor
+chained under the pan, shower under a mammoth, walk past the shower to the car
+and take a very relaxed drive to the quarry — where something has come out of
+the mines and is eating the workforce. You chase it. You get home to find the
+raptor has taken your family, so you chase *him*, while the thing from the
+quarry chases you, until the car gives out. Then a beam of light comes down,
+the tyrant runs, and an old rockstar hands you a guitar and vanishes.
 
 ## How it plays
 
@@ -25,17 +35,28 @@ mammoth shower, and drive the stone car to work until a T-Rex changes your mind.
   and a belly that keeps its own rhythm. Beasts patrol with vision cones: stay
   out of them, hide in a bush, outrun them, or take the fight. Campfires restore
   health and stamina. Black fog marked with a question mark is a mystery
-  encounter. The shop is a mammoth loaded with other people's belongings that
-  wanders the zone on its own route.
+  encounter. Space is a dodge roll that costs stamina and briefly breaks line of
+  sight. The map is wide and mostly empty and the goal is the gate at the far
+  end of it. The shop is a mammoth in a striped awning and a feathered
+  headdress who turns up somewhere new every few minutes and is gone again by
+  the time you go back.
 - **Fights are a deck of riffs.** Three energy a turn, five cards, Block,
   statuses, enemy intents. Cards marked with a note cut to a close-up: the
-  camera pushes in, the letterbox closes, and the note field takes over.
-- **The note field is FNF-shaped.** Four arrow lanes rise to receptors, hit with
-  the arrow keys, D F J K, a click, or the four pads on a touch screen. SICK,
-  GOOD, BAD and AWFUL timing windows, sustains you hold, a combo counter, and a
-  crowd meter that tugs between you and the beast. Duel cards are call and
-  answer: the beast plays a phrase on the left field, you play it back on the
-  right.
+  camera pushes in and the Rock-Axe comes up under the scene.
+- **The Rock-Axe, not a four-arrow scroller.** The guitar lies across the bottom
+  of the screen the way it would in your hands. Rune-stones slide right to left
+  down four strings into a bone strum bar; you strike the string the stone lands
+  on with A S D F (or 1-4, or the arrows, or by tapping anywhere along that
+  string on a touch screen), and the struck string whips and rings. SICK, GOOD,
+  BAD and AWFUL windows, sustains you keep held, a combo counter and a crowd
+  meter. Duel cards are call and answer: the beast plays a phrase in ghost
+  stones, then you play it back.
+- **And you sing it.** In the gaps the strum chart leaves, an ember ribbon
+  swoops down from the top carrying the vocal line. Hold the chant and steer
+  your voice along the ribbon with the mouse (or your thumb on the left edge),
+  and the formant synth sings whatever pitch you are actually holding — so
+  drifting off the line sounds as wrong as it looks. The strings carry the
+  damage, the voice carries the crowd.
 - **Hype and Encore.** Landed notes fill the Hype column. At full, ENCORE is a
   free epic solo that hits every beast once per note you land.
 - **Three acts.** Each ends with BLAZE, angrier each time, and each rescue adds
@@ -72,12 +93,13 @@ js2/anim.js       animated actors, effects, emotes
 js2/audio.js      synth voices, sequencer, sound effects
 js2/songs.js      every song
 js2/dialogue.js   speech bubbles with tails and typewriter text
-js2/rhythm.js     the note field
+js2/rhythm.js     the Rock-Axe: strings, strum bar and the vocal ribbon
 js2/cards.js      riff cards and their renderer
 js2/relics.js     relics
 js2/enemies.js    beasts, intents, encounter tables
-js2/minigames.js  bellows, breakfast, shower, drive
-js2/cutscene.js   sets, staging and the opening script
+js2/minigames.js  side-scroller, dodo swat, egg wrestle, raptor stove, shower
+js2/world.js      the painted stages: house, road, quarry, canyon
+js2/cutscene.js   staging and the opening script
 js2/combat.js     the performance
 js2/village.js    the tile overworld
 js2/events.js     the mammoth market, fog encounters, rewards
