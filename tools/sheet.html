@@ -11,7 +11,8 @@
     const scale = +(params.get('s') || 2);
     const filter = params.get('only') || '';
     const allFrames = params.get('frames') !== '0';
-    const names = Object.keys(SPRITES).filter(n => !filter || n.includes(filter));
+    const want = filter ? filter.split(',').filter(Boolean) : [];
+    const names = Object.keys(SPRITES).filter(n => !want.length || want.some(w => n.includes(w)));
     const cells = [];
     for (const n of names) {
       const sp = Gfx.spr(n);
