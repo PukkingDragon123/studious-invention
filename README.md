@@ -5,7 +5,8 @@ back with music. Walk a ruined valley, dodge or fight the beasts patrolling it,
 and settle every fight by playing riffs in a Friday-Night-Funkin' style note
 field. No build step, no dependencies: open `index.html` in a browser.
 
-**Play it:** open `index.html` (or the published Artifact link at the bottom).
+**Play it:** open `index.html`, or the published Artifact at
+https://claude.ai/artifact/MYXyLPKGDvBpSymnj7V2Dh
 Turn your sound on. Landscape on a phone.
 
 ## The story
