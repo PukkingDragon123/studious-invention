@@ -10,10 +10,12 @@
 
 const GY = 428;                      // the floor / ground line, everywhere
 
+// A small house, deliberately over-furnished: you should never be able to look
+// at a stretch of wall or floor without something of theirs in the way.
 const HOME = {
-  bed: 170, perch: 330, rug: 470, shelf: 610, fossil: 700, plaque: 830,
-  table: 960, stove: 1180, clutter: 1300, door: 1430,
-  shower: 1760, nest: 2010, car: 2260, end: 2420,
+  bed: 130, perch: 232, rug: 316, shelf: 396, fossil: 470, plaque: 556,
+  table: 636, stove: 754, clutter: 830, door: 900,
+  shower: 1090, nest: 1258, car: 1430, end: 1560,
 };
 
 // small deterministic wobble so scattered junk does not jitter between frames
@@ -101,6 +103,7 @@ const World = {
       Gfx.rectA(x0, GY - 20, x1 - x0, 4, '#b07a45', 0.5);
       World.homeWall(t, o, camX, x0, x1);
       World.homeStuff(t, o, camX);
+      World.homeRoof(t, o, camX, x0, x1);
       // the doorway: a bright arch punched through the end wall
       const dx = HOME.door;
       Gfx.rect(dx - 34, -60, 74, GY - 54, '#120c16');
@@ -184,11 +187,47 @@ const World = {
     if (chance(0.5)) Particles.fire(tx, 276, 1);
     Gfx.glow(tx, 272, 130, '#ff9a20', 0.18 + Math.sin(t * 7) * 0.03);
   },
+  // a low thatched roof on log beams - a one-floor hut has no room above you
+  homeRoof(t, o, camX, x0, x1) {
+    const CY = 168;                                   // underside of the beams
+    Gfx.rect(x0, -320, x1 - x0, CY + 320, '#120c16');
+    // thatch, laid in overlapping courses
+    for (let y = -40, row = 0; y < CY; y += 22, row++) {
+      for (let x = Math.floor(x0 / 30) * 30; x < x1; x += 30) {
+        const w = 30, h = 26;
+        Gfx.rectA(x, y, w, h, row % 2 ? '#3a2415' : '#4a2512', 1);
+        Gfx.rectA(x + 2, y + 2, w - 5, 3, '#85562f', 0.35);
+        for (let i = 0; i < 4; i++) Gfx.rectA(x + 3 + i * 7 + jitter(x + i, 4), y + 6, 2, 14, '#241109', 0.5);
+      }
+    }
+    Gfx.rectA(x0, -320, x1 - x0, CY + 320, '#120c16', 0.45);
+    // the beams
+    Gfx.rect(x0, CY, x1 - x0, 16, '#241109');
+    Gfx.rect(x0, CY, x1 - x0, 5, '#5c3a20');
+    Gfx.rect(x0, CY + 13, x1 - x0, 3, '#0f0a12');
+    for (let x = Math.floor(x0 / 132) * 132; x < x1; x += 132) {      // rafter ends
+      Gfx.round(x, CY - 12, 18, 14, 4, '#3a2415');
+      Gfx.round(x + 2, CY - 10, 13, 5, 3, '#85562f');
+    }
+    // everything hanging off them
+    for (let x = Math.floor(x0 / 96) * 96; x < x1; x += 96) {
+      if (x < 40) continue;
+      const k = ((x / 96) | 0) % 4, hx = x + jitter(x, 28), sw = Math.sin(t * 1.1 + x) * 1.5;
+      Gfx.line(hx, CY + 14, hx + sw, CY + 30, '#5c3a20', 2);
+      if (k === 0) Gfx.sprite('house_wall', hx + sw - 16, CY + 28, { anchor: 'tl' });
+      else if (k === 1) { for (let i = 0; i < 5; i++) { const a = -1.9 + i * 0.4; Gfx.line(hx + sw, CY + 30, hx + sw + Math.cos(a) * 13, CY + 30 - Math.sin(a) * 13 + 20, '#27632f', 3); } Gfx.round(hx + sw - 5, CY + 27, 10, 7, 3, '#5c3a20'); }
+      else if (k === 2) Gfx.sprite('prop_pot', hx + sw, CY + 60, { anchor: 'bc', scale: 0.7 });
+      else { Gfx.sprite('prop_bones', hx + sw, CY + 44, { anchor: 'bc', scale: 0.3 }); Gfx.sprite('prop_bones', hx + sw + 12, CY + 52, { anchor: 'bc', scale: 0.22 }); }
+    }
+    // the light that gets past the thatch
+    Gfx.rectA(x0, CY + 16, x1 - x0, 26, '#120c16', 0.35);
+  },
   // the furniture and the mess
   homeStuff(t, o, camX) {
     // bed, slept in
     Gfx.sprite('house_bed', HOME.bed, GY + 4, { anchor: 'bc' });
-    // the dodo's perch: a rock stump by the bed
+    Gfx.sprite('prop_pot', HOME.bed - 54, GY + 4, { anchor: 'bc', scale: 0.62 });
+    // the dodo's perch: a worn rock stump by the bed
     Gfx.round(HOME.perch - 26, GY - 44, 52, 46, 9, '#2e2b38');
     Gfx.round(HOME.perch - 23, GY - 42, 44, 42, 8, '#4d4a5c');
     Gfx.round(HOME.perch - 23, GY - 42, 17, 40, 8, '#6e6b80');
@@ -196,34 +235,51 @@ const World = {
     Gfx.round(HOME.perch - 27, GY - 50, 54, 13, 6, '#9391a6');
     Gfx.round(HOME.perch - 27, GY - 50, 24, 11, 6, '#bdbccd');
     for (let i = 0; i < 4; i++) Gfx.rectA(HOME.perch - 14 + i * 9, GY - 32 + (i % 2) * 12, 3, 9, '#2e2b38', 0.55);
-    // a fur rug, a scatter of bones and dropped junk
-    Gfx.round(HOME.rug - 84, GY - 14, 180, 22, 11, '#3a2415');
-    Gfx.round(HOME.rug - 78, GY - 12, 168, 17, 8, '#85562f');
-    Gfx.round(HOME.rug - 72, GY - 11, 120, 9, 4, '#b07a45');
-    for (let i = 0; i < 24; i++) {                          // shaggy fringe
-      const rx = HOME.rug - 84 + i * 7.6;
+    // a fur rug with a shaggy fringe
+    Gfx.round(HOME.rug - 62, GY - 14, 136, 22, 11, '#3a2415');
+    Gfx.round(HOME.rug - 57, GY - 12, 126, 17, 8, '#85562f');
+    Gfx.round(HOME.rug - 52, GY - 11, 92, 9, 4, '#b07a45');
+    for (let i = 0; i < 20; i++) {
+      const rx = HOME.rug - 62 + i * 6.8;
       Gfx.rect(rx, GY + 8, 3, 3 + jitter(i, 4), '#3a2415');
       Gfx.rect(rx + 2, GY - 17, 3, 3 + jitter(i + 5, 3), '#5c3a20');
     }
-    for (let i = 0; i < 9; i++) {
-      const x = 220 + i * 128 + jitter(i * 3, 40);
-      if (x > HOME.door - 40) continue;
-      Gfx.sprite(i % 3 === 0 ? 'prop_bones' : 'prop_bones', x, GY + 2 + (i % 2) * 3, { anchor: 'bc', scale: i % 3 === 0 ? 0.42 : 0.3, alpha: 0.9 });
+    // the mess: bones, shells and dropped tools, thick on the ground
+    for (let i = 0; i < 22; i++) {
+      const x = 80 + i * 38 + jitter(i * 3, 18);
+      if (x > HOME.door - 34) continue;
+      const k = (i * 7) % 5;
+      if (k === 0) Gfx.sprite('prop_bones', x, GY + 2, { anchor: 'bc', scale: 0.34, alpha: 0.95 });
+      else if (k === 1) Gfx.sprite('prop_bones', x, GY + 4, { anchor: 'bc', scale: 0.24, alpha: 0.9 });
+      else if (k === 2) Gfx.sprite('prop_egg', x, GY + 3, { anchor: 'bc', scale: 0.4, alpha: 0.9 });
+      else if (k === 3) { Gfx.round(x - 5, GY - 4, 11, 6, 3, '#5c3a20'); Gfx.round(x - 4, GY - 5, 8, 4, 2, '#85562f'); }
+      else { Gfx.circle(x, GY - 2, 3, '#c4b89a'); Gfx.circle(x - 1, GY - 3, 1.6, '#fffaea'); }
     }
+    // shelf, and everything that will not fit on it
     Gfx.sprite('house_shelf', HOME.shelf, GY - 128, { anchor: 'bc' });
-    Gfx.sprite('prop_pot', HOME.shelf - 44, GY + 2, { anchor: 'bc', scale: 0.8 });
-    Gfx.sprite('prop_barrel', HOME.shelf + 52, GY + 4, { anchor: 'bc' });
-    Gfx.sprite('prop_skull', HOME.plaque + 128, GY - 132, { anchor: 'bc', scale: 0.8, alpha: 0.95 });
+    Gfx.sprite('prop_pot', HOME.shelf - 40, GY + 2, { anchor: 'bc', scale: 0.8 });
+    Gfx.sprite('prop_barrel', HOME.shelf + 44, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('prop_pot', HOME.shelf + 20, GY + 4, { anchor: 'bc', scale: 0.55 });
+    Gfx.sprite('prop_skull', HOME.plaque + 96, GY - 132, { anchor: 'bc', scale: 0.8, alpha: 0.95 });
+    Gfx.sprite('prop_mushroom', HOME.plaque - 30, GY + 4, { anchor: 'bc', scale: 0.5, alpha: 0.9 });
+    // the table, mid-meal and never cleared
     Gfx.sprite('house_table', HOME.table, GY + 6, { anchor: 'bc' });
-    Gfx.sprite('prop_pot', HOME.table + 58, GY + 4, { anchor: 'bc', scale: 0.7 });
-    // the club, leaning where it was dropped
-    Gfx.sprite('art_club', HOME.clutter, GY - 26, { anchor: 'bc', scale: 1.6, rot: -0.5 });
-    Gfx.sprite('prop_barrel', HOME.clutter + 54, GY + 4, { anchor: 'bc', scale: 0.9 });
+    Gfx.sprite('prop_pot', HOME.table + 48, GY + 4, { anchor: 'bc', scale: 0.7 });
+    Gfx.sprite('prop_pot', HOME.table - 50, GY + 3, { anchor: 'bc', scale: 0.5 });
+    for (let i = 0; i < 4; i++) Gfx.sprite('prop_bones', HOME.table - 22 + i * 15, GY - 34, { anchor: 'bc', scale: 0.2 });
+    // the club, leaning where it was dropped, and the rest of the pile
+    Gfx.sprite('art_club', HOME.clutter, GY - 24, { anchor: 'bc', scale: 1.5, rot: -0.5 });
+    Gfx.sprite('art_club', HOME.clutter + 18, GY - 18, { anchor: 'bc', scale: 1.1, rot: 0.7 });
+    Gfx.sprite('prop_barrel', HOME.clutter + 44, GY + 4, { anchor: 'bc', scale: 0.9 });
+    Gfx.sprite('prop_barrel', HOME.clutter + 62, GY + 2, { anchor: 'bc', scale: 0.7 });
+    Gfx.sprite('prop_pot', HOME.clutter - 26, GY + 4, { anchor: 'bc', scale: 0.6 });
     // the stove pit, with its resident
     Gfx.sprite('stove_pit', HOME.stove, GY - 12, { anchor: 'bc' });
+    Gfx.sprite('prop_pot', HOME.stove - 52, GY + 4, { anchor: 'bc', scale: 0.7 });
+    Gfx.sprite('prop_barrel', HOME.stove + 54, GY + 4, { anchor: 'bc', scale: 0.8 });
     if (o.fire > 0) {
       for (let i = 0; i < 3; i++) if (chance(o.fire)) Particles.fire(HOME.stove + rnd(-26, 26), GY - 34, 1);
-      Gfx.glow(HOME.stove, GY - 60, 260, '#ff9a20', 0.22 * o.fire * (0.85 + Math.sin(t * 9) * 0.15));
+      Gfx.glow(HOME.stove, GY - 60, 240, '#ff9a20', 0.22 * o.fire * (0.85 + Math.sin(t * 9) * 0.15));
     }
   },
 

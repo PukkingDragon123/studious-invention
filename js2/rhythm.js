@@ -60,8 +60,14 @@ class Riff {
     this.chantGood = 0; this.chantSpan = 0; this.chantHeat = 0; this.voiceT = 0; this.curPhrase = null;
     const diff = (typeof Settings !== 'undefined' ? Settings.difficulty : 'normal');
     const dm = diff === 'easy' ? 1.5 : diff === 'hard' ? 0.76 : 1;
-    this.windowMul = dm * (o.windowMult || 1);
-    this.travel = (typeof Settings !== 'undefined' ? Settings.noteSpeed : 1.15) / (o.speedMul || 1);
+    // TRAINING WHEELS. The first riffs of a run are deliberately very easy:
+    // enormous timing windows, stones that drift in slowly, half the notes and
+    // no vocal line at all until you have got the hang of strumming.
+    const played = (typeof Game !== 'undefined' && Game.run && Game.run.riffsPlayed) || 0;
+    this.lesson = played < 3 ? 2 : played < 7 ? 1 : 0;
+    const ew = [1, 1.5, 2.6][this.lesson], et = [1, 1.22, 1.55][this.lesson];
+    this.windowMul = dm * (o.windowMult || 1) * ew;
+    this.travel = (typeof Settings !== 'undefined' ? Settings.noteSpeed : 1.15) / (o.speedMul || 1) * et;
     this.build();
   }
   static latency() { const c = AudioSys.ctx; return c ? (c.outputLatency || 0) + (typeof Settings !== 'undefined' ? Settings.offset : 0) : 0; }
@@ -82,13 +88,14 @@ class Riff {
     let evs = o.encore ? this.encoreEvents(bars) : AudioSys.leadEvents(this.startBar, bars);
     if (!evs.length) { for (let i = 0; i < bars * 16; i += 4) evs.push({ time: AudioSys.stepTime(this.startBar * 16 + i), step: this.startBar * 16 + i, midi: 64, len: 2, dur: 0.22, vel: 1 }); }
     // density: thin the phrase out for the easy cards
-    const density = o.density ?? 1;
+    let density = o.density ?? 1;
+    if (this.lesson) density = 0;
     if (density === 0) {
       const keep = []; let last = -9;
       for (const e of evs) { const rel = e.step - this.startBar * 16; if (rel % 2) continue; if (e.step - last < 2) continue; keep.push(e); last = e.step; }
       evs = keep.length >= 3 ? keep : evs;
     }
-    if (evs.length < 3 * bars) {
+    if (!this.lesson && evs.length < 3 * bars) {
       const have = new Set(evs.map(e => e.step));
       for (let i = 0; i < bars * 16; i += 4) {
         const gs = this.startBar * 16 + i;
@@ -117,7 +124,7 @@ class Riff {
     this.notes.sort((a, b) => a.time - b.time);
     this.mine = this.notes.filter(n => n.mine);
     this.total = this.mine.length;
-    this.buildChant();
+    if (this.lesson < 2) this.buildChant();
     AudioSys.muteLead(this.startTime - 0.02, this.endTime + 0.06);
     this.lastTime = Math.max(...this.notes.map(n => n.time + n.sustain));
     this.finishTime = Math.max(this.lastTime + 0.5, this.startTime + 0.6, ...this.phrases.map(p => p.to + 0.3));
@@ -337,6 +344,7 @@ class Riff {
   }
   finish() {
     if (this.done) return; this.done = true;
+    if (typeof Game !== 'undefined' && Game.run) Game.run.riffsPlayed = (Game.run.riffsPlayed || 0) + 1;
     const total = this.total || 1;
     const weighted = this.hits.reduce((a, c, i) => a + c * RATINGS[i].mult, 0);
     const strumAcc = weighted / total;
@@ -534,6 +542,8 @@ class Riff {
       ctx.globalAlpha = a;
       Gfx.text(Input.touch ? 'TAP THE STRING THE STONE LANDS ON' : 'A  S  D  F  -  ONE PER STRING',
         W / 2, NECK_TOP - 34, { color: '#ffffff', align: 'center', scale: 1.4, outline: true, outlineWidth: 2 });
+      if (this.lesson) Gfx.text(this.lesson > 1 ? 'take your time - the timing is wide open' : 'a little tighter now',
+        W / 2, NECK_TOP - 12, { color: '#a8e878', align: 'center', scale: 1.1, outline: true });
       ctx.globalAlpha = 1;
     }
   }

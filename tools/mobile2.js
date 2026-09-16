@@ -62,7 +62,9 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   await page.evaluate(() => {
     window.__taps = 0;
     window.__auto = setInterval(() => {
-      const s = Game.scene, r = s.riff; if (!r || r.done) return;
+      const s = Game.scene, r = s.riff;
+      if (r) window.__last = { hits: r.hits.slice(), misses: r.misses, combo: r.maxCombo, chantPhrases: r.phrases.length };
+      if (!r || r.done) return;
       const now = Riff.now();
       for (const n of r.mine) if (!n.judged && !n.tapped && now >= n.time - 0.004) {
         n.tapped = true; window.__taps++;
@@ -76,8 +78,7 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   });
   await page.waitForTimeout(5000);
   console.log('riff result:', await page.evaluate(() => {
-    const r = Game.scene.riff;
-    return JSON.stringify({ taps: window.__taps, hits: r ? r.hits : null, misses: r ? r.misses : null, combo: r ? r.maxCombo : null, chantPhrases: r ? r.phrases.length : null });
+    return JSON.stringify(Object.assign({ taps: window.__taps }, window.__last || {}));
   }));
   await page.screenshot({ path: `${OUT}/m_after.png` });
   console.log('errors:', errs.length, errs.slice(0, 4));

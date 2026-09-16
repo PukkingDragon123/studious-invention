@@ -19,16 +19,23 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   let r = await ev(() => { const s = Game.scene; return { n: s.constructor.name, ents: s.zone.entities.map(e => e.constructor.name), tiles: s.zone.tiles.length }; });
   ok('village builds with a full cast', r.n === 'VillageScene' && r.ents.includes('Campfire') && r.ents.includes('Prowler') && r.ents.includes('FogNode') && r.ents.includes('Trader') && r.ents.includes('Npc') && r.ents.includes('ZoneGoal'), JSON.stringify([...new Set(r.ents)]));
 
-  // stamina drains when you run and recovers when you stop
-  await ev(() => { Game.run.stamina = 100; Input.held['ArrowRight'] = true; Input.held['ShiftLeft'] = true; });
+  // stamina drains when you run and recovers when you stop.
+  // park the prowlers first: the valley is open enough now that a sprint can
+  // run you straight into one, which would end the scene mid-measurement.
+  await ev(() => {
+    const s = Game.scene;
+    for (const e of s.zone.entities) if (e.constructor.name === 'Prowler') { e.x = 40; e.y = 40; e.actor.x = 40; e.actor.y = 40; e.route = null; }
+    Game.run.stamina = 100; Input.held['ArrowRight'] = true; Input.held['ShiftLeft'] = true;
+  });
   await page.waitForTimeout(1800);
   const drained = await ev(() => Game.run.stamina);
   await ev(() => { Input.held['ArrowRight'] = false; Input.held['ShiftLeft'] = false; });
   await page.waitForTimeout(1600);
   const recovered = await ev(() => Game.run.stamina);
-  ok('stamina drains when sprinting and recovers at rest', drained < 92 && recovered > drained + 4, `drained ${Math.round(drained)} -> ${Math.round(recovered)}`);
+  ok('stamina drains when sprinting and recovers at rest', drained < 92 && recovered > drained + 4, `drained ${Math.round(drained)} -> ${Math.round(recovered)} (scene ${await ev(() => Game.scene.constructor.name)})`);
 
   // a prowler notices you and gives chase
+  await ev(() => { Game.startVillage(); }); await page.waitForTimeout(900);
   r = await ev(() => {
     const s = Game.scene, p = s.zone.entities.find(e => e.constructor.name === 'Prowler');
     // drop both of them on a known-clear tile so the walk to contact is unobstructed
@@ -98,6 +105,35 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   ok('you can buy from the mammoth', r);
 
   // boss, phases and act progression
+  // the gate will not let you through until three beasts are down
+  await ev(() => { Game.run.act = 1; Game.run.bait = 0; Game.go(new VillageScene(1)); });
+  await page.waitForTimeout(1200);
+  r = await ev(async () => {
+    const s = Game.scene, g = s.zone.entities.find(e => e.constructor.name === 'ZoneGoal');
+    Co.run(g.interact(s));
+    await new Promise(z => setTimeout(z, 400));
+    return { scene: Game.scene.constructor.name, talking: Dialogue.active !== null && Dialogue.active !== undefined };
+  });
+  ok('the gate refuses you without bait', r.scene === 'VillageScene', JSON.stringify(r));
+
+  // a kill in the valley is a piece of bait
+  r = await ev(() => {
+    const before = Game.run.bait;
+    Game.pendingProwler = { dead: false };
+    Game.combatWon({ kind: 'normal', goldEarned: 5 });
+    return { before, after: Game.run.bait };
+  });
+  ok('a beast you put down counts as bait', r.after === r.before + 1, JSON.stringify(r));
+  await page.waitForTimeout(900);
+
+  // with the trail laid, the gate opens
+  await ev(() => { Game.run.bait = Game.run.baitNeed; Game.go(new VillageScene(1)); });
+  await page.waitForTimeout(1200);
+  await ev(() => { const s = Game.scene, g = s.zone.entities.find(e => e.constructor.name === 'ZoneGoal'); Co.run(g.interact(s)); });
+  await page.waitForTimeout(2600);
+  r = await ev(() => ({ n: Game.scene.constructor.name, foe: Game.scene.enemies && Game.scene.enemies[0].name }));
+  ok('with bait laid the gate opens on BLAZE', r.n === 'Combat' && r.foe === 'BLAZE', JSON.stringify(r));
+
   await ev(() => { Game.run.act = 1; Game.enterBoss(); }); await page.waitForTimeout(2600);
   r = await ev(() => ({ n: Game.scene.constructor.name, foe: Game.scene.enemies && Game.scene.enemies[0].name, hp: Game.scene.enemies && Game.scene.enemies[0].maxHp }));
   ok('the boss fight starts against BLAZE', r.n === 'Combat' && r.foe === 'BLAZE', JSON.stringify(r));

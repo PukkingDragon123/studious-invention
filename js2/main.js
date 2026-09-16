@@ -37,6 +37,7 @@ const Game = {
       seed, hp: 76, maxHp: 76, stamina: 100, maxStamina: 100, gold: 40,
       deck, relics: ['bone_pick'], band: [], act: 1, fights: 0, startHype: 0,
       zone: null, pos: null, seenEvents: [], seenFights: [],
+      bait: 0, baitNeed: 3, riffsPlayed: 0,
       stats: { kills: 0, notes: 0, sick: 0, taken: 0 },
     };
     this.go(new CutsceneScene(introScript, { onSkip: () => this.startVillage() }));
@@ -49,6 +50,7 @@ const Game = {
       seed: r.seed, hp: r.hp, maxHp: r.maxHp, stamina: r.stamina, maxStamina: r.maxStamina,
       gold: r.gold, relics: r.relics, band: r.band, act: r.act, fights: r.fights,
       startHype: r.startHype, seenEvents: r.seenEvents, stats: r.stats, pos: r.pos,
+      bait: r.bait, baitNeed: r.baitNeed, riffsPlayed: r.riffsPlayed,
       deck: r.deck.map(c => Cards.toSave(c)),
     };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { }
@@ -92,8 +94,12 @@ const Game = {
     let relics = [];
     if (c.kind === 'elite') { const x = Relics.randomReward(rng, ['common', 'uncommon', 'uncommon', 'rare']); if (x) relics = [x]; }
     if (c.kind === 'boss') { const ex = []; for (let i = 0; i < 2; i++) { const x = Relics.randomReward(rng, ['rare', 'boss', 'uncommon'], ex); if (x) { relics.push(x); ex.push(x); } } }
-    // the beast that chased you in the village is gone for good
-    if (this.pendingProwler) { this.pendingProwler.dead = true; this.pendingProwler = null; }
+    // the beast that chased you in the village is gone for good, and its
+    // carcass is one of the three you need to draw the raptor out
+    if (this.pendingProwler) {
+      this.pendingProwler.dead = true; this.pendingProwler = null;
+      if (r.bait < r.baitNeed) r.bait++;
+    }
     this.goWith('slats', () => new RewardScene({ gold: c.goldEarned, cards, relics, kind: c.kind }));
   },
   afterReward(o) {

@@ -203,12 +203,7 @@ function* introScript(S) {
   yield 0.4;
 
   // ==================================================== 4. THE EGG
-  S.cam.zoomTo(1.0);
-  yield* S.mini(new SideScroll({
-    base: 'bronk', scale: 1.7, startX: HOME.table - 50, goal: HOME.nest - 60, speed: 250,
-    paint: Scroll('home', { fire: 0 }),
-    title: 'THE NEST', sub: 'forty paces',
-  }));
+  yield* S.fadeOut(0.45);
   setOpt({ night: false, fire: 0 });
   S.cam.zoom = 1.8; S.cam.lookAt(HOME.nest - 20, 330, true);
   bronk.x = HOME.nest - 70; bronk.facing = 1; bronk.play('idle');
@@ -263,11 +258,12 @@ function* introScript(S) {
   yield 0.4;
   yield* S.say('BRONK', 'Morning, Trunks. Warm one today, eh?', { at: bronk });
   yield* S.say('', 'Trunks charges one bucket of nuts a week and has never once got the temperature right.', { at: mam, portrait: 'mammoth_idle' });
-  S.cam.zoomTo(1.0);
-  const wash = yield* S.mini(new ShowerGame({}));
-  Particles.splash(W / 2, 300, 30); AudioSys.sfx('spray');
-  S.cam.zoom = 1.5; S.cam.lookAt(HOME.shower + 20, 300, true);
-  if (wash && wash.win) { run.hp = Math.min(run.maxHp, run.hp + 6); Popups.add(bronk.x, bronk.top, 'SQUEAKY CLEAN  +6 HP', '#86e8d2', { scale: 1.2, life: 1.8 }); }
+  setOpt({ showerOn: true });
+  for (let i = 0; i < 3; i++) { Particles.splash(HOME.shower, GY - 110, 12); AudioSys.sfx('spray'); yield 0.5; }
+  AudioSys.sfx('gasp'); Juice.shake(5, 0.3); Emotes.show(bronk, '!', 1.0);
+  yield* S.say('BRONK', 'COLD. COLD. THAT IS COLD, TRUNKS.', { at: bronk });
+  run.hp = Math.min(run.maxHp, run.hp + 6);
+  Popups.add(bronk.x, bronk.top, 'CLEAN ENOUGH  +6 HP', '#86e8d2', { scale: 1.2, life: 1.8 });
   yield 0.9;
 
   // ==================================================== 7. OFF TO WORK
@@ -281,26 +277,24 @@ function* introScript(S) {
   yield* S.say('BRONK', 'Every rock is shaped like a face if you work at the quarry long enough.', { at: bronk });
   yield 0.3;
   setOpt({ showerOn: false });
-  S.cam.zoomTo(1.0);
-  // walk past the shower, to the car
-  yield* S.mini(new SideScroll({
-    base: 'bronk', scale: 1.7, startX: HOME.shower - 120, goal: HOME.car - 50, speed: 240,
-    paint: Scroll('home', { fire: 1, eggGone: true }),
-    title: 'TO WORK', sub: 'the car is past the shower',
-  }));
-  S.cam.zoom = 1.5; S.cam.lookAt(HOME.car, 320, true);
-  bronk.x = HOME.car - 46; bronk.facing = 1; bronk.play('idle');
+  // past the shower, down the yard, to the car
+  S.cam.zoomTo(1.5);
+  bronk.x = HOME.shower - 40; bronk.y = GY; bronk.facing = 1;
+  S.cam.follow = bronk;
+  yield* S.walk('bronk', HOME.car - 52, GY, 130);
+  S.cam.follow = null; S.cam.lookAt(HOME.car, 320);
   S.hide('vela', 'kida', 'kidb', 'mam');
   yield 0.5;
+  yield* S.say('BRONK', 'Right. Rocks.', { at: bronk });
   AudioSys.sfx('car_start');
-  bronk.play('drive');
+  bronk.visible = false;
   yield 0.8;
 
   // ==================================================== 8. THE CHILL DRIVE
   AudioSys.play('drive', { fade: 0.4 });
   const drive = yield* S.mini(new SideScroll({
-    base: 'bronk', moveClip: 'drive', idleClip: 'drive', scale: 1.8,
-    startX: 0, goal: 3000, speed: 120, auto: 150, grip: 3,
+    vehicle: 'car', vehicleScale: 1.6, scale: 1.7,
+    startX: 0, goal: 3000, speed: 130, auto: 150, grip: 3,
     paint: Scroll('road'),
     title: 'THE COMMUTE', sub: 'no rush',
     pickups: Array.from({ length: 9 }, (_, i) => ({ x: 340 + i * 290, spr: 'icon_coin', label: '+1 shell' })),
@@ -310,7 +304,7 @@ function* introScript(S) {
   // ==================================================== 9. THE QUARRY
   yield* S.cut('quarry', {});
   S.cam.zoom = 1.5; S.cam.lookAt(500, 300, true);
-  bronk.x = 380; bronk.y = GY; bronk.facing = 1; bronk.play('idle');
+  bronk.visible = true; bronk.x = 380; bronk.y = GY; bronk.facing = 1; bronk.play('idle');
   AudioSys.play('drive', { fade: 0.6 });
   yield* S.fadeIn(0.7);
   yield 0.6;
@@ -346,15 +340,21 @@ function* introScript(S) {
   yield* S.say('', 'That is Gary. Gary is fine. Gary is mostly fine.', { at: trex, portrait: 'trex_idle' });
   yield* S.say('BRONK', "Right. RIGHT. I am the Employee of the Week. This is an Employee of the Week problem.", { at: bronk });
   yield 0.4;
-  // --- chase the trex
-  S.cam.zoomTo(1.0);
-  trex.visible = false; vic.visible = false; vic2.visible = false;
-  yield* S.mini(new SideScroll({
-    base: 'bronk', moveClip: 'run', scale: 1.7, startX: 0, goal: 2000, speed: 300,
-    paint: Scroll('quarry'),
-    ahead: { spr: 'trex_walk', gap: 520, speed: 250, scale: 1.5, flip: false },
-    title: 'AFTER IT', sub: 'this is not in the job description',
-  }));
+  // --- he gives chase. it does not go far.
+  bronk.visible = true; bronk.play('run', { fps: 18 }); bronk.facing = 1;
+  trex.play('walk');
+  S.cam.zoomTo(1.5); S.cam.lookAt(bronk.x + 200, 300);
+  Co.run(function* () {
+    for (let i = 0; i < 260; i++) {
+      bronk.x += Time.dt * 210; trex.x += Time.dt * 320;
+      Particles.dust(bronk.x - 22, GY, 1);
+      S.cam.lookAt(bronk.x + 150, 300);
+      yield 0;
+    }
+  }());
+  yield 2.2;
+  bronk.play('idle');
+  yield* S.say('BRONK', '...it went towards the village. It went towards MY village.', { at: bronk });
   yield* S.fadeOut(0.7);
 
   // ==================================================== 10. HOME, AT DUSK
@@ -390,7 +390,7 @@ function* introScript(S) {
   S.cam.zoomTo(1.0);
   // --- the big one: chase the raptor, with the tyrant on your heels
   const chase = yield* S.mini(new SideScroll({
-    base: 'bronk', moveClip: 'run', scale: 1.7, startX: 0, goal: 2600, speed: 315,
+    vehicle: 'car', vehicleScale: 1.6, scale: 1.7, startX: 0, goal: 2600, speed: 330, grip: 5,
     paint: Scroll('canyon', { embers: true }),
     ahead: { spr: 'blaze_walk', gap: 560, speed: 268, scale: 1.4, carry: 'vela_cry' },
     pursuer: { spr: 'trex_walk', gap: 520, speed: 252, scale: 1.7 },

@@ -17,16 +17,16 @@ the family stove. One Tuesday he snapped the chain and took Bronk's wife and
 children with him. Bronk is not fast and he is not fit, but he is extremely
 loud.
 
-The opening is a playable morning. A dodo alarm goes off and you swat it. Your
-wife wakes you and the word "pancakes" gets you out of bed at a sprint, which
-is the first of three side-scrolling stages. You are sent to rob a dodo nest
-and have to wrestle the egg off its mother. You cook it by booting the raptor
-chained under the pan, shower under a mammoth, walk past the shower to the car
-and take a very relaxed drive to the quarry — where something has come out of
-the mines and is eating the workforce. You chase it. You get home to find the
-raptor has taken your family, so you chase *him*, while the thing from the
-quarry chases you, until the car gives out. Then a beam of light comes down,
-the tyrant runs, and an old rockstar hands you a guitar and vanishes.
+The opening is a playable morning, in six hands-on beats. A dodo alarm goes off
+and you swat it. Your wife wakes you and the word "pancakes" gets you out of bed
+at a sprint. You are sent to rob a dodo nest and have to wrestle the egg off its
+mother. You cook it by booting the raptor chained under the pan. You shower under
+a mammoth, walk past the shower to the car, and take a very relaxed drive to the
+quarry — where something has come out of the mines and is eating the workforce.
+You get home to find the raptor has taken your family, so you chase *him* in the
+car, while the thing from the quarry chases you, until the car gives out. Then a
+beam of light comes down, the tyrant runs, and an old rockstar hands you a guitar
+and vanishes.
 
 ## How it plays
 
@@ -36,8 +36,10 @@ the tyrant runs, and an old rockstar hands you a guitar and vanishes.
   out of them, hide in a bush, outrun them, or take the fight. Campfires restore
   health and stamina. Black fog marked with a question mark is a mystery
   encounter. Space is a dodge roll that costs stamina and briefly breaks line of
-  sight. The map is wide and mostly empty and the goal is the gate at the far
-  end of it. The shop is a mammoth in a striped awning and a feathered
+  sight. The map is wide and mostly empty, and the way out is the gate at the far
+  end — but a raptor that has eaten will not come back for a smell, so the gate
+  stays shut until you have put **three beasts down** and laid a trail it cannot
+  walk past. The objective tracker sits in the top left. The shop is a mammoth in a striped awning and a feathered
   headdress who turns up somewhere new every few minutes and is gone again by
   the time you go back.
 - **Fights are a deck of riffs.** Three energy a turn, five cards, Block,
@@ -51,6 +53,10 @@ the tyrant runs, and an old rockstar hands you a guitar and vanishes.
   BAD and AWFUL windows, sustains you keep held, a combo counter and a crowd
   meter. Duel cards are call and answer: the beast plays a phrase in ghost
   stones, then you play it back.
+- **It starts very easy.** The first three riffs of a run run with training
+  wheels on: timing windows two and a half times wider, stones drifting in
+  slowly, half the notes, and no vocal line at all. The next four tighten up,
+  and after that it plays straight.
 - **And you sing it.** In the gaps the strum chart leaves, an ember ribbon
   swoops down from the top carrying the vocal line. Hold the chant and steer
   your voice along the ribbon with the mouse (or your thumb on the left edge),
@@ -97,7 +103,7 @@ js2/rhythm.js     the Rock-Axe: strings, strum bar and the vocal ribbon
 js2/cards.js      riff cards and their renderer
 js2/relics.js     relics
 js2/enemies.js    beasts, intents, encounter tables
-js2/minigames.js  side-scroller, dodo swat, egg wrestle, raptor stove, shower
+js2/minigames.js  side-scroller, dodo swat, egg wrestle, raptor stove
 js2/world.js      the painted stages: house, road, quarry, canyon
 js2/cutscene.js   staging and the opening script
 js2/combat.js     the performance

@@ -393,9 +393,21 @@ class ZoneGoal extends Entity {
     Gfx.round(x - 40, y - 100, 80, 100, 8, '#e06a1b');
     Gfx.ctx.globalAlpha = 1;
     Gfx.text(this.label, x, y - 156, { color: k > 0.6 ? '#ffa832' : '#ffe08a', align: 'center', outline: true, outlineWidth: 2, scale: 1.3 });
-    Gfx.text('the raptor went this way', x, y - 138, { color: '#a79bb4', align: 'center', scale: 1 });
+    const r = Game.run, ready = r.bait >= r.baitNeed;
+    Gfx.text(ready ? 'the bait is laid  -  go' : `bait  ${r.bait} / ${r.baitNeed}`, x, y - 138,
+      { color: ready ? '#a8e878' : '#a79bb4', align: 'center', scale: 1 });
   }
-  *interact(V) { Game.enterBoss(); yield 0; }
+  *interact(V) {
+    const r = Game.run;
+    if (r.bait < r.baitNeed) {
+      AudioSys.sfx('error');
+      const n = r.baitNeed - r.bait;
+      yield* Dialogue.say('', `The road past the gate is empty. A raptor that has eaten will not come back for a smell - you need ${n} more kill${n === 1 ? '' : 's'} to lay a trail it cannot walk past.`, { at: { x: this.x, top: this.y - 170 } });
+      return;
+    }
+    Game.enterBoss();
+    yield 0;
+  }
 }
 
 // small animals that mind their own business and bolt if you crowd them
@@ -810,7 +822,22 @@ class VillageScene {
       ctx.restore();
       Gfx.text(`${Math.round(d / 32)}`, cx, cy + 30, { color: '#a79bb4', align: 'center' });
     }
-    if (this.hidden) Gfx.text('HIDDEN', W / 2, 20, { color: '#86e8d2', align: 'center', scale: 1.2, outline: true });
+    // the objective: three kills makes a trail the raptor will follow
+    {
+      const r = Game.run, ready = r.bait >= r.baitNeed, bx = 20, by = 44;
+      Gfx.rectA(bx - 8, by - 6, 208, 44, '#120c16', 0.66);
+      Gfx.rectA(bx - 8, by - 6, 3, 44, ready ? '#6cc95c' : '#ffa832', 1);
+      Gfx.text(ready ? 'BAIT LAID' : 'MAKE RAPTOR BAIT', bx + 2, by - 2,
+        { color: ready ? '#a8e878' : '#ffe98a', scale: 1.1 });
+      for (let i = 0; i < r.baitNeed; i++) {
+        const gx = bx + 4 + i * 26, got = i < r.bait;
+        Gfx.sprite('icon_skull', gx + 9, by + 24, { anchor: 'c', scale: 1.1, alpha: got ? 1 : 0.22 });
+        if (got) Gfx.sprite('icon_check', gx + 15, by + 28, { anchor: 'c', scale: 0.8 });
+      }
+      Gfx.text(ready ? 'head for the gate' : `${r.bait} / ${r.baitNeed} beasts down`,
+        bx + 88, by + 18, { color: '#a79bb4', scale: 1 });
+    }
+    if (this.hidden) Gfx.text('HIDDEN', W / 2, 62, { color: '#86e8d2', align: 'center', scale: 1.2, outline: true });
     // zone banner on arrival
     if (this.intro > 0) {
       const k = clamp(this.intro / 2.2, 0, 1);
