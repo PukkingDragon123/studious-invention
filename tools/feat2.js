@@ -31,6 +31,14 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   // a prowler notices you and gives chase
   r = await ev(() => {
     const s = Game.scene, p = s.zone.entities.find(e => e.constructor.name === 'Prowler');
+    // drop both of them on a known-clear tile so the walk to contact is unobstructed
+    let sx = 0, sy = 0;
+    outer: for (let y = 3; y < s.zone.h - 3; y++) for (let x = 3; x < s.zone.w - 6; x++) {
+      let clear = true;
+      for (let o = 0; o < 4 && clear; o++) if (s.zone.solid[s.zone.idx(x + o, y)]) clear = false;
+      if (clear) { sx = x; sy = y; break outer; }
+    }
+    s.player.x = sx * 32 + 16; s.player.y = sy * 32 + 16;
     p.x = s.player.x + 70; p.y = s.player.y; p.dir = { x: -1, y: 0 }; p.state = 'patrol';
     return p.state;
   });

@@ -166,6 +166,28 @@ class Zone {
       const x = sq.x * TILE + 16 + Math.cos(a) * 92, y = sq.y * TILE + 16 + Math.sin(a) * 70;
       this.entities.push(new Npc(x, y, lines[i][2], lines[i][0], lines[i][1]));
     }
+    // villagers wandering the wider ruin, with things to say
+    const chatter = [
+      ['', "Everything I own is under that roof. The roof is under the floor."],
+      ['', "Do not go east. Please do not go east."],
+      ['', "I heard it singing. The fire one. Singing."],
+      ['', "My gourds! Six seasons of gourds!"],
+      ['', "Bronk. Bronk! Tell me you have a plan."],
+      ['', "Mammoth came through with the packs. Charged me double."],
+      ['', "The tar is rising in the low field again."],
+      ['', "You were always the loud one. Be loud."],
+    ];
+    for (let i = 0; i < 6; i++) {
+      const p = P[r.int(1, P.length - 2)];
+      const line = r.pick(chatter);
+      this.entities.push(new Npc(p.x * TILE + r.int(-110, 110), p.y * TILE + r.int(-80, 80), r.chance(0.5) ? 'villager' : 'villager2', line[0], line[1]));
+    }
+    // harmless critters that scatter when you get close
+    for (let i = 0; i < 7; i++) {
+      let x, y, guard = 0;
+      do { x = r.int(3, this.w - 4); y = r.int(3, this.h - 4); guard++; } while (guard < 40 && this.solid[this.idx(x, y)]);
+      this.entities.push(new Critter(x * TILE + 16, y * TILE + 16, r.pick(['compy', 'dodo'])));
+    }
     // patrolling enemies between the points of interest
     const count = 5 + this.act * 2;
     for (let i = 0; i < count; i++) {
@@ -293,6 +315,38 @@ class ZoneGoal extends Entity {
   *interact(V) { Game.enterBoss(); yield 0; }
 }
 
+// small animals that mind their own business and bolt if you crowd them
+class Critter extends Entity {
+  constructor(x, y, kind) {
+    super(x, y);
+    this.actor = new Actor({ base: kind, x, y, scale: 0.8 });
+    this.home = { x, y }; this.t = rnd(0, 4); this.flee = 0; this.r = 14;
+  }
+  update(dt, V) {
+    this.t -= dt;
+    const d = dist(this.x, this.y, V.player.x, V.player.y);
+    if (d < 96) { this.flee = 1.4; }
+    if (this.flee > 0) {
+      this.flee -= dt;
+      const a = Math.atan2(this.y - V.player.y, this.x - V.player.x);
+      const nx = this.x + Math.cos(a) * 128 * dt, ny = this.y + Math.sin(a) * 128 * dt;
+      if (!V.zone.isSolid(nx, this.y)) this.x = nx;
+      if (!V.zone.isSolid(this.x, ny)) this.y = ny;
+      this.actor.play('walk', { fps: 15 });
+      if (this.flee > 1.3 && chance(0.4)) AudioSys.sfx('roar', { pitch: rnd(320, 520), vol: 0.2, len: 0.25 });
+    } else if (this.t <= 0) {
+      this.t = rnd(1.4, 4);
+      this.target = { x: this.home.x + rnd(-70, 70), y: this.home.y + rnd(-50, 50) };
+    }
+    if (this.target && this.flee <= 0) { if (this.actor.moveTo(this.target.x, this.target.y, dt, 30)) this.target = null; this.actor.play('walk'); }
+    else if (this.flee <= 0) this.actor.play('idle');
+    this.actor.x = this.x; this.actor.y = this.y;
+    if (this.flee > 0) this.actor.facing = this.x > V.player.x ? 1 : -1;
+    this.actor.update(dt);
+  }
+  draw() { this.actor.draw(); }
+}
+
 class Prowler extends Entity {
   constructor(x, y, kind, act, elite) {
     super(x, y);
@@ -343,8 +397,18 @@ class Prowler extends Entity {
   }
   tryMove(dx, dy, V) {
     const z = V.zone;
-    if (!z.isSolid(this.x + dx, this.y)) this.x += dx; else this.dir.x *= -1;
-    if (!z.isSolid(this.x, this.y + dy)) this.y += dy; else this.dir.y *= -1;
+    let moved = false;
+    if (!z.isSolid(this.x + dx, this.y)) { this.x += dx; moved = moved || Math.abs(dx) > 0.01; } else if (this.state !== 'chase') this.dir.x *= -1;
+    if (!z.isSolid(this.x, this.y + dy)) { this.y += dy; moved = moved || Math.abs(dy) > 0.01; } else if (this.state !== 'chase') this.dir.y *= -1;
+    // boxed in while chasing: slide along the wall instead of grinding into it
+    if (!moved && this.state === 'chase') {
+      this.stuck = (this.stuck || 0) + 1;
+      const s = Math.hypot(dx, dy) || 1;
+      const side = (this.stuck >> 3) % 2 ? 1 : -1;
+      const px = -dy / s * s * side, py = dx / s * s * side;
+      if (!z.isSolid(this.x + px, this.y)) this.x += px;
+      if (!z.isSolid(this.x, this.y + py)) this.y += py;
+    } else this.stuck = 0;
     this.x = clamp(this.x, TILE * 2, z.w * TILE - TILE * 2);
     this.y = clamp(this.y, TILE * 2, z.h * TILE - TILE * 2);
   }
@@ -626,9 +690,16 @@ class VillageScene {
       const dx = goal.x - this.player.x, dy = goal.y - this.player.y;
       const a = Math.atan2(dy, dx), d = Math.hypot(dx, dy);
       const cx = W - 52, cy = H - 52;
-      Gfx.circle(cx, cy, 26, '#120c16'); Gfx.circle(cx, cy, 24, '#241c2e');
-      Gfx.sprite('icon_arrow', cx + Math.cos(a) * 12, cy + Math.sin(a) * 12, { anchor: 'c', rot: a, scale: 1.1, tint: '#ffa832' });
-      Gfx.text(`${Math.round(d / 32)}`, cx, cy + 28, { color: '#a79bb4', align: 'center' });
+      Gfx.circle(cx, cy, 27, '#120c16'); Gfx.circle(cx, cy, 24, '#241c2e');
+      Gfx.ring(cx, cy, 24, '#4d4a5c', 1);
+      const ctx = Gfx.ctx;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
+      ctx.fillStyle = '#ffa832';
+      ctx.beginPath(); ctx.moveTo(17, 0); ctx.lineTo(1, -8); ctx.lineTo(4, 0); ctx.lineTo(1, 8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#7a6d8a';
+      ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-1, -6); ctx.lineTo(-4, 0); ctx.lineTo(-1, 6); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      Gfx.text(`${Math.round(d / 32)}`, cx, cy + 30, { color: '#a79bb4', align: 'center' });
     }
     if (this.hidden) Gfx.text('HIDDEN', W / 2, 20, { color: '#86e8d2', align: 'center', scale: 1.2, outline: true });
     // zone banner on arrival

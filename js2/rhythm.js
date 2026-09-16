@@ -245,7 +245,7 @@ class Riff {
         const lit = mine ? (this.lanePress[i] > 0 || this.laneGlow[i] > 0.1) : this.laneGlow[i] > 0.1;
         const s = 1 + (lit ? 0.16 : 0) + bop * 0.05;
         if (lit) { ctx.globalAlpha = sl * 0.5 * (mine ? this.laneGlow[i] : 0.6); Gfx.sprite('target_' + LANES[i], x, y, { anchor: 'c', scale: s * 1.5, frame: 1, additive: true }); ctx.globalAlpha = sl; }
-        Gfx.sprite('target_' + LANES[i], x, y, { anchor: 'c', scale: s, frame: lit ? 1 : 0, alpha: mine ? 1 : 0.75 });
+        Gfx.sprite('target_' + LANES[i], x, y, { anchor: 'c', scale: s, frame: lit ? 1 : 0, alpha: mine ? (lit ? 1 : 0.92) : 0.68 });
       }
     }
     // ---- sustains then heads, player field on top

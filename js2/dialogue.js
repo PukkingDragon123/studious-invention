@@ -23,16 +23,22 @@ const Dialogue = {
     const st = SPEAKER_STYLE[speaker] || SPEAKER_STYLE[''];
     const b = {
       speaker, text, o, st, chars: 0, done: false, t: 0,
-      at: o.at || null, x: o.x, y: o.y, choices: o.choices || null, choice: -1, hover: -1,
+      at: o.at || null, x: o.x, y: o.y, choices: o.choices || null, choice: -1, hover: -1, pop: 0,
       portrait: o.portrait === false ? null : (o.portrait || st.portrait),
       shake: o.shake || 0, speed: o.speed || 48, auto: o.auto,
     };
     this.active = b;
     let waited = 0;
+    const pitch = { BRONK: -120, VELA: 120, PEBBLE: 260, ROXY: 300, BLAZE: -200, ELDER: -80, MAMMOTH: -170 }[speaker] || 0;
     while (true) {
       yield 0;
       b.t += Time.dt; waited += Time.dt;
+      b.pop = Math.min(1, (b.pop || 0) + Time.dt * 7);
+      const was = Math.floor(b.chars);
       b.chars = Math.min(text.length, b.chars + Time.dt * b.speed * (Input.down ? 3 : 1));
+      // one blip every few letters, skipping spaces, so speech has a voice
+      if (Math.floor(b.chars) > was && Math.floor(b.chars) % 3 === 0 && text[Math.floor(b.chars) - 1] !== ' ')
+        AudioSys.sfx('talk', { pitch: pitch + (text.charCodeAt(Math.floor(b.chars) - 1) % 40) });
       const full = b.chars >= text.length;
       if (b.choices) { if (b.choice >= 0) break; continue; }
       if (b.auto && full && waited > b.auto) break;
@@ -96,6 +102,12 @@ const Dialogue = {
     const L = this.layout(b);
     const st = b.st;
     const sh = b.shake ? rnd(-b.shake, b.shake) : 0;
+    const pop = Ease.outBack(clamp(b.pop || 0, 0, 1));
+    const ctx = Gfx.ctx;
+    ctx.save();
+    ctx.translate(L.x + L.w / 2, L.y + L.h);
+    ctx.scale(clamp(pop, 0.02, 1.2), clamp(pop, 0.02, 1.2));
+    ctx.translate(-(L.x + L.w / 2), -(L.y + L.h));
     Gfx.bubble(L.x + sh, L.y, L.w, L.h, L.tx, L.ty, { fill: st.fill, border: '#120c16' });
     let tx = L.x + 12 + sh;
     if (b.portrait) {
@@ -126,8 +138,9 @@ const Dialogue = {
       }
       b.hover = -1;
     } else if (b.chars >= b.text.length && !b.auto) {
-      Gfx.sprite('icon_check', L.x + L.w - 22 + sh, L.y + L.h - 16 + Math.sin(Time.t * 7) * 2, { anchor: 'c', scale: 1, tint: '#3b3048', tintAmount: 0.5 });
+      Gfx.text('\u25b6', L.x + L.w - 20 + sh, L.y + L.h - 20 + Math.sin(Time.t * 7) * 2, { color: '#3b3048', scale: 1.1 });
     }
+    ctx.restore();
   },
   clear() { this.active = null; this.queue.length = 0; }
 };
