@@ -627,7 +627,9 @@ class Combat {
     if (hov >= 0) {
       const c = this.hand[hov];
       const s = 1.35, w = CARD_W * s;
-      const hx = clamp(x0 + hov * spacing - (w - CARD_W) / 2, 6, W - w - 6);
+      // on touch the blown-up card is always centred, so the second tap lands
+      // exactly where the first one did something
+      const hx = Input.touch ? Math.round(W / 2 - w / 2) : clamp(x0 + hov * spacing - (w - CARD_W) / 2, 6, W - w - 6);
       const hy = H - CARD_H * s - 10;
       Cards.draw(c, hx, hy, { scale: s, hover: true, playable: this.canPlay(c), energy: this.energy, combat: this, selected: c === this.selected });
       UI.hit(hx, hy, w, CARD_H * s, () => this.tapCard(c));

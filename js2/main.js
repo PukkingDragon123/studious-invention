@@ -15,6 +15,8 @@ const Game = {
     this.go(new BootScene());
     requestAnimationFrame(ts => this.loop(ts));
   },
+  // swap scenes behind a wipe
+  goWith(kind, factory, hold) { Transition.start(kind, () => this.go(factory()), hold); },
   go(scene) {
     if (this.scene && this.scene.exit) this.scene.exit();
     UI.locked = false; this.overlay = null; this.mini = null;
@@ -39,7 +41,7 @@ const Game = {
     };
     this.go(new CutsceneScene(introScript, { onSkip: () => this.startVillage() }));
   },
-  startVillage() { this.run.zone = null; this.run.pos = null; this.go(new VillageScene(this.run.act)); },
+  startVillage() { this.run.zone = null; this.run.pos = null; this.goWith('iris', () => new VillageScene(this.run.act)); },
   hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } },
   save() {
     const r = this.run; if (!r) return;
@@ -75,14 +77,14 @@ const Game = {
     }
     this.pendingProwler = prowler;
     this.save();
-    this.go(new Combat(ids, { kind: prowler.elite ? 'elite' : 'normal', act }));
+    this.goWith('claw', () => new Combat(ids, { kind: prowler.elite ? 'elite' : 'normal', act }), 0.18);
   },
-  enterFight(ids, kind) { this.run.fights++; this.go(new Combat(ids, { kind: kind || 'normal', act: this.run.act })); },
-  enterBoss() { this.run.fights++; this.pendingProwler = null; this.bossFight = true; this.save(); this.go(new Combat(['blaze'], { kind: 'boss', act: this.run.act })); },
-  enterEvent() { this.go(new FogEvent()); },
-  leaveEvent() { this.go(new VillageScene(this.run.act)); },
-  openShop() { this.go(new MammothShop()); },
-  leaveShop() { this.go(new VillageScene(this.run.act)); },
+  enterFight(ids, kind) { this.run.fights++; this.goWith('claw', () => new Combat(ids, { kind: kind || 'normal', act: this.run.act }), 0.18); },
+  enterBoss() { this.run.fights++; this.pendingProwler = null; this.bossFight = true; this.save(); this.goWith('claw', () => new Combat(['blaze'], { kind: 'boss', act: this.run.act }), 0.3); },
+  enterEvent() { this.goWith('iris', () => new FogEvent()); },
+  leaveEvent() { this.goWith('iris', () => new VillageScene(this.run.act)); },
+  openShop() { this.goWith('slats', () => new MammothShop()); },
+  leaveShop() { this.goWith('slats', () => new VillageScene(this.run.act)); },
   combatWon(c) {
     const r = this.run;
     const rng = new RNG(r.seed + r.fights * 991);
@@ -92,11 +94,11 @@ const Game = {
     if (c.kind === 'boss') { const ex = []; for (let i = 0; i < 2; i++) { const x = Relics.randomReward(rng, ['rare', 'boss', 'uncommon'], ex); if (x) { relics.push(x); ex.push(x); } } }
     // the beast that chased you in the village is gone for good
     if (this.pendingProwler) { this.pendingProwler.dead = true; this.pendingProwler = null; }
-    this.go(new RewardScene({ gold: c.goldEarned, cards, relics, kind: c.kind }));
+    this.goWith('slats', () => new RewardScene({ gold: c.goldEarned, cards, relics, kind: c.kind }));
   },
   afterReward(o) {
     const r = this.run;
-    if (o.kind !== 'boss') { this.save(); this.go(new VillageScene(r.act)); return; }
+    if (o.kind !== 'boss') { this.save(); this.goWith('slats', () => new VillageScene(r.act)); return; }
     r.hp = Math.min(r.maxHp, r.hp + Math.round(r.maxHp * 0.3));
     r.stamina = r.maxStamina;
     if (r.act === 1) { r.band.push('pebble'); r.deck.push(Cards.make('drum_solo')); this.go(new ActStory(2, () => this.nextAct(2))); }
@@ -107,7 +109,7 @@ const Game = {
     const r = this.run;
     r.act = act; r.zone = null; r.pos = null; r.seenFights = [];
     this.save();
-    this.go(new VillageScene(act));
+    this.goWith('iris', () => new VillageScene(act));
   },
   // -------------------------------------------------------------------- loop
   loop(ts) {
@@ -123,7 +125,9 @@ const Game = {
       if (frozen) Juice.hitstop -= dt;
       const sdt = frozen ? 0 : dt;
       Juice.update(dt);
+      Transition.update(dt);
       if (this.overlay) { this.overlay.update(dt); }
+      else if (Transition.phase === 'out' || Transition.phase === 'hold') { this.scene.update(0); }
       else {
         Time.dt = sdt;
         Co.update(sdt); Tweens.update(sdt);
@@ -140,6 +144,7 @@ const Game = {
       this.scene.draw();
       ctx.restore();
       Juice.drawOverlay(ctx);
+      Transition.draw(ctx);
       if (this.overlay) { UI.locked = false; this.overlay.draw(); }
       UI.drawTips();
       Gfx.canvas.style.cursor = Input.touch ? 'none' : (UI.hoverAny ? 'pointer' : 'default');

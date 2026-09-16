@@ -309,5 +309,72 @@ const Popups = {
   clear() { this.list.length = 0; }
 };
 
+// ------------------------------------------------------------------ transitions
+// A screen wipe that hides the scene swap. Kinds: claw, slats, iris, fade.
+const Transition = {
+  phase: 'none', t: 0, dur: 0.34, kind: 'fade', pending: null, held: 0,
+  start(kind, pending, hold = 0) { this.kind = kind || 'fade'; this.pending = pending; this.phase = 'out'; this.t = 0; this.held = hold; },
+  get busy() { return this.phase !== 'none'; },
+  update(dt) {
+    if (this.phase === 'none') return;
+    this.t += dt;
+    if (this.phase === 'out' && this.t >= this.dur) {
+      if (this.pending) { const f = this.pending; this.pending = null; f(); }
+      if (this.held > 0) { this.phase = 'hold'; this.t = 0; }
+      else { this.phase = 'in'; this.t = 0; }
+    } else if (this.phase === 'hold' && this.t >= this.held) { this.phase = 'in'; this.t = 0; }
+    else if (this.phase === 'in' && this.t >= this.dur) { this.phase = 'none'; this.t = 0; }
+  },
+  // k: 0 = screen clear, 1 = screen fully covered
+  cover() {
+    if (this.phase === 'none') return 0;
+    if (this.phase === 'hold') return 1;
+    const k = clamp(this.t / this.dur, 0, 1);
+    return this.phase === 'out' ? Ease.inOutQuad(k) : 1 - Ease.inOutQuad(k);
+  },
+  draw(ctx) {
+    const k = this.cover(); if (k <= 0.001) return;
+    const col = '#120c16';
+    if (this.kind === 'claw') {
+      // three diagonal slashes sweep in from the right
+      ctx.fillStyle = col;
+      for (let i = 0; i < 3; i++) {
+        const w = W * 1.5, band = H / 3 + 40;
+        const x = W + 200 - k * (W + 420) - i * 60;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x, i * (H / 3) - 30); ctx.lineTo(x + w, i * (H / 3) - 30);
+        ctx.lineTo(x + w - 90, i * (H / 3) + band); ctx.lineTo(x - 90, i * (H / 3) + band);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      if (k > 0.05 && k < 0.98) {
+        ctx.globalAlpha = 0.9;
+        for (let i = 0; i < 3; i++) {
+          const x = W + 200 - k * (W + 420) - i * 60;
+          Gfx.line(x - 90, i * (H / 3) + H / 3 + 40, x, i * (H / 3) - 30, '#ffe98a', 3);
+        }
+        ctx.globalAlpha = 1;
+      }
+    } else if (this.kind === 'slats') {
+      ctx.fillStyle = col;
+      const n = 9, h = H / n;
+      for (let i = 0; i < n; i++) {
+        const w = W * clamp(k * 1.5 - (i % 2 ? 0.25 : 0), 0, 1);
+        ctx.fillRect(i % 2 ? 0 : W - w, i * h, w, h + 1);
+      }
+    } else if (this.kind === 'iris') {
+      const r = (1 - k) * Math.hypot(W, H) * 0.6;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.rect(0, 0, W, H);
+      ctx.arc(W / 2, H / 2, Math.max(0, r), 0, 6.2832, true);
+      ctx.fill();
+    } else {
+      ctx.globalAlpha = k; ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+    }
+  }
+};
+
 // ------------------------------------------------------------------ misc
 const Bus = { h: {}, on(e, f) { (this.h[e] = this.h[e] || []).push(f); }, emit(e, ...a) { (this.h[e] || []).forEach(f => f(...a)); }, clear() { this.h = {}; } };

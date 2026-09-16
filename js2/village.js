@@ -88,18 +88,34 @@ class Zone {
     }
     this.addProp(sq.x * TILE + 16, (sq.y + 3) * TILE, 'prop_totem', { footW: 1, footH: 1 });
 
-    // scenery scatter that respects the paths
-    const tries = Math.floor(this.w * this.h * 0.42);
+    // scenery: dense woods at the rim, open ground along the paths and squares
+    const tries = Math.floor(this.w * this.h * 0.3);
+    const openness = (x, y) => {
+      let d2 = 1e9;
+      for (const p of pois) d2 = Math.min(d2, (p.x - x) ** 2 + (p.y - y) ** 2);
+      return clamp(Math.sqrt(d2) / 9, 0, 1);       // 0 at a landmark, 1 far away
+    };
     for (let i = 0; i < tries; i++) {
       const x = r.int(2, this.w - 3), y = r.int(2, this.h - 3);
-      if (this.tiles[this.idx(x, y)] === d.path) continue;
-      if (this.solid[this.idx(x, y)]) continue;
-      const near = pois.some(p => Math.abs(p.x - x) < 3 && Math.abs(p.y - y) < 3);
+      if (this.tiles[this.idx(x, y)] === d.path || this.solid[this.idx(x, y)]) continue;
+      let near = false;
+      for (let oy = -1; oy <= 1 && !near; oy++) for (let ox = -1; ox <= 1; ox++) if (this.inside(x + ox, y + oy) && this.tiles[this.idx(x + ox, y + oy)] === d.path) { near = true; break; }
       if (near) continue;
+      const open = openness(x, y);
+      if (open < 0.35 && r.chance(0.72)) continue;   // keep the squares clear
       const roll = r.next();
-      if (roll < 0.30) this.addProp(x * TILE + 16, y * TILE + 26, r.pick(d.trees), { footW: 1, footH: 1 });
-      else if (roll < 0.62) this.addProp(x * TILE + 16, y * TILE + 26, r.pick(d.scatter), { footW: 1, footH: 1, solid: roll > 0.45 });
+      if (roll < 0.22 * open + 0.04) this.addProp(x * TILE + 16, y * TILE + 26, r.pick(d.trees), { footW: 1, footH: 1 });
+      else if (roll < 0.55) this.addProp(x * TILE + 16, y * TILE + 26, r.pick(d.scatter), { footW: 1, footH: 1, solid: roll > 0.44 });
       else if (roll < 0.70) this.addProp(x * TILE + 16, y * TILE + 26, r.pick(d.hide), { hide: true });
+    }
+    // a dense treeline around the rim so the zone feels bounded
+    for (let i = 0; i < this.w * 2; i++) {
+      const x = r.int(1, this.w - 2), y = r.chance(0.5) ? r.int(0, 2) : r.int(this.h - 3, this.h - 1);
+      this.addProp(x * TILE + 16, y * TILE + 26, r.pick(d.trees), { footW: 1, footH: 1 });
+    }
+    for (let i = 0; i < this.h * 2; i++) {
+      const y = r.int(1, this.h - 2), x = r.chance(0.5) ? r.int(0, 2) : r.int(this.w - 3, this.w - 1);
+      this.addProp(x * TILE + 16, y * TILE + 26, r.pick(d.trees), { footW: 1, footH: 1 });
     }
     // a few pots and baskets for looting near the square
     for (let i = 0; i < 6; i++) {
