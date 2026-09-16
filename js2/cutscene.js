@@ -6,26 +6,28 @@
 
 // A "set" is a painted backdrop in world coordinates the camera moves around.
 const Sets = {
-  house_ext(t, o = {}) {
+  house_ext(t, o = {}, cam) {
+    const L = cam ? cam.x - W : -400, R = cam ? cam.x + W : 1600;
     const dawn = o.dusk
       ? ['#2a1430', '#5c1f3d', '#a03a68', '#e06a1b', '#ffa832']
       : ['#1d3d72', '#3570c0', '#6aa9ee', '#ffb0cf', '#ffe08a'];
-    Gfx.bands(-200, -420, 1800, 560, dawn);
-    if (!o.dusk) { Gfx.circle(520, 30, 26, '#ffe98a'); Gfx.circle(512, 22, 8, '#fffaea'); }
-    else { Gfx.circle(1120, 10, 30, '#ef6a5e'); }
-    // hills
+    Gfx.bands(L - 200, -520, (R - L) + 400, 700, dawn);
+    if (!o.dusk) { Gfx.circle(520, 30, 26, '#ffe98a'); Gfx.glow(520, 30, 130, '#ffe98a', 0.3); }
+    else { Gfx.circle(1120, 10, 30, '#ef6a5e'); Gfx.glow(1120, 10, 220, '#e06a1b', 0.3); }
     const ctx = Gfx.ctx;
+    const step = 40, x0 = Math.floor((L - 200) / step) * step, x1 = R + 200;
     ctx.fillStyle = o.dusk ? '#3f0e18' : '#27632f';
-    ctx.beginPath(); ctx.moveTo(-200, 140);
-    for (let x = -200; x <= 1600; x += 40) ctx.lineTo(x, 80 + Math.sin(x * 0.006) * 46 + Math.sin(x * 0.017) * 18);
-    ctx.lineTo(1600, 300); ctx.lineTo(-200, 300); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x0, 140);
+    for (let x = x0; x <= x1; x += step) ctx.lineTo(x, 80 + Math.sin(x * 0.006) * 46 + Math.sin(x * 0.017) * 18);
+    ctx.lineTo(x1, 300); ctx.lineTo(x0, 300); ctx.fill();
     ctx.fillStyle = o.dusk ? '#58203c' : '#3f9a45';
-    ctx.beginPath(); ctx.moveTo(-200, 170);
-    for (let x = -200; x <= 1600; x += 40) ctx.lineTo(x, 132 + Math.sin(x * 0.01 + 2) * 26);
-    ctx.lineTo(1600, 320); ctx.lineTo(-200, 320); ctx.fill();
-    Gfx.rect(-200, 176, 1800, 220, o.dusk ? '#3a2415' : '#5c3a20');
-    Gfx.rect(-200, 176, 1800, 5, o.dusk ? '#5c3a20' : '#85562f');
-    for (let x = -160; x < 1600; x += 64) Gfx.sprite(((x / 64) | 0) % 3 === 0 ? 'prop_bush' : 'prop_fern', x, 186, { anchor: 'bc', alpha: 0.9 });
+    ctx.beginPath(); ctx.moveTo(x0, 170);
+    for (let x = x0; x <= x1; x += step) ctx.lineTo(x, 132 + Math.sin(x * 0.01 + 2) * 26);
+    ctx.lineTo(x1, 320); ctx.lineTo(x0, 320); ctx.fill();
+    Gfx.rect(x0, 176, x1 - x0, 400, o.dusk ? '#3a2415' : '#5c3a20');
+    Gfx.rect(x0, 176, x1 - x0, 5, o.dusk ? '#5c3a20' : '#85562f');
+    for (let x = Math.floor(x0 / 64) * 64; x < x1; x += 64) Gfx.sprite(((x / 64) | 0) % 3 === 0 ? 'prop_bush' : 'prop_fern', x, 186, { anchor: 'bc', alpha: 0.9 });
+    for (let x = Math.floor(x0 / 260) * 260; x < x1; x += 260) if (((x / 260) | 0) % 3) Gfx.sprite(((x / 260) | 0) % 2 ? 'prop_palm' : 'prop_tree', x + 40, 184, { anchor: 'bc', alpha: 0.85 });
     Gfx.sprite('prop_palm', 80, 182, { anchor: 'bc' });
     Gfx.sprite('prop_tree', 760, 184, { anchor: 'bc' });
     Gfx.sprite(o.wreck ? 'prop_hut_ruin' : 'prop_hut', 420, 190, { anchor: 'bc', scale: 2 });
@@ -42,10 +44,17 @@ const Sets = {
     for (let y = -160; y < 190; y += 40) for (let x = -200; x < 1200; x += 32) Gfx.sprite('house_wall', x, y, { anchor: 'tl' });
     Gfx.rectA(-200, -300, 1400, 500, '#120c16', 0.42);       // walls sit in shadow
     for (let y = 190; y < 460; y += 32) for (let x = -200; x < 1200; x += 32) Gfx.sprite('house_floor', x, y, { anchor: 'tl' });
-    Gfx.rect(-200, 182, 1400, 8, '#120c16');
-    Gfx.rectA(-200, 190, 1400, 10, '#000000', 0.3);
-    Gfx.rectA(-200, 190, 1400, 260, '#e06a1b', 0.05);
-    Gfx.sprite('house_shelf', 150, 176, { anchor: 'bc' });
+    // beaten earth over the stone, so the floor is not the same surface as the wall
+    Gfx.rectA(-200, 190, 1400, 270, '#5c3a20', 0.52);
+    const g = Gfx.ctx.createLinearGradient(0, 190, 0, 460);
+    g.addColorStop(0, 'rgba(6,3,10,0.70)'); g.addColorStop(0.4, 'rgba(6,3,10,0.15)'); g.addColorStop(1, 'rgba(6,3,10,0.5)');
+    Gfx.ctx.fillStyle = g; Gfx.ctx.fillRect(-200, 190, 1400, 270);
+    Gfx.rect(-200, 180, 1400, 10, '#120c16');
+    Gfx.rectA(-200, 176, 1400, 4, '#b07a45', 0.5);
+    Gfx.rectA(-200, 190, 1400, 16, '#000000', 0.45);
+    Gfx.ctx.globalAlpha = 0.3; Gfx.round(330, 272, 320, 46, 8, '#58203c'); Gfx.ctx.globalAlpha = 1;
+    Gfx.sprite('house_shelf', 330, 178, { anchor: 'bc' });
+    Gfx.sprite('prop_skull', 585, 172, { anchor: 'bc', scale: 0.8, alpha: 0.9 });
     Gfx.sprite('house_bed', 930, 268, { anchor: 'bc' });
     Gfx.sprite('house_table', 470, 272, { anchor: 'bc' });
     Gfx.sprite('stove_pit', 720, 250, { anchor: 'bc' });
@@ -119,7 +128,7 @@ class CutsceneScene {
   draw() {
     Gfx.clear('#120c16');
     this.cam.apply(Gfx.ctx);
-    (Sets[this.set] || Sets.house_ext)(this.t, this.setOpt);
+    (Sets[this.set] || Sets.house_ext)(this.t, this.setOpt, this.cam);
     const list = Object.values(this.actors).filter(a => a.visible).map(a => ({ y: a.y, a }));
     list.sort((p, q) => p.y - q.y);
     for (const it of list) it.a.draw();
@@ -178,7 +187,7 @@ function* introScript(S) {
 
   // ------------------------------------------------------------ 2. kitchen
   yield* S.cut('house_int', { fire: 0 });
-  S.cam.zoom = 1.45; S.cam.lookAt(470, 250, true);
+  S.cam.zoom = 1.42; S.cam.lookAt(500, 218, true);
   const bronk = S.add('bronk', { base: 'bronk', x: 300, y: 300, scale: 1 });
   const vela = S.add('vela', { base: 'vela', x: 520, y: 300, scale: 1, facing: 1 });
   const blaze = S.add('blaze', { base: 'blaze', x: 726, y: 298, scale: 1, facing: -1 });
@@ -188,11 +197,11 @@ function* introScript(S) {
   yield* S.say('VELA', "Bronk. The stove's gone out. Again.", { at: vela });
   bronk.play('idle'); bronk.facing = 1;
   yield* S.say('BRONK', "That stove is the laziest animal in this valley.", { at: bronk });
-  S.cam.lookAt(690, 250); S.cam.zoomTo(1.9);
+  S.cam.lookAt(700, 226); S.cam.zoomTo(1.8);
   yield 0.7;
   Emotes.show(blaze, 'anger', 1.6); AudioSys.sfx('detect');
   yield* S.say('', "BLAZE the cook-fire raptor has been chained to this pit for six years. He has opinions about it.", { at: blaze, portrait: 'blaze_idle' });
-  S.cam.zoomTo(1.5); S.cam.lookAt(540, 250);
+  S.cam.zoomTo(1.45); S.cam.lookAt(540, 226);
   yield 0.3;
   // --- minigame 1
   const bell = yield* new BellowsGame({}).run();
@@ -207,7 +216,7 @@ function* introScript(S) {
   yield 0.4;
 
   // ------------------------------------------------------------ 3. breakfast
-  S.cam.lookAt(470, 250); S.cam.zoomTo(1.7);
+  S.cam.lookAt(500, 230); S.cam.zoomTo(1.6);
   const kidA = S.add('kida', { base: 'kid_a', x: 382, y: 302, scale: 1 });
   const kidB = S.add('kidb', { base: 'kid_b', x: 560, y: 304, scale: 1, facing: -1 });
   yield* S.say('VELA', "BREAKFAST! Sit down before these two eat the bone as well.", { at: vela });

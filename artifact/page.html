@@ -170,76 +170,79 @@
 <div class="shell">
   <header class="masthead">
     <h1 class="wordmark">ONGA <em>BONGA</em></h1>
-    <p class="tagline">A stone age rock saga in three acts.</p>
+    <p class="tagline">Get your family back with music.</p>
   </header>
 
   <div class="niche">
     <div id="stage">
-      <canvas id="game" width="640" height="360" aria-label="Onga Bonga, a playable pixel art game"></canvas>
+      <canvas id="game" width="960" height="540" aria-label="Onga Bonga, a playable pixel art game"></canvas>
     </div>
     <div class="utility">
-      <p class="sound-note"><b>Sound on.</b> Every riff you play is cut from the song currently playing, so the guitar only sounds when you hit the notes.</p>
+      <p class="sound-note"><b>Sound on.</b> Every riff is cut from the melody of the song already playing, so the guitar only sounds when you land the notes.</p>
       <button class="go" id="fs" type="button" hidden>Full screen</button>
     </div>
   </div>
 
   <div class="guide">
     <section>
-      <p class="label">The quest</p>
-      <h3>King Rex stole the show</h3>
-      <p>He crashed the festival, carried off Princess Petra and scattered your band across the valley. Climb three acts, beat the boss of each, and you get a bandmate back.</p>
+      <p class="label">The trouble</p>
+      <h3>Your stove ran away</h3>
+      <p>BLAZE the fire-breathing raptor spent six years chained in the kitchen as the family stove. This morning he snapped the chain and took the family with him. The opening plays out in full, with four mini-games, before you ever see a card.</p>
     </section>
     <section>
-      <p class="label">Each turn</p>
-      <h3>Three energy, five cards</h3>
-      <p>Riffs attack, moves block, rallies build the crowd. Dinosaurs telegraph their intent above their heads, so you know whether to swing or brace.</p>
+      <p class="label">The valley</p>
+      <h3>Walk it, don't pick it</h3>
+      <p>The ruins are a tile map, not a row of nodes. Beasts patrol with cones of vision: keep out of them, duck into a bush, or take the fight. Running burns stamina Bronk does not have.</p>
+      <p>Campfires restore you. Black fog hides an encounter. The shop is a mammoth carrying other people's belongings, wandering its own route.</p>
     </section>
     <section>
-      <p class="label">Each riff</p>
-      <h3>Play it, don't click it</h3>
-      <p>Attack cards open a four-lane solo. Hit each note as it reaches the bone bar: <span class="perfect">PERFECT</span> deals 1.5&times; damage, GOOD deals 1&times;, a miss deals nothing.</p>
-      <p>Landed notes fill the <b>HYPE</b> meter. Fill it and the crowd demands an <b>ENCORE</b>: a free epic solo that hits every enemy once per note.</p>
+      <p class="label">The fight</p>
+      <h3>Play the riff yourself</h3>
+      <p>A deck of riffs, three energy a turn. Play a card marked with a note and the camera cuts to a close-up: four arrow lanes, <span class="perfect">SICK</span> timing, sustains to hold, and a crowd meter tugging between you and the beast.</p>
+      <p>Duel cards are call and answer. The beast plays a phrase, then you play it back.</p>
     </section>
   </div>
 
   <section class="controls">
     <p class="label">Controls</p>
     <dl class="keys for-keys">
-      <dt><kbd class="lane-d">D</kbd><kbd class="lane-f">F</kbd><kbd class="lane-j">J</kbd><kbd class="lane-k">K</kbd></dt>
-      <dd>The four frets, left to right. Arrow keys work too.</dd>
+      <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt>
+      <dd>Walk the valley. Arrow keys work too. <kbd>SHIFT</kbd> runs, <kbd>E</kbd> interacts, <kbd>M</kbd> opens the map.</dd>
+      <dt><kbd class="lane-d">&larr;</kbd><kbd class="lane-f">&darr;</kbd><kbd class="lane-j">&uarr;</kbd><kbd class="lane-k">&rarr;</kbd></dt>
+      <dd>The four lanes during a riff. <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> are the same four. Hold for sustains.</dd>
       <dt><kbd>1</kbd>&ndash;<kbd>9</kbd></dt>
-      <dd>Play the card in that slot. Or click it, then click a dinosaur.</dd>
+      <dd>Play the card in that slot, then click the beast you are aiming at.</dd>
       <dt><kbd>SPACE</kbd></dt>
-      <dd>Encore, once the Hype meter is full.</dd>
+      <dd>Encore, once the Hype column is full.</dd>
       <dt><kbd>E</kbd></dt>
       <dd>End your turn.</dd>
       <dt><kbd>ESC</kbd></dt>
-      <dd>Menu, settings and your deck.</dd>
+      <dd>Menu, settings, your deck. Hold it to skip the opening.</dd>
     </dl>
     <dl class="keys for-touch">
-      <dt><span class="pad">FRETS</span></dt>
-      <dd>Tap the four pads along the bottom while a riff plays. Two fingers at once play a chord.</dd>
+      <dt><span class="pad">WALK</span></dt>
+      <dd>Drag the stick in the lower left. ACT interacts, RUN sprints.</dd>
       <dt><span class="pad">CARDS</span></dt>
-      <dd>Tap a card once to read it, tap again to play it, then tap the dinosaur you are aiming at.</dd>
-      <dt><span class="pad">MAP</span></dt>
-      <dd>Drag to scroll, tap a node to travel. Landscape is the way to hold it.</dd>
+      <dd>Tap a card once to read it, tap again to play it, then tap the beast you are aiming at.</dd>
+      <dt><span class="pad">RIFFS</span></dt>
+      <dd>Four pads fill the bottom of the screen. Two fingers at once play a chord.</dd>
     </dl>
   </section>
 
   <section class="band">
-    <p class="label">The roster</p>
+    <p class="label">The cast</p>
     <ul class="roster" id="roster">
-      <li><span class="who">Onga</span><span class="what">You. Rock-Axe, bone-strung, loud.</span></li>
-      <li><span class="who">Bonga</span><span class="what">Log drums. Hits a random enemy every turn.</span></li>
-      <li><span class="who">Ugg</span><span class="what">Mammoth-gut bass. Block at the top of each turn.</span></li>
-      <li><span class="who">Zog</span><span class="what">Bone flute. Widens your timing windows.</span></li>
-      <li><span class="who">Petra</span><span class="what">The princess. Currently up a volcano.</span></li>
-      <li><span class="who">King Rex</span><span class="what">Thinks his roar is the only music.</span></li>
+      <li><span class="who">Bronk</span><span class="what">You. Loud, slow, and out of options.</span></li>
+      <li><span class="who">Vela</span><span class="what">His wife. Taken third. Plays bass.</span></li>
+      <li><span class="who">Pebble</span><span class="what">The son. Keeps time under pressure.</span></li>
+      <li><span class="who">Roxy</span><span class="what">The daughter. Bone flute, steady hands.</span></li>
+      <li><span class="who">Blaze</span><span class="what">Six years chained to a cooking pit. Done asking.</span></li>
+      <li><span class="who">The T-Rex</span><span class="what">Not involved. Still a problem.</span></li>
     </ul>
   </section>
 
   <footer class="colophon">
-    <p>Runs are saved as you go, so you can close this and pick the run back up later. <b>Timing feel off?</b> Open the menu and nudge the offset, or widen the hit windows. Everything here is drawn and synthesized in the page itself: pixel art as text, music as note patterns played by a Web Audio synth. No images, no audio files, no libraries.</p>
+    <p>Runs save as you go, so you can close this and pick the hunt back up later. <b>Timing feel off?</b> Open the menu and nudge the offset, or widen the windows. Everything here is drawn and synthesized in the page itself: 177 sprites written as text and compiled at load, twenty songs written as note patterns and played by a Web Audio synth. No images, no audio files, no libraries.</p>
   </footer>
 </div>
 
@@ -265,27 +268,35 @@
   })();
 </script>
 
-<script src="js/util.js"></script>
-<script src="js/font.js"></script>
-<script src="js/gfx.js"></script>
-<script src="js/sprites.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/songs.js"></script>
-<script src="js/cards.js"></script>
-<script src="js/relics.js"></script>
-<script src="js/enemies.js"></script>
-<script src="js/rhythm.js"></script>
-<script src="js/combat.js"></script>
-<script src="js/map.js"></script>
-<script src="js/events.js"></script>
-<script src="js/scenes.js"></script>
-<script src="js/main.js"></script>
+<script src="js2/core.js"></script>
+<script src="js2/font.js"></script>
+<script src="js2/gfx.js"></script>
+<script src="js2/art_chars.js"></script>
+<script src="js2/art_beasts.js"></script>
+<script src="js2/art_dinos.js"></script>
+<script src="js2/art_world.js"></script>
+<script src="js2/art_ui.js"></script>
+<script src="js2/anim.js"></script>
+<script src="js2/audio.js"></script>
+<script src="js2/songs.js"></script>
+<script src="js2/dialogue.js"></script>
+<script src="js2/rhythm.js"></script>
+<script src="js2/cards.js"></script>
+<script src="js2/relics.js"></script>
+<script src="js2/enemies.js"></script>
+<script src="js2/minigames.js"></script>
+<script src="js2/cutscene.js"></script>
+<script src="js2/combat.js"></script>
+<script src="js2/village.js"></script>
+<script src="js2/events.js"></script>
+<script src="js2/scenes.js"></script>
+<script src="js2/main.js"></script>
 
 <script>
   // Roster portraits are drawn from the game's own sprite data, so the page and
   // the game can never drift apart.
   (function () {
-    var cast = ['onga', 'bonga', 'ugg', 'zog', 'petra', 'trex'];
+    var cast = ['bronk_idle', 'vela_idle', 'kid_a_idle', 'kid_b_idle', 'blaze_idle', 'trex_idle'];
     function paint() {
       var items = document.querySelectorAll('#roster li');
       for (var i = 0; i < items.length && i < cast.length; i++) {

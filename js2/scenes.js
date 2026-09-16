@@ -3,17 +3,49 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
+// the dawn-over-the-ruins painting behind both the boot prompt and the title
+function drawTitleWorld(t) {
+  Gfx.bands(0, 0, W, 360, ['#281040', '#4b2070', '#a03a68', '#e06a1b', '#ffa832', '#ffe08a']);
+  Gfx.circle(760, 150, 46, '#ffe98a');
+  Gfx.glow(760, 150, 220, '#ffa832', 0.35);
+  const ctx = Gfx.ctx;
+  ctx.fillStyle = '#5c1607';
+  ctx.beginPath(); ctx.moveTo(0, 320);
+  for (let x = 0; x <= W; x += 40) ctx.lineTo(x, 236 + Math.sin(x * 0.0055) * 52 + Math.sin(x * 0.014) * 16);
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
+  ctx.fillStyle = '#1a0c14';
+  ctx.beginPath(); ctx.moveTo(0, 340);
+  for (let x = 0; x <= W; x += 40) ctx.lineTo(x, 292 + Math.sin(x * 0.009 + 2) * 26);
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
+  Gfx.rect(0, 392, W, H - 392, '#241c2e');
+  Gfx.rect(0, 392, W, 4, '#3b3048');
+  for (let i = 0; i < 7; i++) Gfx.sprite(i % 2 ? 'prop_hut_ruin' : 'prop_hut', 80 + i * 150, 396, { anchor: 'bc', tint: '#120c16', tintAmount: 0.55 });
+  for (let i = 0; i < 9; i++) Gfx.sprite('prop_deadtree', 40 + i * 120, 398, { anchor: 'bc', tint: '#120c16', tintAmount: 0.7, alpha: 0.8 });
+  const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
+  const bob = Math.abs(Math.sin(beat * Math.PI));
+  Gfx.sprite('bronk_play', 640, 500 - bob * 6, { anchor: 'bc', frame: Math.floor(beat * 2) % 4, scale: 2 });
+  Gfx.sprite('blaze_idle', 840, 504, { anchor: 'bc', frame: Math.floor(t * 6) % 2, scale: 1.5 });
+  for (let i = 0; i < 2; i++) if (chance(0.45)) Particles.fire(840 + rnd(-30, 30), 420, 1);
+  for (let i = 0; i < 6; i++) Gfx.sprite(i % 2 ? 'villager_idle' : 'villager2_idle', 120 + i * 78, 512 - Math.abs(Math.sin((beat + i * 0.4) * Math.PI)) * 5, { anchor: 'bc', tint: '#120c16', tintAmount: 0.7, frame: Math.floor(beat + i) });
+  if (chance(0.35)) Particles.spawn(rnd(0, W), H, { n: 1, color: ['#ffa832', '#e06a1b', '#574a66'], speed: 16, gravity: -22, life: 4, size: 3, sizeEnd: 0, world: false });
+  Particles.draw(Gfx.ctx, false);
+  Gfx.vignette(0.55);
+}
+
 class BootScene {
   constructor() { this.t = 0; }
   enter() { } exit() { }
   update(dt) { this.t += dt; if (Input.anyPress) { AudioSys.init(); Game.go(new TitleScene()); } }
   draw() {
-    Gfx.bands(0, 0, W, H, ['#120c16', '#241c2e', '#3b3048', '#241c2e', '#120c16']);
-    Gfx.text('ONGA BONGA', W / 2, H / 2 - 70, { color: '#ffe98a', align: 'center', scale: 5, outline: true, outlineWidth: 2 });
-    Gfx.ctx.globalAlpha = 0.6 + 0.4 * Math.sin(this.t * 4);
-    Gfx.text(Input.touch ? 'TAP TO BEGIN' : 'PRESS ANY KEY', W / 2, H / 2 + 30, { color: '#ffffff', align: 'center', scale: 1.6, outline: true });
+    drawTitleWorld(this.t);
+    Gfx.rectA(0, 0, W, H, '#120c16', 0.32);
+    Gfx.text('ONGA', 300, 74, { color: '#ffe98a', align: 'center', scale: 6.4, outline: true, outlineWidth: 3 });
+    Gfx.text('BONGA', 300, 154, { color: '#e06a1b', align: 'center', scale: 6.4, outline: true, outlineWidth: 3 });
+    Gfx.text('a stone age rock saga', 300, 226, { color: '#ffffff', align: 'center', scale: 1.4, outline: true });
+    Gfx.ctx.globalAlpha = 0.55 + 0.45 * Math.sin(this.t * 4);
+    Gfx.text(Input.touch ? 'TAP TO BEGIN' : 'PRESS ANY KEY', 300, 300, { color: '#ffffff', align: 'center', scale: 1.8, outline: true, outlineWidth: 2 });
     Gfx.ctx.globalAlpha = 1;
-    Gfx.text('headphones recommended ♪', W / 2, H / 2 + 70, { color: '#7a6d8a', align: 'center' });
+    Gfx.text('headphones recommended ♪', 300, 340, { color: '#d6cfe0', align: 'center', outline: true });
   }
   click() { }
 }
@@ -27,24 +59,9 @@ class TitleScene {
     if (Input.pressed('Enter')) { Game.hasSave() ? Game.continueRun() : Game.newRun(); }
   }
   draw() {
-    // dawn over the village
-    Gfx.bands(0, 0, W, 360, ['#281040', '#4b2070', '#a03a68', '#e06a1b', '#ffa832', '#ffe08a']);
-    Gfx.circle(760, 150, 46, '#ffe98a');
-    const ctx = Gfx.ctx;
-    ctx.fillStyle = '#1a0c14';
-    ctx.beginPath(); ctx.moveTo(0, 300);
-    for (let x = 0; x <= W; x += 40) ctx.lineTo(x, 250 + Math.sin(x * 0.006) * 50);
-    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
-    Gfx.rect(0, 380, W, H - 380, '#241c2e');
-    for (let i = 0; i < 7; i++) Gfx.sprite(i % 2 ? 'prop_hut_ruin' : 'prop_hut', 80 + i * 150, 392, { anchor: 'bc', tint: '#120c16', tintAmount: 0.55 });
+    drawTitleWorld(this.t);
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : this.t * 2;
-    const bob = Math.abs(Math.sin(beat * Math.PI));
-    Gfx.sprite('bronk_play', 660, 460 - bob * 5, { anchor: 'bc', frame: Math.floor(beat * 2) % 4, scale: 1.6 });
-    Gfx.sprite('blaze_idle', 830, 466, { anchor: 'bc', frame: Math.floor(this.t * 6) % 2, scale: 1.1 });
-    for (let i = 0; i < 2; i++) if (chance(0.4)) Particles.fire(830 + rnd(-24, 24), 400, 1);
-    Particles.draw(Gfx.ctx, false);
-    // logo
-    const pulse = 1 + bob * 0.04;
+    const pulse = 1 + Math.abs(Math.sin(beat * Math.PI)) * 0.04;
     Gfx.text('ONGA', 300, 70, { color: '#ffe98a', align: 'center', scale: 6.4 * pulse, outline: true, outlineWidth: 3 });
     Gfx.text('BONGA', 300, 150, { color: '#e06a1b', align: 'center', scale: 6.4 * pulse, outline: true, outlineWidth: 3 });
     Gfx.text('a stone age rock saga', 300, 222, { color: '#ffffff', align: 'center', scale: 1.4, outline: true });
