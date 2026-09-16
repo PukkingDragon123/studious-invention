@@ -8,41 +8,52 @@ const STAGE_Y = 430;
 const ACTOR_SCALE = 2;
 
 const Backdrops = {
+  // three parallax layers plus haze, so the stage has depth behind the fight
   draw(act, t, cam) {
-    const sky = act === 1 ? ['#1d3d72', '#3570c0', '#6aa9ee', '#a8d8ff', '#ffdcb8']
-      : act === 2 ? ['#0f3838', '#14331e', '#27632f', '#3f9a45', '#6cc95c']
-        : ['#281040', '#3f0e18', '#7d1d2b', '#9c3510', '#e06a1b'];
-    Gfx.bands(-400, -300, 2000, 700, sky);
+    const px = (cam ? cam.x - W / 2 : 0);
+    const sky = act === 1 ? ['#1d3d72', '#3570c0', '#6aa9ee', '#a8d8ff', '#ffdcb8', '#ffb0cf']
+      : act === 2 ? ['#101f3d', '#0f3838', '#18706a', '#1d4a26', '#27632f', '#3f9a45']
+        : ['#1a0a1e', '#281040', '#5c1607', '#9c3510', '#e06a1b', '#ffa832'];
+    Gfx.bands(-600, -400, 2400, 760, sky);
     const ctx = Gfx.ctx;
+    if (act === 1) { Gfx.circle(700 - px * 0.05, 30, 40, '#ffe98a'); Gfx.glow(700 - px * 0.05, 30, 150, '#ffe98a', 0.3); }
+    if (act === 3) { Gfx.glow(500 - px * 0.05, 120, 460, '#e06a1b', 0.28); }
     // far ridge
-    ctx.fillStyle = act === 3 ? '#1a0c14' : act === 2 ? '#0f2416' : '#1f4a2a';
-    ctx.beginPath(); ctx.moveTo(-400, 250);
-    for (let x = -400; x <= 1600; x += 50) ctx.lineTo(x, 190 + Math.sin(x * 0.005) * 50 + Math.sin(x * 0.013) * 20);
-    ctx.lineTo(1600, 460); ctx.lineTo(-400, 460); ctx.fill();
-    // mid scenery
-    for (let i = 0; i < 9; i++) {
-      const x = -300 + i * 230;
+    const ridge = (yBase, amp, col, par) => {
+      ctx.fillStyle = col; ctx.beginPath();
+      const off = -px * par;
+      ctx.moveTo(-600, 460);
+      for (let x = -600; x <= 1800; x += 40) ctx.lineTo(x, yBase + Math.sin((x + off) * 0.0042) * amp + Math.sin((x + off) * 0.011) * amp * 0.4);
+      ctx.lineTo(1800, 460); ctx.closePath(); ctx.fill();
+    };
+    ridge(150, 54, act === 3 ? '#3f0e18' : act === 2 ? '#0f3838' : '#2a4a72', 0.12);
+    ridge(210, 34, act === 3 ? '#281040' : act === 2 ? '#14331e' : '#1f4a2a', 0.22);
+    Gfx.rectA(-600, 150, 2400, 130, act === 3 ? '#e06a1b' : '#ffffff', 0.05);   // haze
+    // treeline
+    for (let i = 0; i < 12; i++) {
+      const x = -400 + i * 190 - px * 0.34;
       const spr = act === 3 ? 'prop_deadtree' : act === 2 ? (i % 2 ? 'prop_palm' : 'prop_tree') : (i % 3 ? 'prop_tree' : 'prop_palm');
-      Gfx.sprite(spr, x, 300, { anchor: 'bc', alpha: 0.75 });
+      Gfx.sprite(spr, x, 302, { anchor: 'bc', alpha: 0.55, tint: '#120c16', tintAmount: 0.35 });
     }
-    // the crowd, on a bank well behind the performers
+    // the crowd on a bank
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
-    for (let i = 0; i < 16; i++) {
-      const x = -300 + i * 88 + (i % 3) * 14;
+    Gfx.rect(-600, 296, 2400, 30, act === 3 ? '#241c2e' : act === 2 ? '#102a16' : '#2f4a1e');
+    for (let i = 0; i < 18; i++) {
+      const x = -300 + i * 84 + (i % 3) * 16 - px * 0.5;
       const b = Math.abs(Math.sin((beat + i * 0.31) * Math.PI)) * 6;
-      Gfx.sprite(i % 2 ? 'villager_idle' : 'villager2_idle', x, 322 - b, { anchor: 'bc', tint: '#120c16', tintAmount: 0.78, alpha: 0.7, frame: Math.floor(beat + i) });
+      Gfx.sprite(i % 2 ? 'villager_idle' : 'villager2_idle', x, 322 - b, { anchor: 'bc', tint: '#120c16', tintAmount: 0.82, alpha: 0.8, frame: Math.floor(beat + i) });
     }
-    // the pit floor the fight happens on
-    Gfx.rect(-400, 322, 2000, 400, act === 3 ? '#2e2b38' : act === 2 ? '#14331e' : '#5c3a20');
-    Gfx.rect(-400, 322, 2000, 7, act === 3 ? '#4d4a5c' : act === 2 ? '#27632f' : '#85562f');
-    Gfx.rectA(-400, 329, 2000, 5, '#000000', 0.25);
-    // scuffed ground texture so the floor is not a flat slab
-    for (let i = 0; i < 90; i++) {
-      const x = -400 + ((i * 137) % 2000), y = 344 + ((i * 53) % 190);
-      Gfx.rectA(x, y, 6 + (i % 4) * 3, 2, i % 3 ? '#000000' : '#ffffff', 0.06);
+    // the pit floor
+    Gfx.rect(-600, 322, 2400, 400, act === 3 ? '#2e2b38' : act === 2 ? '#1d3a20' : '#5c3a20');
+    Gfx.rect(-600, 322, 2400, 7, act === 3 ? '#4d4a5c' : act === 2 ? '#27632f' : '#85562f');
+    Gfx.rectA(-600, 329, 2400, 6, '#000000', 0.3);
+    for (let i = 0; i < 120; i++) {
+      const x = -600 + ((i * 137) % 2400), y = 344 + ((i * 53) % 190);
+      Gfx.rectA(x, y, 6 + (i % 4) * 4, 2, i % 3 ? '#000000' : '#ffffff', 0.055);
     }
-    for (let x = -360; x < 1500; x += 150) Gfx.sprite(act === 3 ? 'prop_rock' : 'prop_bush', x + (x % 90), 348, { anchor: 'bc', alpha: 0.55, scale: 1 });
-    if (act === 3) for (let i = 0; i < 3; i++) if (chance(0.3)) Particles.spawn(rnd(-300, 1400), 420, { n: 1, color: ['#e06a1b', '#ffa832'], speed: 22, gravity: -40, life: 3, size: 3 });
+    for (let i = 0; i < 14; i++) Gfx.sprite(act === 3 ? 'prop_rock' : 'prop_bush', -500 + i * 160 - px * 0.7, 350, { anchor: 'bc', alpha: 0.5, tint: '#120c16', tintAmount: 0.3 });
+    if (act === 3) for (let i = 0; i < 3; i++) if (chance(0.35)) Particles.spawn(cam ? cam.x + rnd(-W / 2, W / 2) : rnd(0, W), 460, { n: 1, color: ['#e06a1b', '#ffa832', '#574a66'], speed: 24, gravity: -36, life: 3.4, size: 3, sizeEnd: 0 });
+    if (act === 2) for (let i = 0; i < 2; i++) if (chance(0.25)) Particles.spawn(cam ? cam.x + rnd(-W / 2, W / 2) : rnd(0, W), rnd(100, 300), { n: 1, color: ['#a8e878', '#6cc95c'], speed: 8, vx: 12, gravity: -4, life: 4, size: 2 });
   }
 };
 

@@ -1,72 +1,95 @@
-# ONGA BONGA - A Stone Age Rock Saga
+# ONGA BONGA — A Stone Age Rock Saga
 
-A 2D pixel-art roguelike deck-builder where every attack is a Guitar Hero style riff.
-King Rex crashed the tribe's festival, kidnapped Princess Petra and scattered your band.
-Climb three acts of a branching map, fight dinosaurs with music, rally the tribes,
-reassemble the band and save the princess.
+A 2D pixel-art game where a flaming raptor steals your family and you get them
+back with music. Walk a ruined valley, dodge or fight the beasts patrolling it,
+and settle every fight by playing riffs in a Friday-Night-Funkin' style note
+field. No build step, no dependencies: open `index.html` in a browser.
 
-**Play it:** open `index.html` in any modern browser (Chrome, Firefox, Edge, Safari).
-No build step, no dependencies, works offline. Turn your sound on.
-It is also published as a playable Artifact at https://claude.ai/artifact/MYXyLPKGDvBpSymnj7V2Dh
-(`artifact/page.html` is the wrapper page for that; the Artifact host supplies its
-doctype and head, so it is not a standalone file).
+**Play it:** open `index.html` (or the published Artifact link at the bottom).
+Turn your sound on. Landscape on a phone.
+
+## The story
+
+BLAZE, a fire-breathing raptor, spent six years chained in Bronk's kitchen as
+the family stove. One Tuesday he snapped the chain and took Bronk's wife and
+children with him. Bronk is not fast and he is not fit, but he is extremely
+loud. The opening plays out as a cinematic with four mini-games: work the
+bellows to light the stove, eat breakfast before the children do, run the
+mammoth shower, and drive the stone car to work until a T-Rex changes your mind.
 
 ## How it plays
 
-- **Map (Slay the Spire style):** pick a node each floor: combat, elite, mystery event,
-  rest site, shop, treasure, boss. Three acts: Bedrock Valley, Tar Pit Jungle, Volcano Peak.
-- **Combat:** 3 energy per turn, draw 5. Cards are riffs (attacks), moves (block/utility),
-  rallies (Hype) and powers. Enemies telegraph their intent.
-- **Riffs:** attack cards marked with a note start a rhythm solo synced to the music.
-  Notes fall down four lanes; hit them with **D F J K** (or arrow keys, or click/tap the lane).
-  PERFECT = 1.5x damage, GOOD = 1x, MISS = 0. Riffs are cut from the melody of the
-  song that's playing, and your guitar only sounds when you hit the notes.
-- **Hype and Encore:** notes and rally cards build Hype. At 100, press **Space** for an
-  ENCORE: a free epic solo that hits every enemy for each note you land.
-- **Win to unlock:** every victory offers new riffs for your deck; elites and bosses drop relics
-  (T-Rex Head, Mammoth Tusk, The Wheel, Echo Drum...). Each boss frees a bandmate
-  (Bonga on drums, Ugg on bass, Zog on bone flute) who fights beside you and adds a signature card.
-- **Rally your folks:** mystery events let you play for scared tribes; rallied folk give you
-  permanent starting Hype.
+- **The valley is a tile map, not a node map.** Four-way movement with weight
+  and slide, a stamina bar that empties because Bronk is built the way he is,
+  and a belly that keeps its own rhythm. Beasts patrol with vision cones: stay
+  out of them, hide in a bush, outrun them, or take the fight. Campfires restore
+  health and stamina. Black fog marked with a question mark is a mystery
+  encounter. The shop is a mammoth loaded with other people's belongings that
+  wanders the zone on its own route.
+- **Fights are a deck of riffs.** Three energy a turn, five cards, Block,
+  statuses, enemy intents. Cards marked with a note cut to a close-up: the
+  camera pushes in, the letterbox closes, and the note field takes over.
+- **The note field is FNF-shaped.** Four arrow lanes rise to receptors, hit with
+  the arrow keys, D F J K, a click, or the four pads on a touch screen. SICK,
+  GOOD, BAD and AWFUL timing windows, sustains you hold, a combo counter, and a
+  crowd meter that tugs between you and the beast. Duel cards are call and
+  answer: the beast plays a phrase on the left field, you play it back on the
+  right.
+- **Hype and Encore.** Landed notes fill the Hype column. At full, ENCORE is a
+  free epic solo that hits every beast once per note you land.
+- **Three acts.** Each ends with BLAZE, angrier each time, and each rescue adds
+  a bandmate who fights beside you and brings a signature riff.
 
-Controls: mouse for everything, `E` end turn, `1-9` pick cards, `Space` encore, `Esc` menu.
-On a phone or tablet: four thumb-sized fret pads appear under the fretboard during a
-riff (two fingers at once play chords), cards are tap-to-read then tap-to-play with a
-tap-a-dinosaur targeting step, and the map scrolls by dragging.
-Settings include music/SFX volume, note travel speed, timing offset and hit-window difficulty.
-Runs auto-save; continue from the title screen.
+Controls: WASD or arrows to walk, SHIFT to run, E to interact, M for the map,
+1-9 to play a card, SPACE for Encore, E to end a turn, ESC for the menu.
+On touch: a virtual stick, an ACT button, tap-to-read then tap-to-play cards,
+and four fret pads during a riff.
 
-## Content
+## What's in it
 
-- 45 cards, 24 relics, 25 enemies including 3 bosses (Thunder Tricera, the Swamp Queen, King Rex)
-- 14 original procedurally synthesized songs (Web Audio: distorted guitar, sub bass, tribal drums,
-  bone flute, formant chant), tempo-synced delay and reverb
-- 10 mystery events, shop, rest sites, treasure caves, story cutscenes and an ending concert
+- 38 riff cards, 16 relics, 13 beasts and a three-phase boss
+- A cinematic opening with four bespoke mini-games
+- Three tile zones generated from a seed, each with campfires, patrols, fog
+  encounters, a wandering shop and a boss
+- 20 original songs synthesized in Web Audio, plus about 60 sound effects
+- 177 hand-authored sprites at roughly four times the pixel density of the first
+  cut, with automatic outlines and a shared 50-colour palette
 
 ## Tech
 
-Vanilla JavaScript on a 640x360 canvas scaled with pixel-perfect rendering. All art is
-hand-authored pixel sprites in `js/sprites.js`; the 5x7 bitmap font is in `js/font.js`.
-Music is written as 16th-note step patterns in `js/songs.js` and played by the synth
-sequencer in `js/audio.js`, which also feeds the rhythm charts.
+Vanilla JavaScript on a 960x540 canvas scaled with pixel-perfect rendering.
+Art is authored as text in `js2/art_*.js` and compiled to canvases at load.
+Music is written as 16th-note step patterns in `js2/songs.js` and played by the
+synth sequencer in `js2/audio.js`, which also feeds the rhythm charts, so the
+notes you hit are the melody of the song that is playing.
 
 ```
-js/util.js     helpers, seeded RNG, coroutines, particles
-js/gfx.js      palette, sprite compiler, drawing, input, immediate-mode UI
-js/audio.js    synth voices, sequencer, SFX
-js/songs.js    all music
-js/cards.js    card definitions + renderer
-js/relics.js   relics
-js/enemies.js  enemies, AI, encounters
-js/rhythm.js   riff mini-game
-js/combat.js   combat scene
-js/map.js      map generation + map scene
-js/events.js   events, rest, shop, treasure, rewards
-js/scenes.js   title, story, ending, overlays
-js/main.js     game state, routing, save/load, loop
+js2/core.js       math, seeded RNG, coroutines, tweens, camera, juice, particles
+js2/font.js       two bitmap fonts
+js2/gfx.js        palette, sprite compiler, drawing, input, immediate-mode UI
+js2/anim.js       animated actors, effects, emotes
+js2/audio.js      synth voices, sequencer, sound effects
+js2/songs.js      every song
+js2/dialogue.js   speech bubbles with tails and typewriter text
+js2/rhythm.js     the note field
+js2/cards.js      riff cards and their renderer
+js2/relics.js     relics
+js2/enemies.js    beasts, intents, encounter tables
+js2/minigames.js  bellows, breakfast, shower, drive
+js2/cutscene.js   sets, staging and the opening script
+js2/combat.js     the performance
+js2/village.js    the tile overworld
+js2/events.js     the mammoth market, fog encounters, rewards
+js2/scenes.js     title, act transitions, ending, overlays
+js2/main.js       run state, routing, save/load, the frame loop
+js2/ART_SPEC.md   the art specification the sprites were authored against
 ```
 
-Dev tools in `tools/` (Node + Playwright): `check-sprites.js`, `check-songs.js`,
-`spritesheet.html`, `play.js` (smoke test), `tour.js` (screenshots every screen),
-`autorun.js` (bot that plays a full run), `audiocheck.js` (loudness check).
-Serve the folder (`python3 -m http.server 8765`) before running the Playwright tools.
+The first cut of the game is still playable at `index-classic.html` with its
+sources under `js/`.
+
+Dev tools in `tools/` (Node + Playwright): `check-art.js` validates every
+sprite against the palette and the manifest, `sheet.js` renders a contact sheet,
+`check-songs.js` validates the music, `boot2.js` / `intro2.js` / `feat2.js` /
+`riffshot.js` drive the game headlessly, and `audiocheck.js` measures loudness.
+Serve the folder (`python3 -m http.server 8765`) before running them.
