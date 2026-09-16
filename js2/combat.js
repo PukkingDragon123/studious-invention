@@ -77,7 +77,7 @@ class Combat {
   exit() { Co.stop(this.co); Game.worldToScreen = null; Juice.letterbox(false); }
   spawn(id, initial) {
     const e = Enemies.make(id, this.rng, this.act);
-    e.actor.y = STAGE_Y; e.actor.scale = ACTOR_SCALE * (d => d.def.boss ? 1.05 : 1)(e); e.spawnT = initial ? 0 : 1;
+    e.actor.y = STAGE_Y; e.actor.scale = e.def.boss ? 1.5 : ACTOR_SCALE; e.spawnT = initial ? 0 : 1;
     this.enemies.push(e); if (!initial) this.layout();
     return e;
   }
@@ -415,7 +415,7 @@ class Combat {
     this.banner = { text, sub: '', t: 0, life: 1.8 };
     AudioSys.sfx('roar', { pitch: 45, vol: 1, len: 1.5 });
     Juice.shake(16, 0.7); Juice.flash('#ffa832', 0.5, 2.4);
-    e.actor.play('roar'); setTimeout(() => e.actor.play('idle'), 900);
+    e.actor.flash('#ffe08a', 0.4); e.actor.stretch(0.3);
     AudioSys.play('blaze', { restart: true, intensity: 2, fade: 0.2 });
   }
   // ------------------------------------------------------------------ update
@@ -429,7 +429,7 @@ class Combat {
       if (e.spawnT > 0) e.spawnT = Math.max(0, e.spawnT - dt * 2.2);
       if (!e.alive) e.dieT += dt;
       if (e.tx !== undefined && e.alive) e.actor.x = damp(e.actor.x, e.tx, 7, dt);
-      e.actor.play(e.alive ? 'idle' : 'idle');
+      e.actor.play(e.def.boss ? 'boss' : 'idle');
     }
     for (const c of this.hand) if (c.dealT > 0) c.dealT -= dt;
     for (const k in this.relicFlash) this.relicFlash[k] -= dt;

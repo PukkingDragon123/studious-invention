@@ -8,7 +8,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const errs = [], warns = new Set();
   page.on('console', m => { const t = m.text().split('\n')[0]; if (m.type() === 'error') errs.push(t); else if (m.type() === 'warning') warns.add(t); });
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message + ' | ' + (e.stack || '').split('\n')[1]));
-  await page.goto('http://127.0.0.1:8765/index2.html');
+  await page.goto('http://127.0.0.1:8765/index.html');
   await page.waitForTimeout(700);
   await page.screenshot({ path: `${OUT}/01_boot.png` });
   await page.mouse.click(640, 360); await page.waitForTimeout(900);

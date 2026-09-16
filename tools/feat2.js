@@ -7,7 +7,7 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   const errs = [];
   page.on('console', m => { if (m.type() === 'error') { const t = m.text().split('\n')[0]; if (!t.includes('404')) errs.push(t); } });
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message + ' | ' + (e.stack || '').split('\n')[1]));
-  await page.goto('http://127.0.0.1:8765/index2.html'); await page.waitForTimeout(500);
+  await page.goto('http://127.0.0.1:8765/index.html'); await page.waitForTimeout(500);
   await page.mouse.click(640, 360); await page.waitForTimeout(500);
   const fails = [];
   const ok = (n, cond, info = '') => { console.log((cond ? 'PASS ' : 'FAIL ') + n + (info ? '  ' + info : '')); if (!cond) fails.push(n); };

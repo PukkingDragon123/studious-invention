@@ -75,7 +75,7 @@ const Enemies = {
       id, def: d, name: d.name, hp, maxHp: hp, block: 0, alive: true, act,
       st: { str: d.boss ? (act - 1) * 2 : 0, weak: 0, vuln: 0, burn: 0, stun: 0 },
       turnCount: 0, lastMove: null, intent: null, phase2: false,
-      actor: new Actor({ base: d.base, x: 0, y: 0, scale: 1, facing: -1 }),
+      actor: new Actor({ base: d.base, x: 0, y: 0, scale: 1, facing: -1, clip: d.boss ? 'boss' : 'idle' }),
       hitT: 0, dieT: 0, spawnT: 0, shake: 0,
     };
   },

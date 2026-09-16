@@ -364,6 +364,7 @@ class VillageScene {
     this.player.sprinting = false;
     this.cam.follow = this.player; this.cam.lookAt(this.player.x, this.player.y, true);
     this.footT = 0; this.puffT = 0; this.bellyPhase = 0;
+    this.birds = []; this.ambientT = 3; this.showMap = false;
   }
   enter() {
     AudioSys.play(this.zone.def.music, { fade: 0.8 });
@@ -452,12 +453,49 @@ class VillageScene {
       this.co = Co.run(function* (V) { yield* best.interact(V); V.locked = false; }(this), this);
     }
     this.interactTapped = false;
+    this.updateAmbience(dt);
     // camera: look a little ahead of the player, and pull back when sprinting
     this.cam.lead = 0.18;
     this.cam.zoomTo(p.sprinting ? 1.04 : 1.14);
     this.cam.update(dt);
     if (Input.pressed('Escape')) Game.pause();
     if (Input.pressed('KeyM')) this.showMap = !this.showMap;
+  }
+  updateAmbience(dt) {
+    const p = this.player;
+    // motes of pollen or ash drifting through the shot
+    if (chance(dt * 9)) {
+      const x = p.x + rnd(-W / 2, W / 2), y = p.y + rnd(-H / 2, H / 2);
+      const col = this.act === 3 ? ['#ffa832', '#9c3510', '#574a66'] : this.act === 2 ? ['#a8e878', '#6cc95c', '#ffe98a'] : ['#ffe98a', '#fffaea', '#a8e878'];
+      Particles.spawn(x, y, { n: 1, color: col, speed: 6, vx: 14, vy: -3, gravity: -2, life: 4.5, size: 2, sizeEnd: 0 });
+    }
+    // something crosses the sky now and then
+    this.ambientT -= dt;
+    if (this.ambientT <= 0) {
+      this.ambientT = rnd(7, 16);
+      const dir = chance(0.5) ? 1 : -1;
+      this.birds.push({ x: p.x - dir * (W / 2 + 80), y: p.y - rnd(120, 240), dir, t: 0, sp: rnd(90, 150), n: rndInt(1, 3) });
+      if (chance(0.34)) AudioSys.sfx('roar', { pitch: rnd(160, 420), vol: 0.22, len: 0.5 });
+    }
+    for (const b of this.birds) { b.t += dt; b.x += b.dir * b.sp * dt; b.y += Math.sin(b.t * 2) * 12 * dt; }
+    this.birds = this.birds.filter(b => Math.abs(b.x - p.x) < W);
+  }
+  drawMinimap() {
+    const z = this.zone, s = 2.6;
+    const mw = Math.round(z.w * s), mh = Math.round(z.h * s);
+    const x = W - mw - 18, y = 48;
+    Gfx.panel(x - 6, y - 6, mw + 12, mh + 12, { fill: '#120c16', radius: 3 });
+    for (let ty = 0; ty < z.h; ty += 1) for (let tx = 0; tx < z.w; tx += 1) {
+      const t = z.tiles[z.idx(tx, ty)];
+      const solid = z.solid[z.idx(tx, ty)];
+      Gfx.rect(x + tx * s, y + ty * s, s, s, solid ? '#241c2e' : t === z.def.path ? '#85562f' : '#27632f');
+    }
+    for (const e of z.entities) {
+      const col = e instanceof Campfire ? '#ffa832' : e instanceof Trader ? '#ffe98a' : e instanceof FogNode ? '#b177e6' : e instanceof ZoneGoal ? '#ef6a5e' : e instanceof Prowler ? '#c2333c' : '#6aa9ee';
+      Gfx.rect(x + (e.x / TILE) * s - 1, y + (e.y / TILE) * s - 1, 3, 3, col);
+    }
+    Gfx.rect(x + (this.player.x / TILE) * s - 2, y + (this.player.y / TILE) * s - 2, 5, 5, '#ffffff');
+    Gfx.text('M to close', x + mw / 2, y + mh + 10, { color: '#7a6d8a', align: 'center' });
   }
   stickInput() {
     // left-hand virtual stick: drag anywhere in the lower-left quadrant
@@ -526,6 +564,9 @@ class VillageScene {
         if (o.loot && !o.taken) Gfx.sprite('icon_bag', o.x, o.y - Gfx.spr(o.spr).h - 8 + Math.sin(this.t * 4) * 2, { anchor: 'c', scale: 0.7, alpha: 0.85 });
       }
     }
+    // birds pass in front of the scenery but behind the interface
+    for (const b of this.birds) for (let i = 0; i < b.n; i++)
+      Gfx.sprite('ptero_fly', b.x + i * 34, b.y + i * 16, { anchor: 'c', scale: 0.6, frame: Math.floor(b.t * 7 + i), flip: b.dir < 0, tint: '#120c16', tintAmount: 0.45, alpha: 0.75 });
     Particles.draw(Gfx.ctx, true);
     FX.draw(true);
     Popups.draw(true);
@@ -584,8 +625,9 @@ class VillageScene {
       Gfx.text(this.zone.def.sub, W / 2, 204, { color: '#d6cfe0', align: 'center', scale: 1.2 });
       Gfx.ctx.globalAlpha = 1;
     }
+    if (this.showMap) this.drawMinimap();
     if (Input.touch) this.drawTouchControls();
-    else Gfx.text('WASD / arrows to move  -  SHIFT to run  -  E to interact', W / 2, H - 22, { color: '#7a6d8a', align: 'center' });
+    else Gfx.text('WASD / arrows to move  -  SHIFT to run  -  E to interact  -  M for the map', W / 2, H - 22, { color: '#7a6d8a', align: 'center' });
     UI.iconButton(W - 40, 12, 28, 26, 'icon_menu', () => Game.pause(), { tip: 'Menu (Esc)' });
   }
   drawTouchControls() {

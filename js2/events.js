@@ -21,8 +21,8 @@ class MammothShop {
     if (r2) this.stock.push({ kind: 'relic', id: r2, price: Math.round(168 * rng.float(0.9, 1.1)) });
     this.stock.push({ kind: 'heal', price: 40, label: 'A gourd of something warm', desc: 'Heal {g}25{/} HP.' });
     this.stock.push({ kind: 'remove', price: 72, label: 'Mammoth eats a riff', desc: 'Remove a card from your deck.' });
-    this.mam = new Actor({ base: 'mammoth', x: 240, y: 470, scale: 1, clip: 'trader', facing: 1 });
-    this.bronk = new Actor({ base: 'bronk', x: 96, y: 468, scale: 1, facing: 1 });
+    this.mam = new Actor({ base: 'mammoth', x: 740, y: 530, scale: 1.25, clip: 'trader', facing: -1 });
+    this.bronk = new Actor({ base: 'bronk', x: 110, y: 524, scale: 1.3, facing: 1 });
   }
   enter() { AudioSys.play('mammoth', { fade: 0.5 }); }
   exit() { Dialogue.clear(); }
@@ -40,39 +40,40 @@ class MammothShop {
   draw() {
     // a clearing at dusk
     Gfx.bands(0, 0, W, 340, ['#1d3d72', '#3570c0', '#6aa9ee', '#ffb0cf', '#ffe08a']);
-    Gfx.rect(0, 320, W, H - 320, '#5c3a20');
-    Gfx.rect(0, 320, W, 6, '#85562f');
-    for (let x = -20; x < W; x += 110) Gfx.sprite('prop_bush', x, 336, { anchor: 'bc', alpha: 0.85 });
-    Gfx.sprite('prop_palm', 640, 330, { anchor: 'bc' });
+    Gfx.rect(0, 356, W, H - 356, '#5c3a20');
+    Gfx.rect(0, 356, W, 6, '#85562f');
+    for (let x = -20; x < W; x += 110) Gfx.sprite('prop_bush', x, 372, { anchor: 'bc', alpha: 0.85 });
+    Gfx.sprite('prop_palm', 380, 366, { anchor: 'bc', alpha: 0.9 });
     this.mam.draw(); this.bronk.draw();
     Particles.draw(Gfx.ctx, false);
     // speech
-    const bw = 360, bx = 360, by = 40;
-    Gfx.bubble(bx, by, bw, 56, this.mam.x + 40, this.mam.top, { fill: '#fff6e6' });
+    const bw = 340, bx = 470, by = 24;
+    Gfx.bubble(bx, by, bw, 52, clamp(this.mam.x - 30, bx + 20, bx + bw - 20), this.mam.top + 14, { fill: '#fff6e6' });
     Gfx.textWrap(this.msg, bx + 14, by + 12, bw - 28, { color: '#241c2e' });
+    Gfx.text('THE WANDERING MAMMOTH', this.mam.x, this.mam.y + 4, { color: '#ffe98a', align: 'center', outline: true });
     // wares laid out on the rug
-    Gfx.panel(20, 118, W - 40, 250, { title: 'THE WANDERING MAMMOTH', fill: '#241c2e' });
-    let x = 40, zoom = null;
+    Gfx.panel(16, 92, W - 32, 244, { title: 'TRUNK-PICKED GOODS', fill: '#241c2e' });
+    let x = 34, zoom = null;
     for (const it of this.stock) {
       if (it.kind === 'card') {
-        const hov = UI.hovered(x, 150, CARD_W, CARD_H + 22);
-        if (it.sold) { Gfx.rectA(x, 150, CARD_W, CARD_H, '#000', 0.55); Gfx.text('SOLD', x + CARD_W / 2, 210, { color: '#7a6d8a', align: 'center', scale: 1.4 }); }
+        const hov = UI.hovered(x, 118, CARD_W, CARD_H + 22);
+        if (it.sold) { Gfx.rectA(x, 118, CARD_W, CARD_H, '#000', 0.55); Gfx.text('SOLD', x + CARD_W / 2, 180, { color: '#7a6d8a', align: 'center', scale: 1.4 }); }
         else {
-          Cards.draw(it.card, x, 150, { hover: hov });
-          if (hov) zoom = { c: it.card, x: x + CARD_W / 2, y: 320 };
-          UI.hit(x, 150, CARD_W, CARD_H + 22, () => { if (this.buy(it)) { it.sold = true; Game.run.deck.push(it.card); this.msg = `${it.card.name}. Good ear.`; } });
-          Gfx.sprite('icon_coin', x + 22, 150 + CARD_H + 2, { anchor: 'tl' });
-          Gfx.text(String(it.price), x + 46, 150 + CARD_H + 4, { color: Game.run.gold >= it.price ? '#ffe98a' : '#ef6a5e' });
+          Cards.draw(it.card, x, 118, { hover: hov });
+          if (hov) zoom = { c: it.card, x: x + CARD_W / 2, y: 300 };
+          UI.hit(x, 118, CARD_W, CARD_H + 22, () => { if (this.buy(it)) { it.sold = true; Game.run.deck.push(it.card); this.msg = `${it.card.name}. Good ear.`; } });
+          Gfx.sprite('icon_coin', x + 18, 118 + CARD_H + 4, { anchor: 'tl' });
+          Gfx.text(String(it.price), x + 42, 118 + CARD_H + 6, { color: Game.run.gold >= it.price ? '#ffe98a' : '#ef6a5e' });
         }
-        x += CARD_W + 12;
+        x += CARD_W + 10;
       }
     }
     // relics and services in a column on the right
-    let ry = 150;
+    let ry = 118;
     for (const it of this.stock) {
       if (it.kind === 'card') continue;
-      const rx = 40 + 5 * (CARD_W + 12);
-      const wdt = W - rx - 44;
+      const rx = 34 + 5 * (CARD_W + 10);
+      const wdt = W - rx - 36;
       const hov = UI.hovered(rx, ry, wdt, 52) && !it.sold;
       Gfx.round(rx, ry, wdt, 52, 4, it.sold ? '#1a1520' : hov ? '#3b3048' : '#241c2e');
       Gfx.outlineRound(rx, ry, wdt, 52, 4, it.sold ? '#3b3048' : hov ? '#ffe98a' : '#8a7f68');
@@ -99,9 +100,9 @@ class MammothShop {
       }
       ry += 58;
     }
-    Gfx.sprite('icon_coin', 30, 90, { anchor: 'tl' });
-    Gfx.text(String(Game.run.gold), 54, 92, { color: '#ffe98a', scale: 1.4 });
-    UI.button(W - 170, H - 56, 150, 42, 'BACK TO THE ROAD', () => Game.leaveShop(), { scale: 1.1 });
+    Gfx.sprite('icon_coin', 24, 350, { anchor: 'tl' });
+    Gfx.text(String(Game.run.gold), 48, 352, { color: '#ffe98a', scale: 1.5 });
+    UI.button(W - 200, H - 58, 180, 44, 'BACK TO THE ROAD', () => Game.leaveShop(), { scale: 1.1 });
     if (zoom) Cards.zoom(zoom.c, zoom.x, zoom.y);
     Dialogue.draw();
   }

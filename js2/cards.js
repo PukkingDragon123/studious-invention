@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
-const CARD_W = 116, CARD_H = 158;
+const CARD_W = 104, CARD_H = 142;
 const TYPES = {
   attack: { name: 'RIFF', frame: '#7d1d2b', deep: '#3f0e18', light: '#ef6a5e', art: ['#5c1622', '#3a0f18', '#240a10'] },
   skill: { name: 'MOVE', frame: '#1d3d72', deep: '#101f3d', light: '#6aa9ee', art: ['#17305a', '#101f3d', '#0a1428'] },
@@ -256,7 +256,7 @@ const Cards = {
     Gfx.round(x + 2, y + 2, w - 4, h - 4, 5, o.playable === false ? '#2a2431' : T.frame);
     Gfx.round(x + 5, y + 5, w - 10, h - 10, 4, T.deep);
     // art window
-    const ax = x + 9, ay = y + 26, aw = w - 18, ah = Math.round(58 * s);
+    const ax = x + 8, ay = y + 24, aw = w - 16, ah = Math.round(52 * s);
     Gfx.round(ax, ay, aw, ah, 3, '#120c16');
     Gfx.bands(ax + 2, ay + 2, aw - 4, ah - 4, T.art);
     for (let i = 0; i < 3; i++) Gfx.rectA(ax + 2, ay + 2 + i * 7, aw - 4, 1, '#ffffff', 0.05);
