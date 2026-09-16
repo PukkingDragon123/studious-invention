@@ -1,0 +1,1241 @@
+{
+ "bronk_idle": {
+  "w": 40,
+  "h": 56,
+  "frames": 2,
+  "note": "BRONK the dad: burly caveman, black spiky hair, big nose, stubble, orange hide tunic with black spots, one shoulder strap, big round belly, bare feet. Frame 1 breathes: belly wider, head 1px lower.",
+  "file": "art_chars"
+ },
+ "bronk_walk": {
+  "w": 40,
+  "h": 56,
+  "frames": 4,
+  "note": "walk cycle: contact/down/pass/up. Legs alternate, arms swing opposite, belly lags and bounces, hair shifts.",
+  "file": "art_chars"
+ },
+ "bronk_eat": {
+  "w": 40,
+  "h": 56,
+  "frames": 4,
+  "note": "holding a giant meat leg to his mouth, chomping. F0 leg up mouth open wide, F1 bite down cheeks bulging, F2 chew squashed, F3 head back swallowing. Messy: keep room for the engine to add crumb particles.",
+  "file": "art_chars"
+ },
+ "bronk_play": {
+  "w": 40,
+  "h": 56,
+  "frames": 4,
+  "note": "rocking out with a bone guitar across his chest, mouth open singing. F0 neutral, F1 strum arm down + lean back, F2 big strum + one leg up, F3 head thrown back howling.",
+  "file": "art_chars"
+ },
+ "bronk_shock": {
+  "w": 40,
+  "h": 56,
+  "frames": 2,
+  "note": "terrified: jaw dropped to chest, eyes huge white circles, arms up, hair standing up. F1 even more extreme.",
+  "file": "art_chars"
+ },
+ "bronk_drive": {
+  "w": 40,
+  "h": 42,
+  "frames": 2,
+  "note": "seated in the foot-powered car, gripping a steering bone, legs hidden below the sprite bottom, leaning forward. F1 leaning harder, hair back.",
+  "file": "art_chars"
+ },
+ "bronk_hurt": {
+  "w": 40,
+  "h": 56,
+  "frames": 1,
+  "note": "knocked back, eyes X-ed out, arms flailing.",
+  "file": "art_chars"
+ },
+ "vela_idle": {
+  "w": 38,
+  "h": 56,
+  "frames": 2,
+  "note": "VELA the mum: tall, big orange-red hair piled up, bone hairpin, single-strap leopard-spot dress (use pink/red ramp), strong arms, sandals. F1 breathes.",
+  "file": "art_chars"
+ },
+ "vela_walk": {
+  "w": 38,
+  "h": 56,
+  "frames": 4,
+  "note": "walk cycle, hair and dress hem swing.",
+  "file": "art_chars"
+ },
+ "vela_cook": {
+  "w": 38,
+  "h": 56,
+  "frames": 4,
+  "note": "stirring a stone pot with a huge bone spoon, one hand on hip. Arm circles across the 4 frames.",
+  "file": "art_chars"
+ },
+ "vela_cry": {
+  "w": 38,
+  "h": 56,
+  "frames": 2,
+  "note": "captured and yelling, arms reaching out, hair wild.",
+  "file": "art_chars"
+ },
+ "kid_a_idle": {
+  "w": 26,
+  "h": 38,
+  "frames": 2,
+  "note": "PEBBLE the son: small, wild brown hair, one-shoulder hide, bare feet, cheeky grin.",
+  "file": "art_chars"
+ },
+ "kid_a_walk": {
+  "w": 26,
+  "h": 38,
+  "frames": 4,
+  "note": "bouncy kid walk, big strides.",
+  "file": "art_chars"
+ },
+ "kid_a_eat": {
+  "w": 26,
+  "h": 38,
+  "frames": 4,
+  "note": "gnawing a small meat bone, face covered in sauce.",
+  "file": "art_chars"
+ },
+ "kid_b_idle": {
+  "w": 26,
+  "h": 38,
+  "frames": 2,
+  "note": "ROXY the daughter: pigtails tied with bone rings, teal hide dress, holding a pet lizard toy.",
+  "file": "art_chars"
+ },
+ "kid_b_walk": {
+  "w": 26,
+  "h": 38,
+  "frames": 4,
+  "note": "bouncy kid walk.",
+  "file": "art_chars"
+ },
+ "kid_b_eat": {
+  "w": 26,
+  "h": 38,
+  "frames": 4,
+  "note": "two-handed chomping on a rib, cheeks stuffed.",
+  "file": "art_chars"
+ },
+ "villager_idle": {
+  "w": 36,
+  "h": 52,
+  "frames": 2,
+  "note": "generic tribesman: brown hair, plain hide wrap, worried face.",
+  "file": "art_chars"
+ },
+ "villager_walk": {
+  "w": 36,
+  "h": 52,
+  "frames": 4,
+  "note": "walk cycle.",
+  "file": "art_chars"
+ },
+ "villager2_idle": {
+  "w": 36,
+  "h": 52,
+  "frames": 2,
+  "note": "generic tribeswoman: dark hair in a bun, green hide wrap, carrying a basket.",
+  "file": "art_chars"
+ },
+ "villager2_walk": {
+  "w": 36,
+  "h": 52,
+  "frames": 4,
+  "note": "walk cycle.",
+  "file": "art_chars"
+ },
+ "elder_idle": {
+  "w": 38,
+  "h": 56,
+  "frames": 2,
+  "note": "village elder: white beard to the waist, bone-skull headdress, purple robe, leaning on a gnarled staff. F1 the staff taps.",
+  "file": "art_chars"
+ },
+ "brute_idle": {
+  "w": 44,
+  "h": 58,
+  "frames": 2,
+  "note": "enemy raider: bald with a bone nose-ring, war paint stripes, thick club over one shoulder, heavy gut, angry.",
+  "file": "art_chars"
+ },
+ "brute_walk": {
+  "w": 44,
+  "h": 58,
+  "frames": 4,
+  "note": "heavy stomping walk, club swings.",
+  "file": "art_chars"
+ },
+ "blaze_idle": {
+  "w": 76,
+  "h": 60,
+  "frames": 2,
+  "note": "BLAZE the flaming raptor, the villain: a raptor whose back, tail-tip and crest burn with real flame (fire ramp y z A B C). Body is charcoal-dark green with soot-black singed patches, a cracked stone collar with a broken chain, one eye scarred, permanent scowl. Fire flickers between the two frames.",
+  "file": "art_beasts"
+ },
+ "blaze_walk": {
+  "w": 76,
+  "h": 60,
+  "frames": 4,
+  "note": "prowling walk, tail counterbalancing, flames trailing back.",
+  "file": "art_beasts"
+ },
+ "blaze_roar": {
+  "w": 76,
+  "h": 60,
+  "frames": 2,
+  "note": "head thrown back, jaws wide, a gout of flame from the mouth, crest flames doubled in size.",
+  "file": "art_beasts"
+ },
+ "blaze_boss": {
+  "w": 132,
+  "h": 108,
+  "frames": 2,
+  "note": "boss-scale BLAZE for the final fight: same design, far more detail, flames licking up the whole spine, glowing cracks across the hide, the broken chain whipping.",
+  "file": "art_beasts"
+ },
+ "trex_idle": {
+  "w": 128,
+  "h": 104,
+  "frames": 2,
+  "note": "the T-REX: enormous, olive-green with a lighter belly, scarred snout, tiny arms, teeth visible even closed. Breathing.",
+  "file": "art_beasts"
+ },
+ "trex_walk": {
+  "w": 128,
+  "h": 104,
+  "frames": 4,
+  "note": "ground-shaking stomp cycle.",
+  "file": "art_beasts"
+ },
+ "trex_roar": {
+  "w": 128,
+  "h": 104,
+  "frames": 2,
+  "note": "jaws wide open, tongue and throat visible, head lowered toward the viewer.",
+  "file": "art_beasts"
+ },
+ "mammoth_idle": {
+  "w": 120,
+  "h": 88,
+  "frames": 2,
+  "note": "woolly mammoth: shaggy red-brown coat in layered tufts, huge ivory tusks, small eye, trunk curled. Breathing.",
+  "file": "art_beasts"
+ },
+ "mammoth_walk": {
+  "w": 120,
+  "h": 88,
+  "frames": 4,
+  "note": "plodding walk, trunk swinging.",
+  "file": "art_beasts"
+ },
+ "mammoth_trader": {
+  "w": 128,
+  "h": 96,
+  "frames": 2,
+  "note": "the WANDERING MAMMOTH shopkeeper: same mammoth but loaded with trade goods - bundles, clay pots, a woven rug saddle, bones and gourds hanging off a frame strapped to its back, a little bone bell on the trunk.",
+  "file": "art_beasts"
+ },
+ "mammoth_shower": {
+  "w": 120,
+  "h": 92,
+  "frames": 4,
+  "note": "mammoth standing with its trunk raised and curled forward, spraying water. F0 trunk down, F1 raising, F2 spraying hard, F3 dribbling. Draw the water from the trunk in the blue/teal ramp.",
+  "file": "art_beasts"
+ },
+ "compy_idle": {
+  "w": 42,
+  "h": 30,
+  "frames": 2,
+  "note": "tiny pack raptor, olive green with a yellow throat, big dumb eye, twitchy.",
+  "file": "art_dinos"
+ },
+ "compy_walk": {
+  "w": 42,
+  "h": 30,
+  "frames": 4,
+  "note": "scampering run.",
+  "file": "art_dinos"
+ },
+ "dodo_idle": {
+  "w": 46,
+  "h": 44,
+  "frames": 2,
+  "note": "fat grey-blue dodo, enormous yellow beak, three tail feathers, permanently startled.",
+  "file": "art_dinos"
+ },
+ "dodo_walk": {
+  "w": 46,
+  "h": 44,
+  "frames": 4,
+  "note": "waddle, body tipping side to side.",
+  "file": "art_dinos"
+ },
+ "boar_idle": {
+  "w": 66,
+  "h": 42,
+  "frames": 2,
+  "note": "cave boar: bristly dark brown, upward tusks, small red eye, ridge of hair along the spine.",
+  "file": "art_dinos"
+ },
+ "boar_walk": {
+  "w": 66,
+  "h": 42,
+  "frames": 4,
+  "note": "trotting charge.",
+  "file": "art_dinos"
+ },
+ "raptor_idle": {
+  "w": 72,
+  "h": 56,
+  "frames": 2,
+  "note": "classic raptor: teal-green with darker stripes, feathered crest and forearms, sickle claw raised.",
+  "file": "art_dinos"
+ },
+ "raptor_walk": {
+  "w": 72,
+  "h": 56,
+  "frames": 4,
+  "note": "stalking run, tail level.",
+  "file": "art_dinos"
+ },
+ "ptero_fly": {
+  "w": 84,
+  "h": 46,
+  "frames": 4,
+  "note": "pterodactyl in flight, leathery tan wings, long crest, full flap cycle: wings up, mid, down, mid.",
+  "file": "art_dinos"
+ },
+ "tricera_idle": {
+  "w": 104,
+  "h": 66,
+  "frames": 2,
+  "note": "triceratops: heavy tan-brown body, big bony frill with scalloped edge, three ivory horns, beak mouth.",
+  "file": "art_dinos"
+ },
+ "tricera_walk": {
+  "w": 104,
+  "h": 66,
+  "frames": 4,
+  "note": "heavy walk.",
+  "file": "art_dinos"
+ },
+ "lizard_idle": {
+  "w": 58,
+  "h": 38,
+  "frames": 2,
+  "note": "lava lizard: orange-red scaled body with glowing cracks, spiky back ridge, forked tongue.",
+  "file": "art_dinos"
+ },
+ "lizard_walk": {
+  "w": 58,
+  "h": 38,
+  "frames": 4,
+  "note": "skittering run.",
+  "file": "art_dinos"
+ },
+ "tarblob_idle": {
+  "w": 54,
+  "h": 46,
+  "frames": 4,
+  "note": "living tar blob: near-black glossy ooze with two white eyes, constantly wobbling and dripping. All four frames differ.",
+  "file": "art_dinos"
+ },
+ "stego_idle": {
+  "w": 106,
+  "h": 62,
+  "frames": 2,
+  "note": "stegosaurus: purple-grey body, two rows of tan back plates, spiked tail, tiny head.",
+  "file": "art_dinos"
+ },
+ "stego_walk": {
+  "w": 106,
+  "h": 62,
+  "frames": 4,
+  "note": "slow plod, plates shifting.",
+  "file": "art_dinos"
+ },
+ "tile_grass": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "lush grass, tufts and blades, two tones of green plus a dark base. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_grass2": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "grass variant with a few flowers and a stone. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_dirt": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "packed dirt with pebbles. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_dirt2": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "dirt variant with cracks and a bone shard. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_path": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "worn stone path, flat slabs with gaps. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_stone": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "grey rock floor, angular facets. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_sand": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "pale sand with ripples. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_ash": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "grey volcanic ash with embers. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_rubble": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "smashed masonry, broken bricks and dust. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_moss": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "dark mossy stone. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
+  "file": "art_world"
+ },
+ "tile_water": {
+  "w": 32,
+  "h": 32,
+  "frames": 4,
+  "note": "shallow water, animated ripples, seamless in all directions, blue/teal ramp.",
+  "file": "art_world"
+ },
+ "tile_lava": {
+  "w": 32,
+  "h": 32,
+  "frames": 4,
+  "note": "molten lava, animated glow, seamless.",
+  "file": "art_world"
+ },
+ "wall_stone": {
+  "w": 32,
+  "h": 40,
+  "frames": 1,
+  "note": "a block of village wall seen from the front: stacked stone with mortar lines, darker at the bottom. Tiles horizontally.",
+  "file": "art_world"
+ },
+ "wall_ruin": {
+  "w": 32,
+  "h": 40,
+  "frames": 1,
+  "note": "the same wall, broken and crumbling, top edge jagged, cracks and missing blocks.",
+  "file": "art_world"
+ },
+ "prop_rock": {
+  "w": 34,
+  "h": 26,
+  "frames": 1,
+  "note": "a boulder with facets and a mossy top.",
+  "file": "art_world"
+ },
+ "prop_bush": {
+  "w": 40,
+  "h": 30,
+  "frames": 1,
+  "note": "round leafy bush, layered greens.",
+  "file": "art_world"
+ },
+ "prop_fern": {
+  "w": 30,
+  "h": 26,
+  "frames": 1,
+  "note": "spray of fern fronds.",
+  "file": "art_world"
+ },
+ "prop_palm": {
+  "w": 56,
+  "h": 88,
+  "frames": 1,
+  "note": "palm tree: curved trunk with ring texture, fan of fronds, two coconuts.",
+  "file": "art_world"
+ },
+ "prop_tree": {
+  "w": 68,
+  "h": 92,
+  "frames": 1,
+  "note": "broad jungle tree: thick trunk with roots, dense layered canopy with highlight clumps.",
+  "file": "art_world"
+ },
+ "prop_deadtree": {
+  "w": 56,
+  "h": 84,
+  "frames": 1,
+  "note": "burnt dead tree, bare forked branches, charred black-grey.",
+  "file": "art_world"
+ },
+ "prop_bones": {
+  "w": 52,
+  "h": 26,
+  "frames": 1,
+  "note": "a ribcage and scattered bones half-buried in the ground.",
+  "file": "art_world"
+ },
+ "prop_skull": {
+  "w": 48,
+  "h": 38,
+  "frames": 1,
+  "note": "a huge dinosaur skull resting on the ground, empty eye sockets, teeth.",
+  "file": "art_world"
+ },
+ "prop_totem": {
+  "w": 34,
+  "h": 76,
+  "frames": 1,
+  "note": "carved tribal totem pole: three stacked painted faces, feathers at the top.",
+  "file": "art_world"
+ },
+ "prop_hut": {
+  "w": 100,
+  "h": 84,
+  "frames": 1,
+  "note": "stone-age hut: rounded boulder walls, thatched hide roof, dark doorway, smoke hole.",
+  "file": "art_world"
+ },
+ "prop_hut_ruin": {
+  "w": 100,
+  "h": 84,
+  "frames": 1,
+  "note": "the same hut wrecked: roof collapsed and burnt, walls broken open, scorch marks, smoke stains.",
+  "file": "art_world"
+ },
+ "prop_cave": {
+  "w": 104,
+  "h": 80,
+  "frames": 1,
+  "note": "cave mouth in a rock face, dark interior fading to black, stalactites.",
+  "file": "art_world"
+ },
+ "prop_campfire": {
+  "w": 44,
+  "h": 40,
+  "frames": 4,
+  "note": "campfire: ring of stones, logs, animated flame across all 4 frames. Bright and warm.",
+  "file": "art_world"
+ },
+ "prop_signpost": {
+  "w": 30,
+  "h": 44,
+  "frames": 1,
+  "note": "wooden signpost with a painted bone arrow.",
+  "file": "art_world"
+ },
+ "prop_barrel": {
+  "w": 30,
+  "h": 34,
+  "frames": 1,
+  "note": "woven basket barrel with a hide lid.",
+  "file": "art_world"
+ },
+ "prop_pot": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "round clay pot with a painted tribal band.",
+  "file": "art_world"
+ },
+ "prop_tar": {
+  "w": 68,
+  "h": 26,
+  "frames": 2,
+  "note": "a bubbling tar pool, two frames of bubbles.",
+  "file": "art_world"
+ },
+ "prop_mushroom": {
+  "w": 38,
+  "h": 44,
+  "frames": 1,
+  "note": "giant red spotted mushroom.",
+  "file": "art_world"
+ },
+ "prop_egg": {
+  "w": 30,
+  "h": 34,
+  "frames": 1,
+  "note": "large speckled dinosaur egg in the sand.",
+  "file": "art_world"
+ },
+ "prop_stage": {
+  "w": 132,
+  "h": 52,
+  "frames": 1,
+  "note": "a rough stone performance stage: slab top on pillars, hide banners.",
+  "file": "art_world"
+ },
+ "prop_fog": {
+  "w": 64,
+  "h": 64,
+  "frames": 4,
+  "note": "a churning ball of black fog for mystery encounters, with a faint purple glow inside. All four frames differ.",
+  "file": "art_world"
+ },
+ "car": {
+  "w": 100,
+  "h": 58,
+  "frames": 4,
+  "note": "the FLINTSTONE CAR: wooden frame with a hide canopy on two stone roller wheels, a log bumper, a bone steering stick. Wheels rotate across the 4 frames (spoke positions change).",
+  "file": "art_world"
+ },
+ "house_floor": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "note": "interior stone slab floor, seamless.",
+  "file": "art_world"
+ },
+ "house_wall": {
+  "w": 32,
+  "h": 40,
+  "frames": 1,
+  "note": "interior cave wall with tool marks and a hanging hide, tiles horizontally.",
+  "file": "art_world"
+ },
+ "house_table": {
+  "w": 72,
+  "h": 40,
+  "frames": 1,
+  "note": "stone slab table on rock legs, with plates carved from shell.",
+  "file": "art_world"
+ },
+ "house_bed": {
+  "w": 72,
+  "h": 44,
+  "frames": 1,
+  "note": "bed of furs on a stone ledge.",
+  "file": "art_world"
+ },
+ "house_shelf": {
+  "w": 52,
+  "h": 36,
+  "frames": 1,
+  "note": "wall shelf with clay pots and a skull.",
+  "file": "art_world"
+ },
+ "stove_pit": {
+  "w": 88,
+  "h": 52,
+  "frames": 1,
+  "note": "the cooking pit the raptor sits in: a stone hearth ring with a grill of bones above it, blackened.",
+  "file": "art_world"
+ },
+ "shower_frame": {
+  "w": 104,
+  "h": 100,
+  "frames": 1,
+  "note": "the mammoth shower: a stone stall with a hide curtain rail and a wooden platform, open at the front so a mammoth trunk can hang over it.",
+  "file": "art_world"
+ },
+ "meat_leg": {
+  "w": 40,
+  "h": 36,
+  "frames": 1,
+  "note": "a giant cooked T-rex drumstick: bone handle, glistening dark meat, a bite taken out.",
+  "file": "art_world"
+ },
+ "icon_heart": {
+  "w": 18,
+  "h": 16,
+  "frames": 2,
+  "note": "red heart, frame 1 slightly bigger (beat). Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_energy": {
+  "w": 22,
+  "h": 22,
+  "frames": 2,
+  "note": "a glowing blue-white spark orb, frame 1 brighter. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_coin": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "note": "a gold shell coin. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_shield": {
+  "w": 20,
+  "h": 22,
+  "frames": 1,
+  "note": "a stone shield. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_stamina": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "note": "a green lightning bolt in a ring. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_note": {
+  "w": 16,
+  "h": 20,
+  "frames": 1,
+  "note": "a music note. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_skull": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "note": "a small skull. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_fire": {
+  "w": 16,
+  "h": 20,
+  "frames": 1,
+  "note": "a flame. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_star": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "note": "a five point gold star. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_lock": {
+  "w": 16,
+  "h": 18,
+  "frames": 1,
+  "note": "a padlock of stone. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_check": {
+  "w": 16,
+  "h": 14,
+  "frames": 1,
+  "note": "a green tick. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_cross": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "note": "a red cross. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_menu": {
+  "w": 18,
+  "h": 16,
+  "frames": 1,
+  "note": "three stacked bone bars. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "icon_bag": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "note": "a hide satchel. Crisp UI icon, reads at 1:1.",
+  "file": "art_ui"
+ },
+ "note_left": {
+  "w": 44,
+  "h": 44,
+  "frames": 1,
+  "note": "a rhythm-game arrow pointing LEFT, drawn as a carved stone/bone arrowhead with a bright coloured face and a dark bevel. Colours: left=pink(U V W X), down=teal(M N O P), up=green(t u v w x), right=red(D E F G). Chunky, high contrast, reads instantly.",
+  "file": "art_ui"
+ },
+ "target_left": {
+  "w": 44,
+  "h": 44,
+  "frames": 2,
+  "note": "the empty receptor for the left lane: the same arrow shape as an unlit outline (greys 2 3 4) in frame 0, and lit up in its lane colour with a glow in frame 1.",
+  "file": "art_ui"
+ },
+ "note_down": {
+  "w": 44,
+  "h": 44,
+  "frames": 1,
+  "note": "a rhythm-game arrow pointing DOWN, drawn as a carved stone/bone arrowhead with a bright coloured face and a dark bevel. Colours: left=pink(U V W X), down=teal(M N O P), up=green(t u v w x), right=red(D E F G). Chunky, high contrast, reads instantly.",
+  "file": "art_ui"
+ },
+ "target_down": {
+  "w": 44,
+  "h": 44,
+  "frames": 2,
+  "note": "the empty receptor for the down lane: the same arrow shape as an unlit outline (greys 2 3 4) in frame 0, and lit up in its lane colour with a glow in frame 1.",
+  "file": "art_ui"
+ },
+ "note_up": {
+  "w": 44,
+  "h": 44,
+  "frames": 1,
+  "note": "a rhythm-game arrow pointing UP, drawn as a carved stone/bone arrowhead with a bright coloured face and a dark bevel. Colours: left=pink(U V W X), down=teal(M N O P), up=green(t u v w x), right=red(D E F G). Chunky, high contrast, reads instantly.",
+  "file": "art_ui"
+ },
+ "target_up": {
+  "w": 44,
+  "h": 44,
+  "frames": 2,
+  "note": "the empty receptor for the up lane: the same arrow shape as an unlit outline (greys 2 3 4) in frame 0, and lit up in its lane colour with a glow in frame 1.",
+  "file": "art_ui"
+ },
+ "note_right": {
+  "w": 44,
+  "h": 44,
+  "frames": 1,
+  "note": "a rhythm-game arrow pointing RIGHT, drawn as a carved stone/bone arrowhead with a bright coloured face and a dark bevel. Colours: left=pink(U V W X), down=teal(M N O P), up=green(t u v w x), right=red(D E F G). Chunky, high contrast, reads instantly.",
+  "file": "art_ui"
+ },
+ "target_right": {
+  "w": 44,
+  "h": 44,
+  "frames": 2,
+  "note": "the empty receptor for the right lane: the same arrow shape as an unlit outline (greys 2 3 4) in frame 0, and lit up in its lane colour with a glow in frame 1.",
+  "file": "art_ui"
+ },
+ "intent_attack": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "crossed claw slashes, red. Enemy intent icon.",
+  "file": "art_ui"
+ },
+ "intent_defend": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a shield, blue. Enemy intent icon.",
+  "file": "art_ui"
+ },
+ "intent_buff": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "an up arrow with sparkles, green. Enemy intent icon.",
+  "file": "art_ui"
+ },
+ "intent_debuff": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a down arrow with a skull, purple. Enemy intent icon.",
+  "file": "art_ui"
+ },
+ "intent_heal": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a cross of leaves, green. Enemy intent icon.",
+  "file": "art_ui"
+ },
+ "intent_summon": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "an egg with a star, white. Enemy intent icon.",
+  "file": "art_ui"
+ },
+ "intent_unknown": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a question mark, grey. Enemy intent icon.",
+  "file": "art_ui"
+ },
+ "st_str": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "note": "a flexed arm, red. Tiny status badge.",
+  "file": "art_ui"
+ },
+ "st_weak": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "note": "a drooping arm, grey. Tiny status badge.",
+  "file": "art_ui"
+ },
+ "st_vuln": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "note": "a cracked shield, purple. Tiny status badge.",
+  "file": "art_ui"
+ },
+ "st_burn": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "note": "a flame, orange. Tiny status badge.",
+  "file": "art_ui"
+ },
+ "st_stun": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "note": "spiral stars, yellow. Tiny status badge.",
+  "file": "art_ui"
+ },
+ "st_thorns": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "note": "spikes, bone. Tiny status badge.",
+  "file": "art_ui"
+ },
+ "st_regen": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "note": "a leaf, green. Tiny status badge.",
+  "file": "art_ui"
+ },
+ "st_hype": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "note": "a pink shout burst. Tiny status badge.",
+  "file": "art_ui"
+ },
+ "relic_trex_tooth": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a huge curved tooth. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_bone_pick": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a guitar pick carved from bone. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_tusk": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a mammoth tusk. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_fire_stone": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a glowing ember in a rock. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_egg": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a speckled egg. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_meteor": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a blue crystal shard. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_wheel": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a stone wheel. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_drum": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a log drum. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_amber": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "amber with an insect inside. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_mask": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a painted tribal mask. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_ribbon": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a pink ribbon. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_horn": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a curled war horn. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_totem": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a tiny totem. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_claw": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a raptor claw. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_shell": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a spiral shell. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "relic_ash_jar": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "note": "a clay jar of embers. Treasure icon with a strong silhouette.",
+  "file": "art_ui"
+ },
+ "art_strum": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a hand strumming a bone guitar. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_shield": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a stone shield taking a hit. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_club": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a club mid-swing. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_drum": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "log drums with sticks. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_note": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a music note with motion lines. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_fire": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a burst of flame. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_skull": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a screaming skull. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_heart": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a heart with a sparkle. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_star": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a shooting star. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_bolt": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a lightning bolt. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_crowd": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "three tiny cheering silhouettes. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_boulder": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a falling boulder. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_horn": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a war horn blowing. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_flute": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a bone flute. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_bass": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a huge bass instrument. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_meat": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a meat leg. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_wave": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a sound wave. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_foot": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a stomping foot. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_spiral": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a hypnotic spiral. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "art_moon": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "note": "a crescent moon. Card illustration: bold, centred, reads at a glance on a dark card.",
+  "file": "art_ui"
+ },
+ "fx_ring": {
+  "w": 56,
+  "h": 56,
+  "frames": 4,
+  "note": "an expanding shockwave ring, white to transparent, four stages.",
+  "file": "art_ui"
+ },
+ "fx_burst": {
+  "w": 72,
+  "h": 72,
+  "frames": 4,
+  "note": "a comic impact burst (spiky star), four stages growing then fading, white and gold.",
+  "file": "art_ui"
+ },
+ "fx_slash": {
+  "w": 72,
+  "h": 48,
+  "frames": 3,
+  "note": "a curved claw slash streak, three stages.",
+  "file": "art_ui"
+ },
+ "fx_smoke": {
+  "w": 40,
+  "h": 40,
+  "frames": 4,
+  "note": "a puff of smoke dissipating.",
+  "file": "art_ui"
+ },
+ "fx_splash": {
+  "w": 56,
+  "h": 40,
+  "frames": 4,
+  "note": "a water splash crown.",
+  "file": "art_ui"
+ },
+ "fx_sweat": {
+  "w": 16,
+  "h": 20,
+  "frames": 2,
+  "note": "a cartoon sweat drop.",
+  "file": "art_ui"
+ },
+ "fx_anger": {
+  "w": 24,
+  "h": 24,
+  "frames": 2,
+  "note": "a cartoon anger vein cross.",
+  "file": "art_ui"
+ },
+ "fx_exclaim": {
+  "w": 18,
+  "h": 30,
+  "frames": 2,
+  "note": "a bold exclamation mark for alerts.",
+  "file": "art_ui"
+ },
+ "fx_question": {
+  "w": 22,
+  "h": 30,
+  "frames": 2,
+  "note": "a bold question mark for suspicion.",
+  "file": "art_ui"
+ }
+}

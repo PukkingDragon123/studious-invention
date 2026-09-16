@@ -1,7 +1,7 @@
 const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
-const audio = fs.readFileSync(path.join(root, 'js/audio.js'), 'utf8');
-const songs = fs.readFileSync(path.join(root, 'js/songs.js'), 'utf8');
+const audio = fs.readFileSync(path.join(root, 'js2/audio.js'), 'utf8');
+const songs = fs.readFileSync(path.join(root, 'js2/songs.js'), 'utf8');
 // evaluate parsePattern + noteToMidi from audio.js, and SONGS
 const ctx = new Function('window', 'document', audio.replace(/const AudioSys = \{[\s\S]*$/, '') + '\n' + songs + '\nreturn {parsePattern, SONGS};')({}, {});
 let bad = 0;

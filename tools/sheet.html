@@ -1,0 +1,40 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;background:#2a2431}canvas{image-rendering:pixelated;display:block}</style></head>
+<body><canvas id="game" width="960" height="540"></canvas>
+<script src="../js2/core.js"></script><script src="../js2/font.js"></script><script src="../js2/gfx.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const files = (params.get('f') || 'art_chars').split(',');
+  let loaded = 0;
+  files.forEach(f => { const s = document.createElement('script'); s.src = '../js2/' + f + '.js'; s.onload = () => { if (++loaded === files.length) render(); }; s.onerror = () => { document.title = 'ERROR loading ' + f; if (++loaded === files.length) render(); }; document.head.appendChild(s); });
+  function render() {
+    Gfx.init();
+    const scale = +(params.get('s') || 2);
+    const filter = params.get('only') || '';
+    const allFrames = params.get('frames') !== '0';
+    const names = Object.keys(SPRITES).filter(n => !filter || n.includes(filter));
+    const cells = [];
+    for (const n of names) {
+      const sp = Gfx.spr(n);
+      const fr = allFrames ? sp.frames.length : 1;
+      for (let i = 0; i < fr; i++) cells.push({ n, i, w: sp.w * scale, h: sp.h * scale, last: i === fr - 1 });
+    }
+    const maxW = 1900;
+    let x = 8, y = 20, rowH = 0; const place = [];
+    for (const c of cells) {
+      if (x + c.w > maxW) { x = 8; y += rowH + 26; rowH = 0; }
+      place.push({ c, x, y }); x += c.w + (c.last ? 20 : 6); rowH = Math.max(rowH, c.h);
+    }
+    const cv = document.getElementById('game');
+    cv.width = maxW + 16; cv.height = y + rowH + 40;
+    Gfx.ctx.imageSmoothingEnabled = false;
+    // checkerboard so transparency and centring are obvious
+    for (let yy = 0; yy < cv.height; yy += 16) for (let xx = 0; xx < cv.width; xx += 16)
+      Gfx.rect(xx, yy, 16, 16, ((xx / 16 + yy / 16) % 2) ? '#332c3d' : '#2a2431');
+    for (const p of place) {
+      Gfx.rectA(p.x, p.y + p.c.h - 1, p.c.w, 1, '#ff00ff', 0.5);  // baseline
+      Gfx.sprite(p.c.n, p.x, p.y, { scale, frame: p.c.i, anchor: 'tl' });
+      if (p.c.i === 0) Gfx.text(p.c.n + ' ' + Gfx.spr(p.c.n).w + 'x' + Gfx.spr(p.c.n).h, p.x, p.y + p.c.h + 3, { color: '#ffe98a', scale: 1, font: 'small' });
+    }
+    document.title = names.length + ' sprites';
+  }
+</script></body></html>
