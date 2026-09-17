@@ -99,7 +99,9 @@ class Actor {
     // the bounce: driven by the clip's own frame clock so it lands with the art
     const c = this.clip;
     if (c && (c.bob || c.squish)) {
-      const ph = this.t * Math.PI * (c.loop === false ? 0.5 : 1);
+      // two humps per cycle - one per footfall - however many frames it has
+      const n = Math.max(1, Gfx.frames(c.spr));
+      const ph = c.loop === false ? clamp(this.t / n, 0, 1) * Math.PI : this.t * Math.PI * 2 / n;
       const lift = Math.abs(Math.sin(ph));
       this.bob = -lift * (c.bob || 0) * (this.bounce ?? 1);
       if (c.squish) {
