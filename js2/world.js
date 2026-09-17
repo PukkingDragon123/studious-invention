@@ -76,7 +76,7 @@ const World = {
 
     // ---- the house shell: one floor, stone wall, beaten-earth ground
     if (L < HOME.door + 80) {
-      const x0 = Math.min(L, -240), x1 = HOME.door + 60;
+      const x0 = -420, x1 = HOME.door + 60;   // fixed extents: see World.shell
       Gfx.rect(x0, -320, x1 - x0, GY + 320, '#241c2e');
       World.shell(x0, x1, night);
       for (let x = Math.floor(x0 / 224) * 224; x < x1; x += 224) {
@@ -144,6 +144,8 @@ const World = {
   // frame is not free - so they are baked once into an offscreen canvas and
   // blitted. Keyed on the extents and the time of day.
   _shell: new Map(),
+  // NB: x0/x1 must be constants. They key the cache, so anything derived from
+  // the camera rebuilds this canvas every frame and the game crawls.
   shell(x0, x1, night) {
     const key = x0 + '|' + x1 + '|' + (night ? 1 : 0);
     let c = World._shell.get(key);
