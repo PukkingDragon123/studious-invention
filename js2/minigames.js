@@ -127,8 +127,8 @@ class SideScroll extends MiniGame {
         Gfx.shadow(sx, this.ground + 2, 116 * sc * 0.7, 0.32);
         Gfx.sprite(this.o.vehicle, sx, this.ground + bounce * 0.4,
           { anchor: 'bc', scale: sc, frame: Math.floor(Math.abs(this.x) / 18), flip: this.hero.facing < 0 });
-        Gfx.sprite('bronk_drive', sx - 6 * sc * (this.hero.facing < 0 ? -1 : 1), this.ground - 16 * sc + bounce,
-          { anchor: 'bc', scale: sc, frame: Math.abs(this.vx) > 180 ? 1 : 0, flip: this.hero.facing < 0 });
+        Gfx.sprite('bronk_drive', sx - 6 * sc * (this.hero.facing < 0 ? -1 : 1), this.ground - 22 * sc + bounce,
+          { anchor: 'bc', scale: sc * 0.78, frame: Math.abs(this.vx) > 180 ? 1 : 0, flip: this.hero.facing < 0 });
         if (Math.abs(this.vx) > 60 && chance(Time.dt * 26)) Particles.dust(sx - 40 * sc * (this.hero.facing || 1), this.ground, 1);
       } else {
         this.hero.x = sx; this.hero.draw();

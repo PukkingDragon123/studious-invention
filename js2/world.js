@@ -78,32 +78,35 @@ const World = {
     if (L < HOME.door + 80) {
       const x0 = Math.min(L, -240), x1 = HOME.door + 60;
       Gfx.rect(x0, -320, x1 - x0, GY + 320, '#241c2e');
-      // plain stone in running bond for the wall itself; house_wall is the
-      // hanging-meat accent and is hung sparingly, the way it was drawn to be
-      for (let y = -200, row = 0; y < GY - 6; y += 32, row++) {
-        const off = (row % 2) * 16;
-        for (let x = Math.floor((x0 - off) / 32) * 32 + off; x < x1; x += 32)
-          Gfx.sprite('house_floor', x, y, { anchor: 'tl', flip: ((x * 5 + row * 11) & 3) < 2, tint: '#3b3048', tintAmount: 0.5 });
-      }
+      World.shell(x0, x1, night);
       for (let x = Math.floor(x0 / 224) * 224; x < x1; x += 224) {
         if (x < 60) continue;
         Gfx.sprite('house_wall', x + jitter(x, 40), 196 + jitter(x + 9, 60), { anchor: 'tl' });
       }
-      Gfx.rectA(x0, -320, x1 - x0, GY + 314, '#120c16', night ? 0.50 : 0.30);
-      for (let y = GY - 6, row = 0; y < GY + 240; y += 32, row++) {
-        const off = (row % 2) * 16;
-        for (let x = Math.floor((x0 - off) / 32) * 32 + off; x < x1; x += 32)
-          Gfx.sprite('house_floor', x, y, { anchor: 'tl', flip: ((x * 5 + row * 11) & 3) < 2 });
-      }
-      Gfx.rectA(x0, GY - 6, x1 - x0, 240, '#5c3a20', 0.52);
-      const g = Gfx.ctx.createLinearGradient(0, GY - 6, 0, GY + 200);
-      g.addColorStop(0, 'rgba(6,3,10,0.66)'); g.addColorStop(0.35, 'rgba(6,3,10,0.12)'); g.addColorStop(1, 'rgba(6,3,10,0.5)');
-      Gfx.ctx.fillStyle = g; Gfx.ctx.fillRect(x0, GY - 6, x1 - x0, 210);
-      Gfx.rect(x0, GY - 16, x1 - x0, 10, '#120c16');
-      Gfx.rectA(x0, GY - 20, x1 - x0, 4, '#b07a45', 0.5);
+
       World.homeWall(t, o, camX, x0, x1);
       World.homeStuff(t, o, camX);
       World.homeRoof(t, o, camX, x0, x1);
+      // ---- lighting pass: warm pools, cool corners
+      const flick = 0.86 + Math.sin(t * 9) * 0.08 + Math.sin(t * 23) * 0.04;
+      if (o.fire > 0) {
+        Gfx.glow(HOME.stove, GY - 46, 210, '#ff9a20', 0.24 * o.fire * flick);
+        Gfx.ctx.globalAlpha = 0.16 * o.fire * flick;
+        Gfx.round(HOME.stove - 96, GY - 14, 192, 24, 12, '#ffa832');
+        Gfx.ctx.globalAlpha = 1;
+      }
+      Gfx.glow(HOME.table - 130, 290, 150, '#ff9a20', 0.20 * flick);   // the torch
+      if (!night) {
+        Gfx.glow(HOME.bed + 62, 276, 160, '#a8d8ff', 0.16);            // the window
+        Gfx.ctx.globalAlpha = 0.12;
+        Gfx.round(HOME.bed + 10, GY - 16, 120, 20, 10, '#a8d8ff');
+        Gfx.ctx.globalAlpha = 1;
+      }
+      // the corners of a cave house are always dark
+      const vg = Gfx.ctx.createLinearGradient(x0, 0, x1, 0);
+      vg.addColorStop(0, 'rgba(6,3,10,0.55)'); vg.addColorStop(0.16, 'rgba(6,3,10,0)');
+      vg.addColorStop(0.88, 'rgba(6,3,10,0)'); vg.addColorStop(1, 'rgba(6,3,10,0.35)');
+      Gfx.ctx.fillStyle = vg; Gfx.ctx.fillRect(x0, -200, x1 - x0, GY + 220);
       // the doorway: a bright arch punched through the end wall
       const dx = HOME.door;
       Gfx.rect(dx - 34, -60, 74, GY - 54, '#120c16');
@@ -136,6 +139,81 @@ const World = {
       Gfx.shadow(HOME.car, GY + 2, 120, 0.3);
       Gfx.sprite('car', HOME.car, GY + 2, { anchor: 'bc', frame: 0 });
     }
+  },
+  // The wall and floor are static, and drawing a few thousand blocks every
+  // frame is not free - so they are baked once into an offscreen canvas and
+  // blitted. Keyed on the extents and the time of day.
+  _shell: new Map(),
+  shell(x0, x1, night) {
+    const key = x0 + '|' + x1 + '|' + (night ? 1 : 0);
+    let c = World._shell.get(key);
+    if (!c) {
+      const top = -200, bot = GY + 220, w = Math.ceil(x1 - x0), h = Math.ceil(bot - top);
+      c = document.createElement('canvas'); c.width = w; c.height = h;
+      const real = Gfx.ctx;
+      Gfx.ctx = c.getContext('2d');
+      Gfx.ctx.translate(-x0, -top);
+      World.masonry(x0, x1, top, GY - 6, night);
+      World.earthFloor(x0, x1, GY - 6, bot, night);
+      Gfx.ctx = real;
+      World._shell.set(key, c);
+      if (World._shell.size > 6) World._shell.delete(World._shell.keys().next().value);
+    }
+    Gfx.ctx.drawImage(c, Math.round(x0), -200);
+  },
+  // Hand-laid masonry: irregular blocks in courses, each with its own tone, a
+  // lit top edge and a mortar gap. Tiling a sprite never looked like a wall.
+  masonry(x0, x1, yTop, yBot, night) {
+    const base = night ? ['#241c2e', '#2e2b38', '#241109'] : ['#4d4a5c', '#574a66', '#3b3048', '#5c3a20'];
+    const lit = night ? '#4d4a5c' : '#9391a6';
+    const mortar = night ? '#140f1c' : '#241c2e';
+    Gfx.rect(x0, yTop, x1 - x0, yBot - yTop, mortar);
+    const CH = 26;
+    for (let y = yTop, row = 0; y < yBot; y += CH, row++) {
+      let x = x0 - ((row * 37) % 60);
+      while (x < x1) {
+        const w = 34 + ((row * 7 + (x | 0)) % 5) * 11;
+        const h = CH - 3;
+        const c = base[Math.abs((x * 13 + row * 29) | 0) % base.length];
+        const bw = Math.min(w, x1 - x) - 3;
+        if (bw > 6) {
+          Gfx.rect(x, y, bw, h, c);
+          Gfx.rectA(x, y, bw, 2, lit, 0.5);                     // lit top edge
+          Gfx.rectA(x, y + h - 2, bw, 2, '#120c16', 0.45);      // shadow under
+          // a few chips and flecks so no two blocks read the same
+          for (let k = 0; k < 3; k++) {
+            const fx = x + 4 + ((x * 3 + k * 17 + row * 5) % Math.max(1, bw - 8));
+            const fy = y + 4 + ((x + k * 9 + row * 3) % (h - 8));
+            Gfx.rectA(fx, fy, 3, 2, k % 2 ? lit : '#120c16', 0.22);
+          }
+        }
+        x += w;
+      }
+    }
+    Gfx.rectA(x0, yTop, x1 - x0, yBot - yTop, '#120c16', night ? 0.30 : 0.08);
+  },
+  // Packed earth: a base wash, embedded stones, scuffs, and a dark skirting
+  // where it meets the wall.
+  earthFloor(x0, x1, yTop, yBot, night) {
+    Gfx.rect(x0, yTop, x1 - x0, yBot - yTop, night ? '#2b1a0f' : '#5c3a20');
+    for (let y = yTop + 4; y < yBot; y += 9) {
+      for (let x = x0; x < x1; x += 14) {
+        const k = Math.abs(((x * 5 + y * 11) | 0)) % 7;
+        if (k < 3) Gfx.rectA(x + jitter(x + y, 8), y, 7 + k * 3, 3, night ? '#3a2415' : '#85562f', 0.34);
+        else if (k === 4) Gfx.rectA(x + jitter(x - y, 8), y + 2, 4, 3, night ? '#241109' : '#4d4a5c', 0.5);
+      }
+    }
+    // stones set into the floor
+    for (let x = Math.floor(x0 / 52) * 52; x < x1; x += 52) {
+      const sx = x + jitter(x, 34), sy = yTop + 12 + jitter(x + 5, 48);
+      Gfx.round(sx, sy, 13, 7, 3, night ? '#241c2e' : '#4d4a5c');
+      Gfx.round(sx + 1, sy, 10, 3, 2, night ? '#3b3048' : '#6e6b80');
+    }
+    const g = Gfx.ctx.createLinearGradient(0, yTop, 0, yBot);
+    g.addColorStop(0, 'rgba(6,3,10,0.62)'); g.addColorStop(0.3, 'rgba(6,3,10,0.10)'); g.addColorStop(1, 'rgba(6,3,10,0.55)');
+    Gfx.ctx.fillStyle = g; Gfx.ctx.fillRect(x0, yTop, x1 - x0, yBot - yTop);
+    Gfx.rect(x0, yTop - 10, x1 - x0, 10, '#120c16');              // skirting
+    Gfx.rectA(x0, yTop - 14, x1 - x0, 4, '#b07a45', 0.45);
   },
   // the wall dressing: fossils, cave paintings, the plaque, a window
   homeWall(t, o, camX, x0, x1) {
@@ -222,8 +300,14 @@ const World = {
     // the light that gets past the thatch
     Gfx.rectA(x0, CY + 16, x1 - x0, 26, '#120c16', 0.35);
   },
+  // everything on the floor gets a contact shadow, or it looks pasted on
+  drop(x, w, y = GY + 3, a = 0.34) { Gfx.shadow(x, y, w, a); },
   // the furniture and the mess
   homeStuff(t, o, camX) {
+    for (const [x, w] of [[HOME.bed, 86], [HOME.perch, 62], [HOME.shelf - 40, 34],
+                          [HOME.shelf + 44, 34], [HOME.table, 84], [HOME.stove, 96],
+                          [HOME.clutter + 44, 34], [HOME.clutter + 62, 26], [HOME.bed - 54, 26]])
+      World.drop(x, w);
     // bed, slept in
     Gfx.sprite('house_bed', HOME.bed, GY + 4, { anchor: 'bc' });
     Gfx.sprite('prop_pot', HOME.bed - 54, GY + 4, { anchor: 'bc', scale: 0.62 });
