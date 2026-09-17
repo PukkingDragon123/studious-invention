@@ -5,9 +5,9 @@ colour with one shadow tone that follows the silhouette, a rim light down the
 near edge, and the far arm and leg a tone back so limbs never merge into the
 torso.
 
-The detail passes are what make it a cartoon rather than a shape: eyes with an
-iris, a pupil and a catchlight under a heavy angular brow; ears; a wedge nose
-with a nostril; mouths with teeth and a tongue; collarbones, pecs or a belly
+The detail passes are what make it a cartoon rather than a shape: plain black
+dot eyes under thick black dash brows; ears; a small wedge nose; an enormous
+mouth that drops the jaw off the bottom of the head; collarbones, pecs or a belly
 fold, a navel, abs, knees, elbows, finger lines and toes; hair as a mass plus
 loose strands plus a highlight streak; fur with a belt, folds, stroke texture
 and a torn hem; necklaces of carved teeth.
@@ -170,100 +170,138 @@ def figure(spec, pose):
 
 # --- face --------------------------------------------------------------------
 def face(g, m, spec, pose):
-    """A 90s cartoon face: big eyes with a highlight, a heavy angular brow,
-    a real nose with a nostril, and a mouth with teeth in it."""
+    """Saturday-morning cartoon face, and the mouth is the loudest thing on it.
+
+    Eyes are plain black dots - no white, no iris, no catchlight. Brows are
+    thick black dashes above them. The mouth is huge: when it opens the jaw
+    drops clean off the bottom of the head."""
     cx, hy, hr = m['cx'], m['headY'], m['headR']
-    eyeY = hy + hr * 0.10
-    dx = hr * 0.46
+    eyeY = hy - hr * 0.02
+    dx = hr * 0.44
     shut = pose.get('eyes') == 'shut'
     wide = pose.get('eyes') == 'wide'
     angry = pose.get('angry')
     bc = spec.get('brow', '0')
+    INK = '0'
 
     # --- ear on the near side, with an inner fold
-    ex0 = cx - hr * 0.96
-    g.ellipse(ex0, hy + hr * 0.18, hr * 0.22, hr * 0.30, SKIN['base'])
-    g.ellipse(ex0 + 0.6, hy + hr * 0.18, hr * 0.11, hr * 0.17, SKIN['mid'])
+    ex0 = cx - hr * 0.97
+    g.ellipse(ex0, hy + hr * 0.10, hr * 0.24, hr * 0.32, SKIN['base'])
+    g.ellipse(ex0 + 0.6, hy + hr * 0.10, hr * 0.12, hr * 0.18, SKIN['mid'])
 
-    # --- eyes
-    if shut:
-        for side in (-1, 1):
-            X = cx + side * dx
-            for i in range(6): g.px(X - 2.5 + i, eyeY + 1 + (0.5 if 0 < i < 5 else 0), SKIN['line'])
-            for i in range(4): g.px(X - 1.5 + i, eyeY + 2.4, SKIN['mid'])
-    else:
-        rw = (2.9 if wide else 2.4)
-        rh = rw * (1.25 if wide else 1.1)
-        for side in (-1, 1):
-            X = cx + side * dx
-            g.ellipse(X, eyeY + 0.6, rw, rh, '7')                  # white
-            g.ellipse(X, eyeY + 0.6, rw * 0.92, rh * 0.92, '6')    # soft edge
-            g.ellipse(X, eyeY + 0.6, rw * 0.80, rh * 0.86, '7')
-            ix = X + pose.get('look', 0)
-            g.ellipse(ix, eyeY + 0.9, rw * 0.50, rh * 0.62, spec.get('iris', 'j'))   # iris
-            g.ellipse(ix, eyeY + 1.0, rw * 0.28, rh * 0.38, '0')                      # pupil
-            g.px(ix - rw * 0.32, eyeY - rh * 0.16, '7')                               # catchlight
-            g.px(ix - rw * 0.32 + 1, eyeY - rh * 0.16, '7')
-            for i in range(int(rw * 2)):                                              # lash line
-                g.px(X - rw + i, eyeY - rh + 0.4, SKIN['dark'])
-    # --- brows: thick, angular, and the single loudest thing on the face
+    # --- eyes: two black dots, and nothing else
+    look = pose.get('look', 0)
     for side in (-1, 1):
         X = cx + side * dx
-        by = eyeY - hr * 0.46
-        n = 7
-        for i in range(n):
-            x = X - 3 + i
-            tilt = (i - n / 2) * 0.30 * (side if angry else 0)
-            for k in range(2): g.px(x, by + tilt + k, bc)
-        if angry:
-            for k in range(2): g.px(X + side * 3.4, by + 1.4 * side + k, bc)
+        if shut:
+            # a shut eye is a heavy black curve, lashes and all
+            for i in range(7):
+                g.px(X - 3 + i, eyeY + 1 + (0.6 if 0 < i < 6 else 0), INK)
+                g.px(X - 3 + i, eyeY + 2 + (0.6 if 0 < i < 6 else 0), INK)
+            g.px(X - 4, eyeY + 0.4, INK); g.px(X + 4, eyeY + 0.4, INK)
+        else:
+            r = 3.1 if wide else 2.3
+            g.ellipse(X + look, eyeY + 0.5, r, r * 1.12, INK)
+            if wide:                                   # blown-out panic eyes
+                g.ellipse(X + look, eyeY + 0.5, r * 1.05, r * 1.2, INK)
 
-    # --- nose: a wedge with a nostril and a shadow under it
-    ny = eyeY + hr * 0.30
-    for k in range(3):
-        wdt = 2 + k
-        for i in range(wdt):
-            g.px(cx - 1 + i, ny + k, SKIN['base'] if i < wdt - 1 else SKIN['mid'])
-    g.px(cx - 1, ny, SKIN['hi'])
-    g.px(cx + 2, ny + 2, SKIN['line'])                                  # nostril
-    for i in range(4): g.px(cx - 1 + i, ny + 3, SKIN['dark'])
+    # --- brows: thick black dashes, the whole expression lives here
+    for side in (-1, 1):
+        X = cx + side * dx
+        by = eyeY - hr * 0.46 - (1.0 if wide else 0)
+        n = int(hr * 0.48) + 1
+        for i in range(n):
+            x = X - (n - 1) / 2 + i
+            tilt = (i - n / 2) * (0.34 * side if angry else (-0.18 * side if wide else 0))
+            for k in range(2): g.px(x, by + tilt + k, bc)
+
+    # --- nose: a bulb, because a caveman's nose arrives before he does
+    ny = eyeY + hr * 0.24
+    g.ellipse(cx + hr * 0.04, ny, hr * 0.26, hr * 0.22, SKIN['base'])
+    g.ellipse(cx + hr * 0.14, ny + hr * 0.06, hr * 0.16, hr * 0.13, SKIN['mid'])
+    g.ellipse(cx - hr * 0.06, ny - hr * 0.06, hr * 0.10, hr * 0.08, SKIN['hi'])
+    for i in range(int(hr * 0.42)):
+        g.px(cx - hr * 0.16 + i, ny + hr * 0.22, SKIN['dark'])          # underside
+    g.px(cx + hr * 0.20, ny + hr * 0.14, SKIN['line'])                  # nostril
 
     # --- mouth
     mo = pose.get('mouth', 'flat')
-    my = hy + hr * 0.74
-    if mo in ('open', 'shout'):
-        w = 3.4 if mo == 'open' else 4.6
-        h2 = 2.8 if mo == 'open' else 4.0
-        g.ellipse(cx, my + 1.5, w + 0.8, h2 + 0.8, SKIN['line'])
-        g.ellipse(cx, my + 1.5, w, h2, '0')
-        for i in range(int(w * 1.7)): g.px(cx - w * 0.85 + i, my - h2 * 0.35 + 1.5, '$')   # top teeth
-        g.ellipse(cx, my + h2 * 0.7 + 1.5, w * 0.62, h2 * 0.34, 'E')                        # tongue
+    my = hy + hr * 0.78
+
+    def maw(w, h, drop):
+        """a dropped jaw with a cavern in it: skin first, then the hole"""
+        jy = my + drop
+        # the jaw itself, hand-shaded because the silhouette pass already ran
+        g.ellipse(cx, jy, w + 2.4, h + 2.6, SKIN['base'])
+        g.ellipse(cx + w * 0.42, jy + h * 0.30, w * 0.70, h * 0.90, SKIN['mid'])
+        g.ellipse(cx + w * 0.78, jy + h * 0.34, w * 0.42, h * 0.62, SKIN['dark'])
+        g.ellipse(cx - w * 0.30, jy - h * 0.55, w * 0.60, h * 0.34, SKIN['hi'])
+        # the cavern
+        g.ellipse(cx, jy, w + 0.9, h + 0.9, SKIN['line'])
+        g.ellipse(cx, jy, w, h, INK)
+        # top teeth in a band across the roof
+        for i in range(int(w * 1.7)):
+            tx = cx - w * 0.85 + i
+            g.px(tx, jy - h * 0.62, '$')
+            g.px(tx, jy - h * 0.62 + 1, '$' if i % 3 else '@')
+        # bottom teeth, just a hint
+        for i in range(int(w * 1.1)):
+            g.px(cx - w * 0.55 + i, jy + h * 0.80, '@')
+        g.ellipse(cx, jy + h * 0.52, w * 0.60, h * 0.34, 'E')            # tongue
+        g.ellipse(cx, jy + h * 0.44, w * 0.34, h * 0.16, 'F')
+        return jy
+
+    if mo == 'shout':
+        maw(hr * 0.66, hr * 0.60, hr * 0.22)
+    elif mo == 'open':
+        maw(hr * 0.48, hr * 0.40, hr * 0.10)
     elif mo == 'grin':
-        for i in range(10): g.px(cx - 5 + i, my + 1 + (1 if 1 < i < 8 else 0), SKIN['line'])
-        for i in range(8): g.px(cx - 4 + i, my + 2 + (1 if 1 < i < 6 else 0), '$')
-        for i in range(0, 8, 2): g.px(cx - 4 + i, my + 2 + (1 if 1 < i < 6 else 0), '6')    # tooth gaps
+        # ear to ear, and every tooth in it
+        w, h = hr * 0.74, hr * 0.30
+        g.ellipse(cx, my, w + 0.9, h + 0.9, SKIN['line'])
+        g.ellipse(cx, my, w, h, INK)
+        for i in range(int(w * 1.9)):
+            g.px(cx - w * 0.95 + i, my - h * 0.34, '$')
+            g.px(cx - w * 0.95 + i, my - h * 0.34 + 1, '$')
+        for i in range(0, int(w * 1.9), 3):
+            g.px(cx - w * 0.95 + i, my - h * 0.34, '@')                 # tooth gaps
+            g.px(cx - w * 0.95 + i, my - h * 0.34 + 1, '@')
+        g.ellipse(cx, my + h * 0.55, w * 0.58, h * 0.40, 'E')
+        for side in (-1, 1):                                            # dimples
+            g.px(cx + side * (w + 1.6), my - 1, SKIN['mid'])
     else:
-        for i in range(7): g.px(cx - 3.5 + i, my + 1, SKIN['line'])
-        for i in range(5): g.px(cx - 2.5 + i, my + 2, SKIN['hi'])
+        # a closed mouth is one long curved line with the corners turned up
+        w = hr * 0.56
+        n = int(w * 2)
+        for i in range(n + 1):
+            t = i / n
+            x = cx - w + i
+            dip = -math.sin(t * math.pi) * 1.1
+            g.px(x, my + dip, INK)
+            g.px(x, my + dip + 1, INK)
+            g.px(x, my + dip + 2, SKIN['dark'])
+        for k, dy in enumerate((0, -1.2, -2.4)):                    # the corners turn up
+            g.px(cx - w - k, my + dy, INK); g.px(cx + w + k, my + dy, INK)
+            g.px(cx - w - k, my + dy + 1, INK); g.px(cx + w + k, my + dy + 1, INK)
     # cheek
-    g.px(cx - hr * 0.66, my - 1, SKIN['mid']); g.px(cx - hr * 0.66, my, SKIN['mid'])
+    g.px(cx - hr * 0.72, my - 2, SKIN['mid']); g.px(cx - hr * 0.72, my - 1, SKIN['mid'])
 
     if spec.get('beard'):
         bc2 = spec.get('beardCol', '6')
         # sits below the mouth and to the sides of it, never over it
-        g.ellipse(cx, my + 7, hr * 0.74, hr * 0.44, SKIN['dark'])
-        g.ellipse(cx, my + 6.6, hr * 0.70, hr * 0.40, bc2)
-        g.ellipse(cx - 1, my + 6.2, hr * 0.48, hr * 0.24, '7')
+        g.ellipse(cx, my + 5.4, hr * 0.50, hr * 0.40, SKIN['dark'])
+        g.ellipse(cx, my + 5.0, hr * 0.46, hr * 0.36, bc2)
+        g.ellipse(cx - 1, my + 4.6, hr * 0.30, hr * 0.22, '7')
         for side in (-1, 1):                                          # sideburns down the jaw
-            g.ellipse(cx + side * hr * 0.62, my + 1, hr * 0.20, hr * 0.34, bc2)
+            g.ellipse(cx + side * hr * 0.72, my + 1, hr * 0.20, hr * 0.34, bc2)
         for i in range(9):                                            # strands
-            bx = cx - hr * 0.56 + i * (hr * 0.14)
-            for k in range(1 + (i % 3)): g.px(bx, my + 7 + hr * 0.40 + k, bc2)
-        for i in range(7): g.px(cx - 3.5 + i, my - 1, '5')             # moustache, above the mouth
-        for i in range(5): g.px(cx - 2.5 + i, my - 2, '7')
+            bx = cx - hr * 0.46 + i * (hr * 0.12)
+            for k in range(1 + (i % 3)): g.px(bx, my + 5.4 + hr * 0.36 + k, bc2)
+        for i in range(9): g.px(cx - 4.5 + i, my - 3.4, '5')           # moustache, above the mouth
+        for i in range(7): g.px(cx - 3.5 + i, my - 4.4, '7')
     if spec.get('stubble'):
-        for i in range(14):
-            g.px(cx - hr * 0.58 + (i * 7) % int(hr * 1.2), my + 4 + (i % 2), SKIN['dark'])
+        for i in range(10):
+            g.px(cx - hr * 0.60 + (i * 7) % int(hr * 1.2), my + 5.4 + (i % 2), SKIN['dark'])
 
 def anatomy(g, m, spec, pose):
     """cel-animation muscle and detail lines: collarbone, pecs, belly, navel,
@@ -331,16 +369,16 @@ def hair(g, m, spec, pose):
     c, c2 = spec['hair'], spec.get('hair2', spec['hair'])
     dark = spec.get('hair3', c)
     style = spec.get('hairStyle', 'mop')
-    top = hy - hr * 0.82
+    top = hy - hr * 0.98
     if style == 'mop':
-        g.ellipse(cx, top + 1, hr * 1.04, hr * 0.62, c)
-        for ox, oy, r in ((-0.92, 0.20, 0.40), (-0.48, -0.26, 0.46), (0.08, -0.36, 0.46),
+        g.ellipse(cx, top + 1, hr * 1.04, hr * 0.56, c)
+        for ox, oy, r in ((-0.92, 0.14, 0.38), (-0.48, -0.26, 0.46), (0.08, -0.36, 0.46),
                           (0.60, -0.22, 0.42), (0.98, 0.14, 0.38)):
             g.disc(cx + ox * hr, top + oy * hr, hr * r, c)
         for i in range(5):                                            # a parted fringe
             if i == 2: continue                                       # the part itself
             fx = cx - hr * 0.9 + i * (hr * 0.45)
-            for k in range(2 + (i % 2)): g.px(fx, top + hr * 0.46 + k, c)
+            for k in range(2 + (i % 2)): g.px(fx, top + hr * 0.40 + k, c)
     elif style == 'spike':
         g.ellipse(cx, top + 1, hr * 1.04, hr * 0.64, c)
         for i in range(8):
@@ -351,7 +389,7 @@ def hair(g, m, spec, pose):
                 wdt = max(1, int((1 - k / sh) * 3.4))
                 for w in range(wdt): g.px(sx - wdt / 2 + w, top - k, c if k < sh * 0.55 else c2)
     elif style == 'curls':
-        g.ellipse(cx, top + 1, hr * 1.18, hr * 0.84, c)
+        g.ellipse(cx, top + 1, hr * 1.18, hr * 0.72, c)
         for ox, oy, r in ((-1.18, 0.22, 0.5), (-0.82, -0.42, 0.56), (-0.2, -0.62, 0.6),
                           (0.46, -0.54, 0.56), (1.02, -0.16, 0.54), (1.22, 0.36, 0.46),
                           (-1.28, 0.78, 0.44), (1.32, 0.82, 0.42)):
@@ -437,28 +475,28 @@ def necklace(g, m, spec):
     g.px(cx - 1, y0 + 5, BONE['hi'])
 
 # --- cast --------------------------------------------------------------------
-ADULT = dict(w=52, h=76, headR=11.5, headY=17, waistY=48, shoW=29, hipW=20,
+ADULT = dict(w=52, h=76, headR=13, headY=19, waistY=50, shoW=29, hipW=20,
              armR=3.9, legR=4.5, furLen=11, brow='0', iris='j')
 CAST = {
-  'bronk':     dict(ADULT, build='fat', shoW=32, hipW=25, headR=12, waistY=50, furLen=12,
+  'bronk':     dict(ADULT, build='fat', shoW=32, hipW=25, headR=13.5, waistY=52, furLen=12,
                     hair='f', hair2='g', hair3='0', hairStyle='mop', stubble=True, neck=True),
-  'vela':      dict(ADULT, build='slim', female=True, w=50, shoW=23, hipW=19, headR=11,
+  'vela':      dict(ADULT, build='slim', female=True, w=50, shoW=23, hipW=19, headR=12.4,
                     hair='A', hair2='B', hair3='z', hairStyle='curls', hairBone=True,
                     furLen=15, strap=True, neck=True, iris='u'),
-  'elder':     dict(ADULT, build='slim', shoW=25, hipW=19, headR=11, hair='6', hair2='7',
+  'elder':     dict(ADULT, build='slim', shoW=25, hipW=19, headR=12.4, hair='6', hair2='7',
                     hair3='5', hairStyle='bald', beard=True, beardCol='6', furLen=17,
                     brow='5', iris='k'),
-  'brute':     dict(ADULT, w=58, h=80, build='strong', shoW=38, hipW=23, headR=11.5, headY=18,
+  'brute':     dict(ADULT, w=58, h=80, build='strong', shoW=38, hipW=23, headR=13, headY=20,
                     waistY=52, armR=5.2, legR=5.2, hair='z', hair2='A', hair3='y',
                     hairStyle='spike', furLen=11, neck=True, abs=True, iris='y'),
   'villager':  dict(ADULT, build='strong', shoW=28, hipW=20, hair='g', hair2='h', hair3='f',
                     hairStyle='mop', furLen=10, neck=True),
   'villager2': dict(ADULT, build='slim', female=True, shoW=23, hipW=19, hair='h', hair2='i',
                     hair3='g', hairStyle='bun', furLen=14, strap=True, neck=True),
-  'kid_a':     dict(w=34, h=50, build='kid', headR=9, headY=12.5, waistY=31, shoW=17, hipW=13,
+  'kid_a':     dict(w=34, h=50, build='kid', headR=10.4, headY=14, waistY=32, shoW=17, hipW=13,
                     armR=2.7, legR=3.1, furLen=7, brow='0', iris='j',
                     hair='z', hair2='A', hair3='y', hairStyle='spike'),
-  'kid_b':     dict(w=34, h=50, build='kid', headR=9, headY=12.5, waistY=31, shoW=16, hipW=13,
+  'kid_b':     dict(w=34, h=50, build='kid', headR=10.4, headY=14, waistY=32, shoW=16, hipW=13,
                     armR=2.7, legR=3.1, furLen=8, brow='0', iris='g',
                     hair='g', hair2='h', hair3='f', hairStyle='bun', female=True, hairBone=True),
 }
@@ -576,13 +614,20 @@ def sleep_frames(name):
         for y in range(H):
             for x in range(W):
                 if gf.get(x, y) != '.': g.px(x, y, gf.get(x, y))
-        # --- face, eyes shut, mouth open
-        for i in range(5): g.px(hx - 5 + i, hy - 1, SKIN['line'])            # brow
-        for i in range(5): g.px(hx - 5 + i, hy + 2, SKIN['line'])            # shut eye
-        g.px(hx - 8, hy + 3, SKIN['hi']); g.px(hx - 9, hy + 4, SKIN['base']); g.px(hx - 8, hy + 5, SKIN['mid'])
-        mw = 3 + lift
-        g.ellipse(hx - 2, hy + hr * 0.66, mw, 2.2 + lift * 0.6, '0')
-        g.ellipse(hx - 2, hy + hr * 0.66 + 1, mw * 0.6, 1, 'E')
+        # --- face: one heavy shut eye, a dash brow, and a snoring cavern
+        for i in range(5):
+            g.px(hx - 8 + i, hy - 4 + (i > 2), '0'); g.px(hx - 8 + i, hy - 3 + (i > 2), '0')  # brow
+        for i in range(7):                                                    # shut eye, curved
+            d = 1 if 1 < i < 5 else 0
+            g.px(hx - 8 + i, hy + d, '0'); g.px(hx - 8 + i, hy + 1 + d, '0')
+        g.px(hx - 2, hy - 1, '0'); g.px(hx - 1, hy - 2, '0')                  # lash tick
+        g.ellipse(hx - 8.5, hy + 4, 2.6, 2.2, SKIN['base'])                   # the nose bulb
+        g.px(hx - 9.5, hy + 3, SKIN['hi'])
+        mw = 4.4 + lift
+        g.ellipse(hx - 4, hy + 8, mw + 1, 3.0 + lift * 0.7, SKIN['line'])
+        g.ellipse(hx - 4, hy + 8, mw, 2.4 + lift * 0.7, '0')
+        for i in range(int(mw * 1.4)): g.px(hx - 4 - mw * 0.7 + i, hy + 8 - 1.6, '$')
+        g.ellipse(hx - 4, hy + 9.2, mw * 0.55, 1.1, 'E')
         # --- hair, shoved back by the pillow
         hair(g, dict(cx=hx + 2, headY=hy - 1, headR=hr, shoY=0, waistY=0, hipY=0, footY=0, shoW=0, hipW=0),
              dict(spec, hairStyle=spec.get('hairStyle', 'mop')), {})

@@ -19,12 +19,13 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
       Gfx.ctx.save(); Gfx.ctx.translate(0, i * 540);
       Gfx.ctx.beginPath(); Gfx.ctx.rect(0, 0, 960, 540); Gfx.ctx.clip();
       Gfx.ctx.fillStyle = '#120c16'; Gfx.ctx.fillRect(0, 0, 960, 540);
-      Gfx.ctx.translate(-cx, 0);
-      World[stage](2.0, { fire: 1 }, cx);
+      Gfx.ctx.scale(VIEW, VIEW);
+      Gfx.ctx.translate(-cx, -(GY - (H / VIEW) * 0.74));
+      World[stage](2.0, { fire: 1, beat: 0.5 }, cx);
       Gfx.ctx.restore();
       // landmark rulers so it is obvious what sits where
       if (typeof HOME !== 'undefined') for (const [k, v] of Object.entries(HOME)) {
-        const sx = v - cx; if (sx < 0 || sx > 960) continue;
+        const sx = (v - cx) * VIEW; if (sx < 0 || sx > 960) continue;
         Gfx.rectA(sx, i * 540, 1, 540, '#ff00ff', 0.5);
         Gfx.text(k, sx + 3, i * 540 + 22, { color: '#ff88ff', scale: 1, font: 'small' });
       }

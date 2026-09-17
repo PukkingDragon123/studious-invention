@@ -1,260 +1,52 @@
 <!-- Artifact wrapper page. Published via the Artifact tool, which supplies the
-     doctype/head/body skeleton, so this file starts at <title>. The game itself
-     is js/*.js, published alongside it unchanged. -->
+     doctype/head/body skeleton, so this file starts at <title>. The page is the
+     game and nothing else: no copy, no chrome, just the canvas filling the view.
+     The game itself is js2/*.js, published alongside it unchanged. -->
 <title>Onga Bonga</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
 <style>
-  :root {
-    --ash: #120e18;
-    --rock: #1e1826;
-    --rock-hi: #2b2233;
-    --ochre: #d9a066;
-    --pigment: #c4562f;
-    --bone: #f0e8d2;
-    --bone-dim: #a2988a;
-    --moss: #a3e04a;
-    --edge: #35293f;
-    --display: "Silkscreen", "Courier New", monospace;
-    --body: "Newsreader", Georgia, "Times New Roman", serif;
-    color-scheme: dark;
+  html, body {
+    margin: 0; padding: 0; height: 100%; background: #000;
+    overflow: hidden; color-scheme: dark;
   }
-
-  html, body { background: var(--ash); }
-  body {
-    margin: 0;
-    padding-block: 0 4rem;
-    padding-inline: 20px;
-    font-family: var(--body);
-    font-size: 17px;
-    line-height: 1.65;
-    color: var(--bone-dim);
-    background:
-      radial-gradient(120% 80% at 50% -10%, #241a2e 0%, rgba(18,14,24,0) 60%),
-      repeating-linear-gradient(94deg, rgba(255,255,255,0.012) 0 2px, rgba(0,0,0,0) 2px 7px),
-      var(--ash);
-    background-attachment: fixed;
-  }
-
-  .shell { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 3.25rem; }
-
-  /* ---------------------------------------------------------------- masthead */
-  .masthead {
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.25rem;
-    padding-block: 1.75rem 0;
-  }
-  .wordmark {
-    font-family: var(--display); font-weight: 700;
-    font-size: clamp(1.75rem, 5.2vw, 2.9rem);
-    line-height: 1; margin: 0; color: var(--ochre);
-    letter-spacing: 0.02em;
-    text-shadow: 0 2px 0 #6b3f1c, 0 0 28px rgba(217,160,102,0.25);
-  }
-  .wordmark em { font-style: normal; color: var(--pigment); }
-  .tagline { font-style: italic; font-size: 1.05rem; color: var(--bone-dim); margin: 0; }
-
-  /* ------------------------------------------------------------------- stage */
-  .niche { position: relative; }
-  .niche::before {
-    content: ""; position: absolute; inset: -14% 0 -22%;
-    background: radial-gradient(60% 55% at 50% 45%, rgba(242,140,40,0.20), rgba(242,140,40,0) 70%);
-    filter: blur(6px); pointer-events: none; z-index: 0;
-    animation: firelight 5.5s ease-in-out infinite;
-  }
-  @keyframes firelight { 0%, 100% { opacity: 0.75; } 43% { opacity: 1; } 68% { opacity: 0.82; } }
-  @media (prefers-reduced-motion: reduce) { .niche::before { animation: none; } }
-
   #stage {
-    position: relative; z-index: 1;
-    padding: 12px;
-    background: linear-gradient(180deg, var(--rock-hi), var(--rock));
-    border: 1px solid var(--edge);
-    border-radius: 3px;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 24px 60px -24px #000;
+    width: 100vw; height: 100vh;
+    display: grid; place-items: center;
+    background: #000;
   }
-  #stage::after {
-    content: ""; position: absolute; inset: 5px; border: 1px solid rgba(217,160,102,0.28);
-    border-radius: 2px; pointer-events: none;
-  }
+  /* 16:9 letterboxed against whichever axis runs out first. */
   canvas#game {
-    display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
+    display: block;
+    width: min(100vw, 177.78vh);
+    height: min(56.25vw, 100vh);
     image-rendering: pixelated; image-rendering: crisp-edges;
-    background: #0b0710; border-radius: 1px; touch-action: none; outline: none;
+    background: #0b0710; touch-action: none; outline: none;
     -webkit-tap-highlight-color: transparent;
-  }
-  #stage:fullscreen { padding: 0; background: #000; display: grid; place-items: center; border: 0; }
-  #stage:fullscreen::after { display: none; }
-  #stage:fullscreen canvas#game { width: min(100vw, 177.7vh); height: auto; }
-
-  /* --------------------------------------------------------------- utility bar */
-  .utility {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;
-    margin-top: 0.9rem;
-  }
-  .sound-note { font-size: 0.95rem; margin: 0; flex: 1 1 16rem; }
-  .sound-note b { color: var(--bone); font-weight: 600; }
-  button.go {
-    font-family: var(--display); font-size: 0.78rem; letter-spacing: 0.08em;
-    color: var(--bone); background: var(--pigment);
-    border: 1px solid #e07a45; border-bottom-width: 3px; border-radius: 2px;
-    padding: 0.7rem 1.1rem; cursor: pointer;
-  }
-  button.go:hover { background: #d9632f; }
-  button.go:active { transform: translateY(1px); border-bottom-width: 2px; }
-  button.go:focus-visible { outline: 2px solid var(--ochre); outline-offset: 3px; }
-  button.go[hidden] { display: none; }
-
-  /* ------------------------------------------------------------------ columns */
-  .label {
-    font-family: var(--display); font-size: 0.7rem; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--ochre); margin: 0 0 0.55rem;
-  }
-  .guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.75rem 2.25rem; }
-  .guide section { border-top: 1px solid var(--edge); padding-top: 0.9rem; }
-  .guide h3 {
-    font-family: var(--body); font-size: 1.15rem; font-weight: 600; color: var(--bone);
-    margin: 0 0 0.35rem; text-wrap: balance;
-  }
-  .guide p { margin: 0; font-size: 0.97rem; max-width: 34ch; }
-  .guide p + p { margin-top: 0.6rem; }
-  .guide b { color: var(--bone); font-weight: 600; }
-  .perfect { color: var(--moss); font-weight: 600; }
-
-  /* ----------------------------------------------------------------- controls */
-  .controls { border-top: 1px solid var(--edge); padding-top: 0.9rem; }
-  dl.keys { display: grid; grid-template-columns: max-content 1fr; gap: 0.5rem 1.1rem; margin: 0; align-items: baseline; }
-  dl.keys dt { display: flex; gap: 4px; }
-  dl.keys dd { margin: 0; font-size: 0.95rem; }
-  kbd {
-    font-family: var(--display); font-size: 0.68rem; line-height: 1;
-    color: var(--bone); background: var(--rock-hi);
-    border: 1px solid var(--edge); border-bottom: 3px solid #120d18;
-    border-radius: 3px; padding: 0.42rem 0.5rem; min-width: 0.85rem; text-align: center;
-  }
-  kbd.lane-d { color: #7ed86a; } kbd.lane-f { color: #e86a6a; }
-  kbd.lane-j { color: #f6d743; } kbd.lane-k { color: #79a6ff; }
-  .pad { font-family: var(--display); font-size: 0.68rem; color: var(--bone); }
-  dl.keys.for-touch { display: none; }
-  [data-input="touch"] dl.keys.for-keys { display: none; }
-  [data-input="touch"] dl.keys.for-touch { display: grid; }
-
-  /* --------------------------------------------------------------------- band */
-  .band { border-top: 1px solid var(--edge); padding-top: 0.9rem; }
-  ul.roster {
-    list-style: none; margin: 0; padding: 0;
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1.25rem;
-  }
-  ul.roster li { display: flex; flex-direction: column; gap: 0.3rem; }
-  ul.roster.with-art li { display: grid; grid-template-rows: 86px min-content min-content; align-content: start; }
-  ul.roster canvas {
-    width: auto; height: auto; max-height: 86px; max-width: 100%;
-    image-rendering: pixelated; image-rendering: crisp-edges;
-    align-self: end; justify-self: start;
-  }
-  ul.roster .who { font-family: var(--display); font-size: 0.72rem; color: var(--bone); letter-spacing: 0.05em; }
-  ul.roster .what { font-size: 0.9rem; line-height: 1.45; }
-
-  /* ------------------------------------------------------------------- colophon */
-  .colophon { border-top: 1px solid var(--edge); padding-top: 0.9rem; }
-  .colophon p { margin: 0; font-size: 0.9rem; max-width: 62ch; }
-  .colophon b { color: var(--bone); font-weight: 600; }
-
-  @media (max-width: 560px) {
-    body { font-size: 16px; padding-inline: 16px; }
-    .shell { gap: 2.5rem; }
-    #stage { padding: 7px; }
   }
 </style>
 
-<div class="shell">
-  <header class="masthead">
-    <h1 class="wordmark">ONGA <em>BONGA</em></h1>
-    <p class="tagline">Get your family back with music.</p>
-  </header>
-
-  <div class="niche">
-    <div id="stage">
-      <canvas id="game" width="960" height="540" aria-label="Onga Bonga, a playable pixel art game"></canvas>
-    </div>
-    <div class="utility">
-      <p class="sound-note"><b>Sound on.</b> Every riff is cut from the melody of the song already playing, so the guitar only sounds when you land the notes.</p>
-      <button class="go" id="fs" type="button" hidden>Full screen</button>
-    </div>
-  </div>
-
-  <div class="guide">
-    <section>
-      <p class="label">The trouble</p>
-      <h3>Your stove ran away</h3>
-      <p>BLAZE the fire-breathing raptor spent six years chained in the kitchen as the family stove. This morning he snapped the chain and took the family with him. The opening plays out in full, with four mini-games, before you ever see a card.</p>
-    </section>
-    <section>
-      <p class="label">The valley</p>
-      <h3>Walk it, don't pick it</h3>
-      <p>Every human in it comes out of one figure builder, so the whole valley shares a way of being drawn &mdash; 90s Saturday morning, with eyes that have a catchlight in them, heavy angular brows, teeth in the mouths, knuckles on the fists, and fur with a belt and a torn hem. The house is hand-laid masonry lit by its own fire. Nothing is drawn as a smooth circle; the circles rasterise in chunky steps like everything else.</p>
-      <p>The ruins are a wide, mostly empty tile map, and the way out is the gate at the far end &mdash; but it stays shut until you have put three beasts down and laid a trail the raptor cannot walk past. Beasts patrol with cones of vision: keep out of them, duck into a bush, roll past, or take the fight. Running burns stamina Bronk does not have.</p>
-      <p>Campfires restore you. Black fog hides an encounter. The shop is a mammoth in a striped awning and a feathered headdress who turns up where he feels like it and is gone by the time you look again.</p>
-    </section>
-    <section>
-      <p class="label">The fight</p>
-      <h3>Play the riff yourself</h3>
-      <p>A deck of riffs, three energy a turn. Play a card marked with a note and the camera cuts in: the Rock-Axe lies across the bottom of the screen and rune-stones slide right to left down four strings into a bone strum bar. Strike the string the stone lands on and it rings. <span class="perfect">SICK</span> timing, sustains to hold.</p>
-      <p>It starts gently: the first riffs of a run have timing windows two and a half times wider than normal, stones that drift in slowly, half the notes and no vocal line at all. It tightens as you play.</p>
-      <p>In the gaps the song hands you the vocal. An ember ribbon swoops down from the top: hold the chant and steer your voice along it, and the synth sings whatever pitch you are actually on. Strings carry the damage, the voice carries the crowd.</p>
-      <p>Duel cards are call and answer. The beast plays a phrase, then you play it back.</p>
-    </section>
-  </div>
-
-  <section class="controls">
-    <p class="label">Controls</p>
-    <dl class="keys for-keys">
-      <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt>
-      <dd>Walk the valley. Arrow keys work too. <kbd>SHIFT</kbd> runs, <kbd>SPACE</kbd> rolls, <kbd>E</kbd> interacts, <kbd>M</kbd> opens the map.</dd>
-      <dt><kbd class="lane-d">A</kbd><kbd class="lane-f">S</kbd><kbd class="lane-j">D</kbd><kbd class="lane-k">F</kbd></dt>
-      <dd>The four strings, top to bottom. <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> and the arrows are the same four. Hold for sustains.</dd>
-      <dt><kbd>SPACE</kbd> + mouse</dt>
-      <dd>Sing. Hold it while the ember ribbon is up and steer your voice with the mouse.</dd>
-      <dt><kbd>1</kbd>&ndash;<kbd>9</kbd></dt>
-      <dd>Play the card in that slot, then click the beast you are aiming at.</dd>
-      <dt><kbd>R</kbd></dt>
-      <dd>Encore, once the Hype column is full. <kbd>SPACE</kbd> does it too, outside a riff.</dd>
-      <dt><kbd>E</kbd></dt>
-      <dd>End your turn.</dd>
-      <dt><kbd>ESC</kbd></dt>
-      <dd>Menu, settings, your deck. Hold it to skip the opening.</dd>
-    </dl>
-    <dl class="keys for-touch">
-      <dt><span class="pad">WALK</span></dt>
-      <dd>Drag the stick in the lower left. ACT interacts, RUN sprints, DODGE rolls.</dd>
-      <dt><span class="pad">CARDS</span></dt>
-      <dd>Tap a card once to read it, tap again to play it, then tap the beast you are aiming at.</dd>
-      <dt><span class="pad">RIFFS</span></dt>
-      <dd>Tap the string a stone lands on &mdash; the whole band across the neck is its pad. Two fingers at once play a chord.</dd>
-      <dt><span class="pad">VOICE</span></dt>
-      <dd>When the ember ribbon drops in, hold the left edge of the screen and slide your thumb up and down to follow it.</dd>
-    </dl>
-  </section>
-
-  <section class="band">
-    <p class="label">The cast</p>
-    <ul class="roster" id="roster">
-      <li><span class="who">Bronk</span><span class="what">You. Loud, slow, and out of options.</span></li>
-      <li><span class="who">Vela</span><span class="what">His wife. Taken third. Plays bass.</span></li>
-      <li><span class="who">Pebble</span><span class="what">The son. Keeps time under pressure.</span></li>
-      <li><span class="who">Roxy</span><span class="what">The daughter. Bone flute, steady hands.</span></li>
-      <li><span class="who">Blaze</span><span class="what">Six years chained to a cooking pit. Done asking.</span></li>
-      <li><span class="who">The T-Rex</span><span class="what">Not involved. Still a problem.</span></li>
-    </ul>
-  </section>
-
-  <footer class="colophon">
-    <p>Runs save as you go, so you can close this and pick the hunt back up later. <b>Timing feel off?</b> Open the menu and nudge the offset, or widen the windows. Everything here is drawn and synthesized in the page itself: 177 sprites written as text and compiled at load, twenty songs written as note patterns and played by a Web Audio synth. No images, no audio files, no libraries.</p>
-  </footer>
+<div id="stage">
+  <canvas id="game" width="960" height="540" aria-label="Onga Bonga, a playable pixel art game"></canvas>
 </div>
 
 <script>
-  // Carry a run across republishes, and keep the roster honest if anything fails.
+  // The first tap or key press asks for real fullscreen, once. Browsers only
+  // grant it from a user gesture, and refusing is fine — the page already fills
+  // the viewport either way.
+  (function () {
+    var asked = false;
+    function go() {
+      if (asked) return; asked = true;
+      var el = document.getElementById('stage');
+      var fn = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (!fn) return;
+      try { var p = fn.call(el, { navigationUI: 'hide' }); if (p && p.catch) p.catch(function () { }); }
+      catch (e) { }
+    }
+    window.addEventListener('pointerdown', go, { once: true });
+    window.addEventListener('keydown', go, { once: true });
+  })();
+
+  // Carry a run across republishes.
   (function () {
     var SAVE = 'ongabonga_save_v1', SETTINGS = 'ongabonga_settings_v1';
     function restore(d) {
@@ -299,52 +91,3 @@
 <script src="js2/events.js"></script>
 <script src="js2/scenes.js"></script>
 <script src="js2/main.js"></script>
-
-<script>
-  // Roster portraits are drawn from the game's own sprite data, so the page and
-  // the game can never drift apart.
-  (function () {
-    var cast = ['bronk_idle', 'vela_idle', 'kid_a_idle', 'kid_b_idle', 'blaze_idle', 'trex_idle'];
-    function paint() {
-      var items = document.querySelectorAll('#roster li');
-      for (var i = 0; i < items.length && i < cast.length; i++) {
-        try {
-          var src = Gfx.spr(cast[i]).frames[0];
-          var c = document.createElement('canvas');
-          c.width = src.width; c.height = src.height;
-          var g = c.getContext('2d');
-          g.imageSmoothingEnabled = false;
-          g.drawImage(src, 0, 0);
-          c.setAttribute('aria-hidden', 'true');
-          items[i].insertBefore(c, items[i].firstChild);
-        } catch (e) { return; }
-      }
-      var list = document.getElementById('roster');
-      if (list && list.querySelector('canvas')) list.classList.add('with-art');
-    }
-    if (document.readyState === 'complete') paint();
-    else window.addEventListener('load', paint);
-  })();
-
-  // Full screen is the difference between playable and cramped on a phone, but
-  // the control only appears where the browser will actually grant it.
-  (function () {
-    var btn = document.getElementById('fs'), stage = document.getElementById('stage');
-    if (!btn || !stage || !document.fullscreenEnabled || !stage.requestFullscreen) return;
-    btn.hidden = false;
-    btn.addEventListener('click', function () {
-      try {
-        if (document.fullscreenElement) document.exitFullscreen();
-        else { var p = stage.requestFullscreen({ navigationUI: 'hide' }); if (p && p.catch) p.catch(function () { }); }
-      } catch (e) { }
-    });
-    document.addEventListener('fullscreenchange', function () {
-      btn.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
-    });
-  })();
-
-  // Swap the printed controls to touch wording the first time a finger lands.
-  window.addEventListener('touchstart', function () {
-    document.documentElement.setAttribute('data-input', 'touch');
-  }, { once: true, passive: true });
-</script>

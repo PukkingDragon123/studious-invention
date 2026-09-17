@@ -46,14 +46,15 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
       if (clear) { sx = x; sy = y; break outer; }
     }
     s.player.x = sx * 32 + 16; s.player.y = sy * 32 + 16;
-    p.x = s.player.x + 70; p.y = s.player.y; p.dir = { x: -1, y: 0 }; p.state = 'patrol';
+    // far enough that the chase state is observable before contact
+    p.x = s.player.x + 150; p.y = s.player.y; p.dir = { x: -1, y: 0 }; p.state = 'patrol';
     return p.state;
   });
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(500);
   r = await ev(() => { const s = Game.scene; if (!s.zone) return 'scene:' + s.constructor.name; const p = s.zone.entities.find(e => e.constructor.name === 'Prowler'); return p ? p.state : 'gone'; });
   ok('a prowler spots you and chases', r === 'chase', 'state=' + r);
   await shot('village_chase');
-  await page.waitForTimeout(1600);
+  await page.waitForTimeout(2600);
   r = await ev(() => Game.scene.constructor.name);
   ok('touching a prowler starts a fight', r === 'Combat', r);
   await shot('village_fight');

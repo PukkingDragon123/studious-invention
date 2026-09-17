@@ -3,12 +3,25 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
+// How much every clip bounces. Nothing in this game stands perfectly still:
+// an idle breathes, a walk lifts off the floor and a run leaves it entirely.
+// bob is pixels of vertical travel; squish is how much the bounce squashes.
+const BOB = {
+  idle: 1.2, walk: 3.4, run: 5.2, dash: 6.0, eat: 2.0, play: 3.6, sing: 3.0,
+  cook: 1.6, cry: 2.4, shock: 2.6, hurt: 0, sleep: 0.9, drive: 1.4,
+  roar: 2.2, boss: 2.6, trader: 1.0, shower: 1.4, fly: 4.0, kick: 4.4,
+};
+const SQUISH = {
+  idle: 0.020, walk: 0.055, run: 0.085, dash: 0.10, play: 0.06, sing: 0.05,
+  eat: 0.04, cry: 0.05, shock: 0.05, roar: 0.045, fly: 0.06, kick: 0.07,
+};
+
 // Per-character clip table: logical name -> { spr, fps, loop, hold }
 const CLIPS = {};
 function defClips(base, table) {
   CLIPS[base] = {};
   for (const [name, def] of Object.entries(table)) {
-    CLIPS[base][name] = Object.assign({ spr: base + '_' + name, fps: 8, loop: true }, typeof def === 'object' ? def : { spr: base + '_' + def });
+    CLIPS[base][name] = Object.assign({ spr: base + '_' + name, fps: 8, loop: true, bob: BOB[name] ?? 0.8, squish: SQUISH[name] ?? 0 }, typeof def === 'object' ? def : { spr: base + '_' + def });
   }
 }
 
@@ -83,7 +96,17 @@ class Actor {
     }
     this.sx = damp(this.sx, 1, 14, dt); this.sy = damp(this.sy, 1, 14, dt);
     if (this.vz !== 0 || this.z > 0) { this.vz -= 900 * dt; this.z += this.vz * dt; if (this.z <= 0) { this.z = 0; if (this.vz < -120) this.squash(Math.min(0.3, -this.vz / 1400)); this.vz = 0; } }
-    if (this.bobAmp) this.bob = Math.sin(Time.t * this.bobRate) * this.bobAmp;
+    // the bounce: driven by the clip's own frame clock so it lands with the art
+    const c = this.clip;
+    if (c && (c.bob || c.squish)) {
+      const ph = this.t * Math.PI * (c.loop === false ? 0.5 : 1);
+      const lift = Math.abs(Math.sin(ph));
+      this.bob = -lift * (c.bob || 0) * (this.bounce ?? 1);
+      if (c.squish) {
+        const q = Math.cos(ph * 2) * c.squish * (this.bounce ?? 1);
+        this.sx = damp(this.sx, 1 - q, 14, dt); this.sy = damp(this.sy, 1 + q, 14, dt);
+      }
+    } else if (this.bobAmp) this.bob = Math.sin(Time.t * this.bobRate) * this.bobAmp;
     if (this.tintT > 0) { this.tintT -= dt; if (this.tintT <= 0) this.tint = null; }
     this.rot += this.rotVel * dt;
   }

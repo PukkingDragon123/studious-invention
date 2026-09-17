@@ -531,6 +531,7 @@ class VillageScene {
     this.zone = Game.run.zone && Game.run.zone.act === this.act ? Game.run.zone : new Zone(this.act, Game.run.seed);
     Game.run.zone = this.zone;
     this.cam = new Camera();
+    this.cam.zoom = this.cam.tzoom = VIEW;
     this.cam.setBounds(0, 0, this.zone.w * TILE, this.zone.h * TILE);
     this.t = 0; this.locked = false; this.hidden = false; this.co = null;
     this.prompt = null; this.intro = 2.2;
@@ -614,10 +615,11 @@ class VillageScene {
     // animation: the belly leads, the body follows
     p.play(rolling ? 'dash' : spd > 20 ? (p.sprinting ? 'run' : 'walk') : 'idle');
     this.bellyPhase += dt * (4 + spd * 0.045);
-    const wob = Math.sin(this.bellyPhase);
-    p.sx = 1 + wob * (0.035 + spd * 0.00035) + (tired ? 0.02 : 0);
-    p.sy = 1 - wob * (0.035 + spd * 0.00035);
     p.update(dt);
+    // the belly rides on top of the clip's own bounce, never instead of it
+    const wob = Math.sin(this.bellyPhase), amp = 0.055 + spd * 0.0005;
+    p.sx *= 1 + wob * amp + (tired ? 0.02 : 0);
+    p.sy *= 1 - wob * amp;
     // footfalls kick up dust
     if (spd > 20) {
       this.footT -= dt * (p.sprinting ? 7 : 4.6);
@@ -657,7 +659,7 @@ class VillageScene {
     this.updateAmbience(dt);
     // camera: look a little ahead of the player, and pull back when sprinting
     this.cam.lead = 0.18;
-    this.cam.zoomTo(p.sprinting ? 1.04 : 1.14);
+    this.cam.zoomTo(p.sprinting ? VIEW * 0.9 : VIEW);
     this.cam.update(dt);
     if (Input.pressed('Escape')) Game.pause();
     if (Input.pressed('KeyM')) this.showMap = !this.showMap;

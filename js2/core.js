@@ -4,6 +4,11 @@
 'use strict';
 
 const W = 960, H = 540;          // logical canvas: art is authored at 1:1
+// One art pixel is VIEW screen pixels, in EVERY scene - the village, combat,
+// the cutscene camera and the side-scrolling stages all draw through this, so
+// nothing ever changes size when the game cuts. VW/VH are how much world fits.
+const VIEW = 2;
+const VW = W / VIEW, VH = H / VIEW;
 const TILE = 32;                 // village tile size
 
 // ------------------------------------------------------------------ math
@@ -312,7 +317,7 @@ const Popups = {
 // ------------------------------------------------------------------ transitions
 // A screen wipe that hides the scene swap. Kinds: claw, slats, iris, fade.
 const Transition = {
-  phase: 'none', t: 0, dur: 0.34, kind: 'fade', pending: null, held: 0,
+  phase: 'none', t: 0, dur: 0.28, kind: 'fade', pending: null, held: 0,
   start(kind, pending, hold = 0) { this.kind = kind || 'fade'; this.pending = pending; this.phase = 'out'; this.t = 0; this.held = hold; },
   get busy() { return this.phase !== 'none'; },
   update(dt) {
@@ -334,7 +339,9 @@ const Transition = {
   },
   draw(ctx) {
     const k = this.cover(); if (k <= 0.001) return;
-    const col = '#120c16';
+    // Warm stone, never black. A cut should feel like a curtain of sandstone
+    // sweeping past, not like the game switching itself off.
+    const col = '#b07a45';
     if (this.kind === 'claw') {
       // three diagonal slashes sweep in from the right
       ctx.fillStyle = col;
