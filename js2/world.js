@@ -13,9 +13,9 @@ const GY = 428;                      // the floor / ground line, everywhere
 // A small house, deliberately over-furnished: you should never be able to look
 // at a stretch of wall or floor without something of theirs in the way.
 const HOME = {
-  bed: 130, perch: 232, rug: 316, shelf: 396, fossil: 470, plaque: 556,
-  table: 636, stove: 754, clutter: 830, door: 900,
-  shower: 1090, nest: 1258, car: 1430, end: 1560,
+  bed: 96, perch: 176, rug: 244, shelf: 302, fossil: 358, plaque: 424,
+  table: 488, stove: 578, clutter: 636, door: 688,
+  shower: 850, nest: 990, car: 1140, end: 1250,
 };
 
 // small deterministic wobble so scattered junk does not jitter between frames

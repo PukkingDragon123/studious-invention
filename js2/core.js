@@ -267,7 +267,7 @@ const Particles = {
           ctx.restore(); break;
         }
         case 'drop': ctx.fillRect(x, y - s, Math.max(1, s / 2), s * 1.6); break;
-        case 'ring': { ctx.globalAlpha *= 0.8; ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, (1 - k) * p.size * 6 + 2, 0, 6.29); ctx.stroke(); break; }
+        case 'ring': { ctx.globalAlpha *= 0.8; Gfx.ring(x, y, (1 - k) * p.size * 6 + 2, p.color, 3); break; }
         default: ctx.fillRect(x - (s >> 1), y - (s >> 1), s, s);
       }
     }
@@ -364,12 +364,17 @@ const Transition = {
         ctx.fillRect(i % 2 ? 0 : W - w, i * h, w, h + 1);
       }
     } else if (this.kind === 'iris') {
-      const r = (1 - k) * Math.hypot(W, H) * 0.6;
+      // a stepped iris: the hole is cut band by band, so the edge stays blocky
+      const r = Math.max(0, (1 - k) * Math.hypot(W, H) * 0.6), st = 6;
       ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.rect(0, 0, W, H);
-      ctx.arc(W / 2, H / 2, Math.max(0, r), 0, 6.2832, true);
-      ctx.fill();
+      for (let y = 0; y < H; y += st) {
+        const dy = y + st / 2 - H / 2;
+        const w = r > Math.abs(dy) ? Math.sqrt(r * r - dy * dy) : 0;
+        if (w <= 0) { ctx.fillRect(0, y, W, st); continue; }
+        const l = Math.round(W / 2 - w), rr = Math.round(W / 2 + w);
+        if (l > 0) ctx.fillRect(0, y, l, st);
+        if (rr < W) ctx.fillRect(rr, y, W - rr, st);
+      }
     } else {
       ctx.globalAlpha = k; ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
     }

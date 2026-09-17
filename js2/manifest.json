@@ -1,168 +1,168 @@
 {
  "bronk_idle": {
-  "w": 40,
-  "h": 56,
+  "w": 46,
+  "h": 68,
   "frames": 2,
   "note": "BRONK the dad: burly caveman, black spiky hair, big nose, stubble, orange hide tunic with black spots, one shoulder strap, big round belly, bare feet. Frame 1 breathes: belly wider, head 1px lower.",
   "file": "art_chars"
  },
  "bronk_walk": {
-  "w": 40,
-  "h": 56,
+  "w": 46,
+  "h": 68,
   "frames": 4,
   "note": "walk cycle: contact/down/pass/up. Legs alternate, arms swing opposite, belly lags and bounces, hair shifts.",
   "file": "art_chars"
  },
  "bronk_eat": {
-  "w": 40,
-  "h": 56,
+  "w": 46,
+  "h": 68,
   "frames": 4,
   "note": "holding a giant meat leg to his mouth, chomping. F0 leg up mouth open wide, F1 bite down cheeks bulging, F2 chew squashed, F3 head back swallowing. Messy: keep room for the engine to add crumb particles.",
   "file": "art_chars"
  },
  "bronk_play": {
-  "w": 40,
-  "h": 56,
+  "w": 46,
+  "h": 68,
   "frames": 4,
   "note": "rocking out with a bone guitar across his chest, mouth open singing. F0 neutral, F1 strum arm down + lean back, F2 big strum + one leg up, F3 head thrown back howling.",
   "file": "art_chars"
  },
  "bronk_shock": {
-  "w": 40,
-  "h": 56,
+  "w": 46,
+  "h": 68,
   "frames": 2,
   "note": "terrified: jaw dropped to chest, eyes huge white circles, arms up, hair standing up. F1 even more extreme.",
   "file": "art_chars"
  },
  "bronk_drive": {
-  "w": 40,
-  "h": 42,
+  "w": 46,
+  "h": 47,
   "frames": 2,
   "note": "seated in the foot-powered car, gripping a steering bone, legs hidden below the sprite bottom, leaning forward. F1 leaning harder, hair back.",
   "file": "art_chars"
  },
  "bronk_hurt": {
-  "w": 40,
-  "h": 56,
+  "w": 46,
+  "h": 68,
   "frames": 1,
   "note": "knocked back, eyes X-ed out, arms flailing.",
   "file": "art_chars"
  },
  "vela_idle": {
-  "w": 38,
-  "h": 56,
+  "w": 44,
+  "h": 68,
   "frames": 2,
   "note": "VELA the mum: tall, big orange-red hair piled up, bone hairpin, single-strap leopard-spot dress (use pink/red ramp), strong arms, sandals. F1 breathes.",
   "file": "art_chars"
  },
  "vela_walk": {
-  "w": 38,
-  "h": 56,
+  "w": 44,
+  "h": 68,
   "frames": 4,
   "note": "walk cycle, hair and dress hem swing.",
   "file": "art_chars"
  },
  "vela_cook": {
-  "w": 38,
-  "h": 56,
+  "w": 44,
+  "h": 68,
   "frames": 4,
   "note": "stirring a stone pot with a huge bone spoon, one hand on hip. Arm circles across the 4 frames.",
   "file": "art_chars"
  },
  "vela_cry": {
-  "w": 38,
-  "h": 56,
+  "w": 44,
+  "h": 68,
   "frames": 2,
   "note": "captured and yelling, arms reaching out, hair wild.",
   "file": "art_chars"
  },
  "kid_a_idle": {
-  "w": 26,
-  "h": 38,
+  "w": 30,
+  "h": 44,
   "frames": 2,
   "note": "PEBBLE the son: small, wild brown hair, one-shoulder hide, bare feet, cheeky grin.",
   "file": "art_chars"
  },
  "kid_a_walk": {
-  "w": 26,
-  "h": 38,
+  "w": 30,
+  "h": 44,
   "frames": 4,
   "note": "bouncy kid walk, big strides.",
   "file": "art_chars"
  },
  "kid_a_eat": {
-  "w": 26,
-  "h": 38,
+  "w": 30,
+  "h": 44,
   "frames": 4,
   "note": "gnawing a small meat bone, face covered in sauce.",
   "file": "art_chars"
  },
  "kid_b_idle": {
-  "w": 26,
-  "h": 38,
+  "w": 30,
+  "h": 44,
   "frames": 2,
   "note": "ROXY the daughter: pigtails tied with bone rings, teal hide dress, holding a pet lizard toy.",
   "file": "art_chars"
  },
  "kid_b_walk": {
-  "w": 26,
-  "h": 38,
+  "w": 30,
+  "h": 44,
   "frames": 4,
   "note": "bouncy kid walk.",
   "file": "art_chars"
  },
  "kid_b_eat": {
-  "w": 26,
-  "h": 38,
+  "w": 30,
+  "h": 44,
   "frames": 4,
   "note": "two-handed chomping on a rib, cheeks stuffed.",
   "file": "art_chars"
  },
  "villager_idle": {
-  "w": 36,
-  "h": 52,
+  "w": 46,
+  "h": 68,
   "frames": 2,
   "note": "generic tribesman: brown hair, plain hide wrap, worried face.",
   "file": "art_chars"
  },
  "villager_walk": {
-  "w": 36,
-  "h": 52,
+  "w": 46,
+  "h": 68,
   "frames": 4,
   "note": "walk cycle.",
   "file": "art_chars"
  },
  "villager2_idle": {
-  "w": 36,
-  "h": 52,
+  "w": 46,
+  "h": 68,
   "frames": 2,
   "note": "generic tribeswoman: dark hair in a bun, green hide wrap, carrying a basket.",
   "file": "art_chars"
  },
  "villager2_walk": {
-  "w": 36,
-  "h": 52,
+  "w": 46,
+  "h": 68,
   "frames": 4,
   "note": "walk cycle.",
   "file": "art_chars"
  },
  "elder_idle": {
-  "w": 38,
-  "h": 56,
+  "w": 46,
+  "h": 68,
   "frames": 2,
   "note": "village elder: white beard to the waist, bone-skull headdress, purple robe, leaning on a gnarled staff. F1 the staff taps.",
   "file": "art_chars"
  },
  "brute_idle": {
-  "w": 44,
-  "h": 58,
+  "w": 50,
+  "h": 70,
   "frames": 2,
   "note": "enemy raider: bald with a bone nose-ring, war paint stripes, thick club over one shoulder, heavy gut, angry.",
   "file": "art_chars"
  },
  "brute_walk": {
-  "w": 44,
-  "h": 58,
+  "w": 50,
+  "h": 70,
   "frames": 4,
   "note": "heavy stomping walk, club swings.",
   "file": "art_chars"
@@ -1239,17 +1239,24 @@
   "file": "art_ui"
  },
  "bronk_dash": {
-  "w": 40,
-  "h": 56,
+  "w": 46,
+  "h": 68,
   "frames": 4,
   "note": "sprinting flat out, body thrown forward, speed lines behind.",
   "file": "art_chars"
  },
  "bronk_sleep": {
-  "w": 52,
-  "h": 30,
+  "w": 72,
+  "h": 34,
   "frames": 2,
-  "note": "asleep on his back, mouth open, fur pulled over the belly.",
+  "note": "flat on his back, fur over the belly, mouth open, snoring.",
   "file": "art_chars"
+ },
+ "bronk_sing": {
+  "note": "generated caveman",
+  "file": "art_chars",
+  "w": 46,
+  "h": 68,
+  "frames": 4
  }
 }

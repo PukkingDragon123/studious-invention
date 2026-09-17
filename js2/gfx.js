@@ -157,8 +157,38 @@ const Gfx = {
     this.ctx.fillRect(x, y, w, t); this.ctx.fillRect(x, y + h - t, w, t);
     this.ctx.fillRect(x, y, t, h); this.ctx.fillRect(x + w - t, y, t, h);
   },
-  circle(x, y, r, color) { const c = this.ctx; c.fillStyle = color; c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill(); },
-  ring(x, y, r, color, lw = 2) { const c = this.ctx; c.strokeStyle = color; c.lineWidth = lw; c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.stroke(); },
+  // Circles are rasterised in chunky steps rather than stroked as vector arcs:
+  // a smooth anti-aliased circle is the one shape that always gives a pixel
+  // game away. STEP is the size of a "pixel" in the drawn shape.
+  circleStep: 3,
+  circle(x, y, r, color) {
+    const c = this.ctx, st = this.circleStep, rr = r * r;
+    c.fillStyle = color;
+    const y0 = Math.round(y - r), n = Math.ceil((r * 2) / st);
+    for (let i = 0; i <= n; i++) {
+      const yy = y0 + i * st, dy = yy + st / 2 - y;
+      const w = Math.sqrt(Math.max(0, rr - dy * dy));
+      if (w <= 0.4) continue;
+      c.fillRect(Math.round(x - w), yy, Math.max(st, Math.round(w * 2)), st);
+    }
+  },
+  ring(x, y, r, color, lw = 2) {
+    const c = this.ctx, st = this.circleStep, ir = Math.max(0, r - Math.max(lw, st));
+    c.fillStyle = color;
+    const y0 = Math.round(y - r), n = Math.ceil((r * 2) / st);
+    for (let i = 0; i <= n; i++) {
+      const yy = y0 + i * st, dy = yy + st / 2 - y;
+      const o = Math.sqrt(Math.max(0, r * r - dy * dy));
+      if (o <= 0.4) continue;
+      const inr = Math.sqrt(Math.max(0, ir * ir - dy * dy));
+      if (inr <= 0.4) { c.fillRect(Math.round(x - o), yy, Math.max(st, Math.round(o * 2)), st); }
+      else {
+        const w = Math.max(st, Math.round(o - inr));
+        c.fillRect(Math.round(x - o), yy, w, st);
+        c.fillRect(Math.round(x + inr), yy, w, st);
+      }
+    }
+  },
   line(x1, y1, x2, y2, color, lw = 1) { const c = this.ctx; c.strokeStyle = color; c.lineWidth = lw; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); },
   bands(x, y, w, h, colors) { const n = colors.length, bh = h / n; for (let i = 0; i < n; i++) this.rect(x, y + i * bh, w, Math.ceil(bh) + 1, colors[i]); },
   // rounded-corner rectangle drawn with pixel steps (no anti-aliasing)

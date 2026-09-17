@@ -162,52 +162,101 @@ class SideScroll extends MiniGame {
   }
 }
 
-// ------------------------------------------------------------------ SMACK ---
-// The dodo alarm clock. It pops up squawking; you swat it. It does not learn.
+// ------------------------------------------------------------------- BONK ---
+// The dodo alarm. You wake up, it is screaming on its perch, you bonk it.
+// It comes back once, louder, and gets bonked harder. That is the whole game.
 class SmackGame extends MiniGame {
   constructor(o) {
     super(o);
-    this.round = 0; this.rounds = o.rounds || 3; this.pos = { x: W / 2, y: H / 2 };
-    this.up = false; this.wait = 0.7; this.live = 0; this.limit = 1.5; this.smacked = 0; this.pop = 0; this.hitT = 0;
-    this.intro = 0.9;
-    this.o.hint = Input.touch ? 'SWAT IT' : 'SWAT IT  -  CLICK, OR ANY KEY';
+    this.round = 0; this.rounds = o.rounds || 2;
+    this.state = 'wake';                 // wake -> squawk -> struck -> gone
+    this.t = 0; this.stateT = 0; this.swing = 0; this.hit = 0; this.bonked = 0;
+    this.gy = o.groundY ?? H * 0.78;
+    this.bedX = o.bedX ?? W * 0.32;
+    this.perchX = o.perchX ?? W * 0.62;
+    this.dodo = { x: this.perchX, y: this.gy - 62, vx: 0, vy: 0, spin: 0, squash: 1, gone: false };
+    this.eyes = 0;                       // how open Bronk's eyes are
+    this.intro = 0.5; this.o.hint = '';
+  }
+  bonk() {
+    if (this.state !== 'squawk') return;
+    this.state = 'struck'; this.stateT = 0; this.swing = 1; this.hit = 1; this.bonked++;
+    const hard = this.round >= this.rounds - 1;
+    Juice.stop(hard ? 0.14 : 0.08);
+    Juice.shake(hard ? 16 : 10, 0.35);
+    Juice.flash('#ffffff', 0.3, 5);
+    AudioSys.sfx('thud'); AudioSys.sfx('crunch', { vol: 0.7 });
+    Particles.spawn(this.dodo.x, this.dodo.y, {
+      n: 26, color: ['#fffaea', '#e8dfc6', '#d6cfe0', '#c4b89a'],
+      speed: 260, spread: 6.28, life: 1.4, size: 5, sizeEnd: 0, gravity: 120,
+    });
+    FX.burst(this.dodo.x, this.dodo.y, { world: false, scale: hard ? 2.0 : 1.5 });
+    this.dodo.vx = hard ? 600 : 340; this.dodo.vy = hard ? -420 : -260;
+    this.dodo.spin = hard ? 16 : 9; this.dodo.squash = 0.45;
+    Popups.add(this.dodo.x, this.dodo.y - 40, hard ? 'BONK!!' : 'BONK!', '#ffe98a',
+      { world: false, scale: hard ? 3.2 : 2.4, life: 1.1, vy: -40 });
   }
   step(dt) {
-    if (!this.up) {
-      this.wait -= dt;
-      if (this.wait <= 0) {
-        this.up = true; this.live = 0; this.pop = 1;
-        this.limit = Math.max(0.6, 1.5 - this.round * 0.35);
-        this.pos = { x: rnd(W * 0.28, W * 0.72), y: rnd(H * 0.34, H * 0.6) };
-        AudioSys.sfx('roar', { pitch: 520, vol: 0.55, len: 0.35 });
+    this.stateT += dt;
+    const pressed = Input.clicks.length || Input.keys.length;
+    if (this.state === 'wake') {
+      this.eyes = Math.min(1, this.eyes + dt * 1.6);
+      if (this.stateT > 0.7) { this.state = 'squawk'; this.stateT = 0; AudioSys.sfx('roar', { pitch: 560, vol: 0.7, len: 0.4 }); }
+    } else if (this.state === 'squawk') {
+      if (pressed) this.bonk();
+      else if (this.stateT > 2.4) this.bonk();          // it never gets away with it
+    } else if (this.state === 'struck') {
+      const d = this.dodo;
+      d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 900 * dt;
+      d.squash = damp(d.squash, 1, 6, dt);
+      if (chance(dt * 30)) Particles.spawn(d.x, d.y, { n: 1, color: ['#fffaea'], speed: 40, life: 1.2, size: 4, sizeEnd: 0, gravity: 40 });
+      if (this.stateT > 0.9) {
+        this.round++;
+        if (this.round >= this.rounds) { this.state = 'gone'; this.stateT = 0; }
+        else {
+          this.state = 'squawk'; this.stateT = -0.5;
+          this.dodo = { x: this.perchX, y: this.gy - 62, vx: 0, vy: 0, spin: 0, squash: 1.3 };
+          AudioSys.sfx('roar', { pitch: 700, vol: 0.85, len: 0.5 });
+        }
       }
-    } else {
-      this.live += dt;
-      const swung = Input.clicks.length || Input.keys.length;
-      if (swung) {
-        this.up = false; this.smacked++; this.round++; this.wait = rnd(0.5, 1.0); this.hitT = 0.4;
-        AudioSys.sfx('thud'); Juice.shake(7, 0.18); Juice.flash('#ffffff', 0.2, 3);
-        Particles.spawn(this.pos.x, this.pos.y, { n: 14, color: ['#d6cfe0', '#a79bb4', '#ffe98a'], speed: 190, spread: 6.28, life: 0.7, size: 5, sizeEnd: 0, gravity: 260 });
-        FX.burst(this.pos.x, this.pos.y, { world: false, scale: 1.3 });
-      } else if (this.live > this.limit) { this.up = false; this.round++; this.wait = rnd(0.5, 0.9); }
-    }
-    this.pop = Math.max(0, this.pop - dt * 3);
-    this.hitT = Math.max(0, this.hitT - dt);
-    if (this.round >= this.rounds && !this.up) this.finish({ win: this.smacked > 0, smacked: this.smacked });
+    } else if (this.stateT > 0.7) this.finish({ win: true, bonked: this.bonked });
+    this.swing = Math.max(0, this.swing - dt * 3.4);
+    this.hit = Math.max(0, this.hit - dt * 2.4);
   }
   draw() {
     if (this.o.paint) this.o.paint(this.t, this);
-    if (this.up) {
-      const k = Ease.outBack(clamp(1 - this.pop, 0, 1));
-      const sq = 1 + Math.sin(this.live * 26) * 0.12;
-      Gfx.glow(this.pos.x, this.pos.y, 70, '#ffe98a', 0.2);
-      Gfx.sprite('dodo_idle', this.pos.x, this.pos.y, { anchor: 'c', scale: 2.1 * k * sq, frame: Math.floor(this.t * 10) % 2 });
-      for (let i = 0; i < 3; i++) {
-        const a = -0.9 + i * 0.9, r = 46 + Math.sin(this.live * 18 + i) * 8;
-        Gfx.text('~', this.pos.x + Math.cos(a) * r, this.pos.y + Math.sin(a) * r - 26, { color: '#ffe98a', align: 'center', scale: 2, outline: true });
+    const d = this.dodo;
+    // the dodo, mid-squawk or mid-flight
+    if (this.state !== 'gone') {
+      const wob = this.state === 'squawk' ? Math.sin(this.t * 26) * 0.12 : 0;
+      if (this.state === 'squawk') {
+        Gfx.glow(d.x, d.y, 80, '#ffe98a', 0.16 + Math.sin(this.t * 14) * 0.06);
+        for (let i = 0; i < 3; i++) {
+          const a = -1.1 + i * 0.85, r = 48 + Math.sin(this.t * 20 + i) * 8;
+          Gfx.text('~', d.x + Math.cos(a) * r, d.y + Math.sin(a) * r - 24,
+            { color: '#ffe98a', align: 'center', scale: 2.2, outline: true, outlineWidth: 2 });
+        }
       }
+      Gfx.sprite('dodo_walk', d.x, d.y, {
+        anchor: 'c', scale: 2.2 * (1 + wob), frame: Math.floor(this.t * 14) % 4,
+        rot: this.state === 'struck' ? this.t * d.spin : 0,
+        sx: d.squash, sy: 2 - d.squash,
+      });
     }
-    if (this.hitT > 0) Gfx.sprite('fx_anger', this.pos.x + 30, this.pos.y - 40, { anchor: 'c', scale: 1.6, frame: Math.floor(this.t * 12) % 2 });
+    // Bronk in bed, one eye open, club ready
+    const bx = this.bedX, by = this.gy;
+    Gfx.sprite('bronk_sleep', bx, by, { anchor: 'bc', scale: 2.0, frame: this.eyes > 0.5 ? 1 : 0 });
+    const sw = Ease.outCubic(1 - this.swing);
+    Gfx.sprite('art_club', bx + 34 + sw * 52, by - 54 - (1 - sw) * 34, {
+      anchor: 'c', scale: 1.8, rot: -2.2 + sw * 2.6,
+    });
+    if (this.hit > 0.1) Gfx.sprite('fx_anger', d.x + 34, d.y - 34, { anchor: 'c', scale: 1.8, frame: Math.floor(this.t * 14) % 2 });
+    // the only instruction there is
+    if (this.state === 'squawk') {
+      const k = 0.7 + Math.sin(this.t * 9) * 0.3;
+      Gfx.text(Input.touch ? 'TAP TO BONK IT' : 'ANY KEY TO BONK IT', W / 2, H - 92,
+        { color: '#ffe98a', align: 'center', scale: 1.4 + k * 0.3, outline: true, outlineWidth: 2 });
+    }
     this.drawFrame('', '', undefined);
   }
 }

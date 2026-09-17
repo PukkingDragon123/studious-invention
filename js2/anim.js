@@ -15,8 +15,8 @@ function defClips(base, table) {
 defClips('bronk', {
   idle: { fps: 2.4 }, walk: { fps: 10 }, run: { spr: 'bronk_walk', fps: 16 },
   eat: { fps: 7 }, play: { fps: 8 }, shock: { fps: 6 }, drive: { fps: 8 },
-  sing: { spr: 'bronk_play', fps: 5 }, sleep: { spr: 'bronk_sleep', fps: 1.2 },
-  dash: { spr: 'bronk_dash', fps: 15 }, kick: { spr: 'bronk_walk', fps: 12 },
+  sing: { spr: 'bronk_sing', fps: 5 }, sleep: { spr: 'bronk_sleep', fps: 1.2 },
+  dash: { spr: 'bronk_dash', fps: 15 }, kick: { spr: 'bronk_dash', fps: 12 },
   hurt: { spr: 'bronk_hurt', fps: 1, loop: false },
 });
 defClips('vela', { idle: { fps: 2.2 }, walk: { fps: 10 }, cook: { fps: 6 }, cry: { fps: 5 } });
@@ -24,7 +24,7 @@ defClips('kid_a', { idle: { fps: 2.6 }, walk: { fps: 11 }, eat: { fps: 8 } });
 defClips('kid_b', { idle: { fps: 2.6 }, walk: { fps: 11 }, eat: { fps: 8 } });
 defClips('villager', { idle: { fps: 2 }, walk: { fps: 9 } });
 defClips('villager2', { idle: { fps: 2 }, walk: { fps: 9 } });
-defClips('elder', { idle: { fps: 1.6 } });
+defClips('elder', { idle: { fps: 1.4 } });
 defClips('brute', { idle: { fps: 2 }, walk: { fps: 8 } });
 defClips('blaze', { idle: { fps: 7 }, walk: { fps: 10 }, roar: { fps: 7 }, boss: { fps: 6 } });
 defClips('trex', { idle: { fps: 1.8 }, walk: { fps: 7 }, roar: { fps: 5 } });

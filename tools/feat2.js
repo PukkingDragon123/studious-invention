@@ -35,7 +35,7 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   ok('stamina drains when sprinting and recovers at rest', drained < 92 && recovered > drained + 4, `drained ${Math.round(drained)} -> ${Math.round(recovered)} (scene ${await ev(() => Game.scene.constructor.name)})`);
 
   // a prowler notices you and gives chase
-  await ev(() => { Game.startVillage(); }); await page.waitForTimeout(900);
+  await ev(() => { Game.startVillage(); }); await page.waitForTimeout(1600);
   r = await ev(() => {
     const s = Game.scene, p = s.zone.entities.find(e => e.constructor.name === 'Prowler');
     // drop both of them on a known-clear tile so the walk to contact is unobstructed
@@ -49,9 +49,9 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
     p.x = s.player.x + 70; p.y = s.player.y; p.dir = { x: -1, y: 0 }; p.state = 'patrol';
     return p.state;
   });
-  await page.waitForTimeout(500);
-  r = await ev(() => { const p = Game.scene.zone.entities.find(e => e.constructor.name === 'Prowler'); return p ? p.state : 'gone'; });
-  ok('a prowler spots you and chases', r === 'chase' || Game.scene === undefined, 'state=' + r);
+  await page.waitForTimeout(800);
+  r = await ev(() => { const s = Game.scene; if (!s.zone) return 'scene:' + s.constructor.name; const p = s.zone.entities.find(e => e.constructor.name === 'Prowler'); return p ? p.state : 'gone'; });
+  ok('a prowler spots you and chases', r === 'chase', 'state=' + r);
   await shot('village_chase');
   await page.waitForTimeout(1600);
   r = await ev(() => Game.scene.constructor.name);

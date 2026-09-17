@@ -119,7 +119,7 @@ function* introScript(S) {
   yield* S.fadeIn(1.4);
   const bronk = S.add('bronk', { base: 'bronk', x: HOME.bed + 10, y: GY, scale: 1, facing: 1 });
   bronk.play('sleep');
-  const dodo = S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 58, scale: 0.9, facing: -1 });
+  const dodo = S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 50, scale: 0.9, facing: -1 });
   yield 1.0;
   // snoring z's
   Co.run(function* () {
@@ -141,7 +141,11 @@ function* introScript(S) {
   yield* S.say('', 'The dodo has gone off every morning for four years. It has never once been thanked.', { at: dodo, portrait: 'dodo_idle' });
   // --- mini-game: swat it
   S.cam.zoomTo(1.0); S.cam.lookAt(HOME.perch, 300);
-  const smack = yield* S.mini(new SmackGame({ rounds: 3, paint: () => { Gfx.clear('#120c16'); const ctx = Gfx.ctx; ctx.save(); ctx.translate(-(HOME.perch - W / 2), 0); World.home(S.t, S.setOpt, HOME.perch - W / 2); ctx.restore(); Gfx.rectA(0, 0, W, H, '#120c16', 0.35); } }));
+  const CX = HOME.perch - W / 2;
+  const smack = yield* S.mini(new SmackGame({
+    rounds: 2, groundY: GY, bedX: HOME.bed - CX, perchX: HOME.perch - CX,
+    paint: () => { Gfx.clear('#120c16'); const ctx = Gfx.ctx; ctx.save(); ctx.translate(-CX, 0); World.home(S.t, S.setOpt, CX); ctx.restore(); Gfx.rectA(0, 0, W, H, '#120c16', 0.3); },
+  }));
   dodo.visible = false;
   S.cam.zoomTo(2.2); S.cam.lookAt(HOME.bed + 40, 320);
   bronk.play('sleep'); bronk.squash(0.2);
