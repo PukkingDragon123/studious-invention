@@ -40,22 +40,26 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
     const s = Game.scene, p = s.zone.entities.find(e => e.constructor.name === 'Prowler');
     // drop both of them on a known-clear tile so the walk to contact is unobstructed
     let sx = 0, sy = 0;
-    outer: for (let y = 3; y < s.zone.h - 3; y++) for (let x = 3; x < s.zone.w - 6; x++) {
+    outer: for (let y = 3; y < s.zone.h - 3; y++) for (let x = 3; x < s.zone.w - 10; x++) {
       let clear = true;
-      for (let o = 0; o < 4 && clear; o++) if (s.zone.solid[s.zone.idx(x + o, y)]) clear = false;
+      for (let o = 0; o < 8 && clear; o++) if (s.zone.solid[s.zone.idx(x + o, y)]) clear = false;
       if (clear) { sx = x; sy = y; break outer; }
     }
     s.player.x = sx * 32 + 16; s.player.y = sy * 32 + 16;
     // far enough that the chase state is observable before contact
-    p.x = s.player.x + 150; p.y = s.player.y; p.dir = { x: -1, y: 0 }; p.state = 'patrol';
+    p.x = p.actor.x = s.player.x + 130; p.y = p.actor.y = s.player.y;
+    p.dir = { x: -1, y: 0 }; p.route = null; p.state = 'patrol'; p.wait = 0;
     return p.state;
   });
-  await page.waitForTimeout(500);
-  r = await ev(() => { const s = Game.scene; if (!s.zone) return 'scene:' + s.constructor.name; const p = s.zone.entities.find(e => e.constructor.name === 'Prowler'); return p ? p.state : 'gone'; });
+  await page.waitForTimeout(800);
+  const seen = () => ev(() => { const s = Game.scene; if (!s.zone) return 'scene:' + s.constructor.name; const p = s.zone.entities.find(e => e.constructor.name === 'Prowler'); return p ? p.state : 'gone'; });
+  r = await seen();
+  for (let i = 0; i < 8 && r === 'patrol'; i++) { await page.waitForTimeout(400); r = await seen(); }
   ok('a prowler spots you and chases', r === 'chase', 'state=' + r);
   await shot('village_chase');
-  await page.waitForTimeout(2600);
-  r = await ev(() => Game.scene.constructor.name);
+  // it has to walk to you. poll instead of guessing how long that takes.
+  r = 'VillageScene';
+  for (let i = 0; i < 16 && r !== 'Combat'; i++) { await page.waitForTimeout(500); r = await ev(() => Game.scene.constructor.name); }
   ok('touching a prowler starts a fight', r === 'Combat', r);
   await shot('village_fight');
 
@@ -86,6 +90,26 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   await page.waitForTimeout(900);
   r = await ev(() => ({ hp: Game.run.hp, stam: Math.round(Game.run.stamina) }));
   ok('resting at a campfire heals and refills stamina', r.hp > 20 && r.stam > 90, JSON.stringify(r));
+
+  // the first fire of the act stages the campfire scene: a man, a guitar, and
+  // a tyrannosaur that came to listen
+  await page.waitForTimeout(900);
+  r = await ev(() => ({ n: Game.scene.constructor.name, set: Game.scene.set, seen: Game.run.campSeen }));
+  ok('the first campfire of an act plays the night scene', r.n === 'CutsceneScene' && r.set === 'camp' && r.seen === 1, JSON.stringify(r));
+  await page.waitForTimeout(2600);
+  await shot('campfire_scene');
+  await ev(() => Game.leaveEvent()); await page.waitForTimeout(800);
+  r = await ev(() => {
+    const s = Game.scene, c = s.zone.entities.find(e => e.constructor.name === 'Campfire' && !e.used);
+    Game.run.hp = 20;
+    s.locked = true; Co.run(function* () { yield* c.interact(s); s.locked = false; }());
+    return !!c;
+  });
+  await page.waitForTimeout(700);
+  await ev(() => { if (Dialogue.active && Dialogue.active.choices) Dialogue.active.choice = 0; });
+  await page.waitForTimeout(1200);
+  r = await ev(() => ({ n: Game.scene.constructor.name, hp: Game.run.hp }));
+  ok('the second fire just heals, without the scene', r.n === 'VillageScene' && r.hp > 20, JSON.stringify(r));
 
   // fog encounter
   await ev(() => Game.enterEvent()); await page.waitForTimeout(600);

@@ -261,7 +261,15 @@ class Campfire extends Entity {
       [`Rest  ({g}+${heal} HP{/}, full stamina)`, 'Practice  ({g}upgrade a riff{/})', 'Leave it burning'], { at: { x: this.x, top: this.y - 46 } });
     if (pick === 0) {
       run.hp = Math.min(run.maxHp, run.hp + heal); run.stamina = run.maxStamina; this.used = true;
-      AudioSys.sfx('rest_sfx'); Popups.add(this.x, this.y - 40, `+${heal} HP`, '#a8e878', { scale: 1.6 });
+      AudioSys.sfx('rest_sfx');
+      // the first fire of each act is worth sitting down at properly. after
+      // that you have heard the story, and resting is just resting.
+      if (run.campSeen !== run.act) {
+        run.campSeen = run.act;
+        Game.goWith('fade', () => new CutsceneScene(campfireScript, { heal, onSkip: () => Game.leaveEvent() }));
+        return;
+      }
+      Popups.add(this.x, this.y - 40, `+${heal} HP`, '#a8e878', { scale: 1.6 });
       Particles.sparkle(this.x, this.y - 30, 18);
     } else if (pick === 1) {
       const up = run.deck.filter(c => !c.up);

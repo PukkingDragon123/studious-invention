@@ -71,8 +71,15 @@ class SideScroll extends MiniGame {
     this.pickups = (o.pickups || []).map(p => Object.assign({ got: false, t: rnd(0, 6) }, p));
     this.props = o.props || [];
     this.caught = 0; this.got = 0; this.bump = 0; this.puff = 0;
+    // jumping, and the things you jump over
+    this.canJump = !!o.jump;
+    this.z = 0; this.vz = 0; this.airT = 0; this.stumble = 0;
+    this.obstacles = (o.obstacles || []).map(b => Object.assign({ hit: false }, b));
+    this.lunge = 0;                                // how hard the pursuer is snapping
     this.intro = o.intro ?? 1.2;
-    this.o.hint = o.hint || (Input.touch ? 'HOLD THE RIGHT OF THE SCREEN TO RUN' : 'HOLD  D  OR  →  TO RUN');
+    this.o.hint = o.hint || (this.canJump
+      ? (Input.touch ? 'HOLD RIGHT TO RUN  -  TAP LEFT TO JUMP' : 'HOLD  D  TO RUN  -  SPACE TO JUMP')
+      : (Input.touch ? 'HOLD THE RIGHT OF THE SCREEN TO RUN' : 'HOLD  D  OR  →  TO RUN'));
   }
   step(dt) {
     // --- input: hold to run right, and you can back up if you want to
@@ -83,8 +90,32 @@ class SideScroll extends MiniGame {
     else if (Input.down && Input.my > 120) dir = Input.mx > W * 0.5 ? 1 : -1;
     const want = dir * this.runSpeed + this.auto;
     this.vx = damp(this.vx, want, this.o.grip ?? 7, dt);
+    if (this.stumble > 0) { this.stumble -= dt; this.vx *= 0.35; }
     this.x += this.vx * dt;
     if (this.x < 0) { this.x = 0; this.vx = 0; }
+    // --- the jump
+    if (this.canJump) {
+      let jump = Input.pressed('Space', 'KeyW', 'ArrowUp');
+      if (Input.touch) for (const c of Input.clicks) if (c.x < W * 0.5) jump = true;
+      if (jump && this.z <= 0.5) { this.vz = 470; AudioSys.sfx('whoosh', { vol: 0.5 }); Particles.dust(this.sx(this.x), this.sy(this.ground), 4); }
+      if (this.z > 0 || this.vz !== 0) {
+        this.vz -= 1500 * dt; this.z += this.vz * dt;
+        if (this.z <= 0) {
+          if (this.vz < -180) { Juice.shake(4, 0.12); Particles.dust(this.sx(this.x), this.sy(this.ground), 5); AudioSys.sfx('thud', { vol: 0.4 }); }
+          this.z = 0; this.vz = 0;
+        }
+      }
+      this.airT = this.z > 2 ? this.airT + dt : 0;
+      // things in the road
+      for (const b of this.obstacles) {
+        if (b.hit || Math.abs(b.x - this.x) > (b.w || 34) * 0.5 + 12) continue;
+        if (this.z > (b.h || 38) * 0.6) continue;
+        b.hit = true; this.stumble = 0.55; this.bump = 1;
+        Juice.stop(0.08); Juice.shake(10, 0.3); Juice.flash('#ef6a5e', 0.22, 5);
+        Juice.pow(this.sx(b.x), this.sy(this.ground - 20), { r: 44, spikes: 9, col: '#ef6a5e' });
+        AudioSys.sfx('hurt');
+      }
+    }
     // --- animation and dust
     const moving = Math.abs(this.vx) > 24;
     this.hero.play(moving ? this.moveClip : this.idleClip, { fps: moving ? 8 + Math.abs(this.vx) / 26 : undefined });
@@ -101,8 +132,19 @@ class SideScroll extends MiniGame {
       const p = this.pursuer; p.t += dt;
       p.x += (p.speed + (this.o.pursuerRamp || 0) * (this.x / this.goal)) * dt;
       p.x = Math.max(p.x, this.x - (this.o.leash ?? 900));
-      if (p.x > this.x - 46) { this.caught += dt; this.bump = 1; Juice.shake(5, 0.12); if (chance(dt * 4)) AudioSys.sfx('chomp'); }
-      else this.caught = Math.max(0, this.caught - dt * 0.5);
+      // how close it is to having you, 0..1 - everything scary keys off this
+      this.lunge = clamp(1 - (this.x - p.x) / 300, 0, 1);
+      if (p.x > this.x - 46) {
+        this.caught += dt; this.bump = 1;
+        Juice.shake(7, 0.14);
+        if (chance(dt * 4)) { AudioSys.sfx('chomp'); Juice.flash('#7d1d2b', 0.3, 5); }
+      } else this.caught = Math.max(0, this.caught - dt * 0.5);
+      if (this.lunge > 0.55) {
+        Juice.shake(this.lunge * 5, 0.1);
+        if (chance(dt * 1.3)) AudioSys.sfx('roar', { pitch: 44, vol: 0.9, len: 1.1 });
+        if (chance(dt * 22)) Particles.spawn(this.sx(p.x + 40), this.sy(this.ground - 60) + rnd(-20, 20),
+          { n: 1, color: ['#e8dfc6', '#d6cfe0'], speed: 60, gravity: 200, life: 0.7, size: 3, sizeEnd: 0 });
+      }
     }
     if (this.ahead) { const a = this.ahead; a.t += dt; a.x += a.speed * dt; }
     // --- pickups
@@ -135,25 +177,40 @@ class SideScroll extends MiniGame {
       } });
       if (this.pursuer) list.push({ y: this.ground + 1, f: () => {
         const p = this.pursuer, bob = Math.abs(Math.sin(p.t * 9)) * 5;
+        const snap = this.lunge > 0.5 ? Math.max(0, Math.sin(p.t * 11)) * this.lunge : 0;
         Gfx.shadow(p.x, this.ground, 44 * p.scale, 0.34);
-        Gfx.sprite(p.spr, p.x, this.ground - bob, { anchor: 'bc', scale: p.scale, frame: Math.floor(p.t * 10), flip: p.flip });
+        if (this.lunge > 0.3) Gfx.glow(p.x + 30, this.ground - 60, 90 * this.lunge, '#c2333c', 0.3 * this.lunge);
+        Gfx.sprite(p.spr, p.x + snap * 26, this.ground - bob, {
+          anchor: 'bc', scale: p.scale * (1 + snap * 0.06), frame: Math.floor(p.t * 10), flip: p.flip,
+        });
+        if (snap > 0.4 && p.roarSpr) Gfx.sprite(p.roarSpr, p.x + snap * 30, this.ground - bob,
+          { anchor: 'bc', scale: p.scale * (1 + snap * 0.08), frame: Math.floor(p.t * 8), flip: p.flip });
       } });
       list.push({ y: this.ground + 2, f: () => {
         if (this.o.vehicle) {
-          const bounce = Math.sin(this.t * 11 + this.x * 0.03) * 3 * clamp(Math.abs(this.vx) / 160, 0.25, 1);
+          const bounce = Math.sin(this.t * 11 + this.x * 0.03) * 3 * clamp(Math.abs(this.vx) / 160, 0.25, 1) - this.z;
           const sc = this.o.vehicleScale || 1;
-          Gfx.shadow(this.x, this.ground + 2, 88 * sc, 0.32);
+          Gfx.shadow(this.x, this.ground + 2, 88 * sc * clamp(1 - this.z / 200, 0.5, 1), 0.32);
           Gfx.sprite(this.o.vehicle, this.x, this.ground + bounce * 0.4,
             { anchor: 'bc', scale: sc, frame: Math.floor(Math.abs(this.x) / 18), flip: this.hero.facing < 0 });
           Gfx.sprite('bronk_drive', this.x - 6 * sc * (this.hero.facing < 0 ? -1 : 1), this.ground - 22 * sc + bounce,
             { anchor: 'bc', scale: sc * 0.78, frame: Math.abs(this.vx) > 180 ? 1 : 0, flip: this.hero.facing < 0 });
           if (Math.abs(this.vx) > 60 && chance(Time.dt * 26)) Particles.dust(this.sx(this.x - 40 * sc * (this.hero.facing || 1)), this.sy(this.ground), 1);
         } else {
-          this.hero.x = this.x; this.hero.y = this.ground; this.hero.draw();
+          this.hero.x = this.x; this.hero.y = this.ground; this.hero.z = this.z; this.hero.draw();
         }
       } });
       list.sort((a, b) => a.y - b.y);
       for (const it of list) it.f();
+      for (const b of this.obstacles) {
+        if (b.x < this.camX - 60 || b.x > this.camX + VW + 60) continue;
+        Gfx.shadow(b.x, this.ground + 2, (b.w || 34) + 14, 0.3);
+        Gfx.sprite(b.spr || 'prop_rock', b.x, this.ground + 2, { anchor: 'bc', scale: b.scale || 1, alpha: b.hit ? 0.5 : 1 });
+        if (!b.hit) {
+          const k = 0.5 + Math.sin(Time.t * 7 + b.x) * 0.5;
+          Gfx.rectA(b.x - 12, this.ground - (b.h || 38) - 16, 24, 4, '#ffe98a', 0.25 + k * 0.35);
+        }
+      }
       if (this.o.goalSpr) Gfx.sprite(this.o.goalSpr, this.goal, this.ground, { anchor: 'bc', scale: this.o.goalScale || 1 });
     });
     this.drawHud();
@@ -164,8 +221,19 @@ class SideScroll extends MiniGame {
       const px = this.sx(this.pursuer.x);
       const danger = clamp(1 - (this.pursuer.x - (this.x - 46)) / 340, 0, 1);
       if (danger > 0.02) {
-        Gfx.rectA(0, 0, W, H, '#c2333c', danger * 0.18 * (0.7 + Math.sin(Time.t * 14) * 0.3));
-        Gfx.text('RUN!', W / 2, 78, { color: '#ef6a5e', align: 'center', scale: 2 + danger, outline: true, outlineWidth: 2 });
+        // a closing vignette rather than a flat red wash: it feels like teeth
+        const ctx = Gfx.ctx;
+        const g = ctx.createRadialGradient(W / 2, H / 2, H * (0.62 - danger * 0.34), W / 2, H / 2, H * 0.95);
+        g.addColorStop(0, 'rgba(194,51,60,0)');
+        g.addColorStop(1, `rgba(124,20,28,${(0.45 + Math.sin(Time.t * 14) * 0.1) * danger})`);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        Juice.lines(danger * 0.8);
+        const wob = Math.sin(Time.t * 21) * danger * 4;
+        Gfx.text('RUN!', W / 2 + wob, 84, { color: '#ef6a5e', align: 'center', scale: 2.4 + danger * 1.6, outline: true, outlineWidth: 2 });
+        for (let i = 0; i < 5; i++) {                    // claw marks raking the frame
+          const a = 0.18 + i * 0.03;
+          Gfx.rectA(W - 70 + i * 13, 0, 5, H * (0.3 + (i % 2) * 0.2), '#7d1d2b', danger * a);
+        }
       }
       // when it is behind the camera, say so - an unseen threat is just confusing
       if (px < 40) {

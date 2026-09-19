@@ -27,6 +27,10 @@ const HOME = {
   shower: 1390, car: 1650, end: 1800,
 };
 
+// The camp: one clearing, laid out left to right. He sits west of the fire so
+// the thing in the east treeline is looking straight down the light at him.
+const CAMP = { bronk: 452, fire: 540, rex: 836, end: 1100 };
+
 // small deterministic wobble so scattered junk does not jitter between frames
 const jitter = (i, m = 1) => ((Math.sin(i * 12.9898) * 43758.5453) % 1) * m;
 
@@ -983,14 +987,11 @@ const World = {
     }
     ridge(0.42, '#4b2070', '#7c3eb2', 326, 24);
     ridge(0.22, '#27632f', '#3f9a45', 368, 14, true);
-    for (let x = Math.floor(L / 150) * 150; x < R; x += 150)     // a treeline on the near ridge
-      Gfx.sprite(((x / 150) | 0) % 3 ? 'prop_tree' : 'prop_palm', x + jitter(x, 64), 384 + jitter(x + 3, 8),
-        { anchor: 'bc', scale: 0.5, alpha: 0.9 });
-    // distant herd, plodding the other way
-    for (let i = 0; i < 4; i++) {
-      const hx = ((i * 700 - camX * 0.3 + t * 12) % 2800 + 2800) % 2800 + L - 300;
-      Gfx.sprite('mammoth_walk', hx, 390, { anchor: 'bc', scale: 0.5, alpha: 0.6, frame: Math.floor(t * 4 + i) % 4 });
-    }
+
+    // ---- the town along the road: no two houses the same, and all of them in use
+    World.suburb(t, camX, L, R);
+
+    // ---- the road surface
     Gfx.rect(L, GY - 6, R - L, 300, '#85562f');
     Gfx.rect(L, GY - 6, R - L, 6, '#b07a45');
     Gfx.rectA(L, GY + 24, R - L, 8, '#5c3a20', 0.5);
@@ -1000,22 +1001,126 @@ const World = {
       Gfx.round(x + 86, GY + 14, 13, 7, 3, '#7a6d8a');
       Gfx.round(x + 20, GY + 28, 9, 5, 2, '#574a66');
     }
-    for (let x = Math.floor(L / 260) * 260; x < R; x += 260) {
-      Gfx.sprite(((x / 260) | 0) % 2 ? 'prop_palm' : 'prop_deadtree', x + jitter(x, 40), GY - 2, { anchor: 'bc', alpha: 0.92 });
-      Gfx.sprite('prop_bush', x + 140, GY + 4, { anchor: 'bc', alpha: 0.9 });
-    }
-    for (let x = Math.floor(L / 640) * 640; x < R; x += 640) Gfx.sprite('prop_bones', x + 300, GY + 6, { anchor: 'bc', scale: 0.8, alpha: 0.9 });
-    // things worth passing: a tar pit, a standing stone, a herd crossing
-    for (let x = Math.floor(L / 900) * 900; x < R; x += 900) {
-      Gfx.sprite('prop_tar', x + 120, GY + 6, { anchor: 'bc', scale: 1.1 });
-      Gfx.sprite('prop_totem', x + 520, GY + 4, { anchor: 'bc', scale: 0.9 });
-      Gfx.sprite('prop_signpost', x + 700, GY + 4, { anchor: 'bc' });
-    }
-    for (let i = 0; i < 3; i++) {                              // compies running the verge
-      const cx2 = ((i * 620 - camX * 0.9 + t * 60) % 1860 + 1860) % 1860 + L - 200;
-      Gfx.sprite('compy_walk', cx2, GY + 2, { anchor: 'bc', scale: 0.8, frame: Math.floor(t * 12 + i) % 4 });
-    }
+    World.traffic(t, camX, L, R);
     World.verge(t, camX, L, R, ['#27632f', '#3f9a45', '#6cc95c'], '#85562f');
+  },
+
+  // Everything at the side of the road: houses of four kinds, and a villager
+  // outside most of them getting on with something.
+  suburb(t, camX, L, R) {
+    const BLOCK = 300;
+    for (let x = Math.floor(L / BLOCK) * BLOCK; x < R + BLOCK; x += BLOCK) {
+      const i = Math.abs((x / BLOCK) | 0);
+      const hx = x + jitter(x, 60);
+      const kind = i % 4;
+      const hy = GY - 4;
+      Gfx.shadow(hx, hy + 2, 120, 0.28);
+      if (kind === 0) {                                    // a round hut with a smoking hole
+        Gfx.sprite('prop_hut', hx, hy, { anchor: 'bc', scale: 1.15 });
+        for (let k = 0; k < 4; k++) {
+          const sy = hy - 96 - ((t * 22 + k * 22) % 88);
+          Gfx.ctx.globalAlpha = 0.28 * (1 - ((t * 22 + k * 22) % 88) / 88);
+          Gfx.round(hx - 8 + Math.sin(t + k) * 7, sy, 18, 12, 6, '#d6cfe0');
+          Gfx.ctx.globalAlpha = 1;
+        }
+      } else if (kind === 1) {                             // a lean-to under a rock shelf
+        Gfx.round(hx - 62, hy - 74, 124, 22, 8, '#574a66');
+        Gfx.round(hx - 58, hy - 72, 116, 14, 6, '#7a6d8a');
+        for (let k = 0; k < 7; k++) Gfx.line(hx - 52 + k * 17, hy - 54, hx - 44 + k * 17, hy, '#5c3a20', 5);
+        for (let k = 0; k < 7; k++) Gfx.line(hx - 52 + k * 17, hy - 54, hx - 44 + k * 17, hy, '#85562f', 2);
+        Gfx.round(hx - 58, hy - 56, 116, 8, 3, '#3a2415');
+        Gfx.sprite('prop_pot', hx + 34, hy + 2, { anchor: 'bc' });
+      } else if (kind === 2) {                             // a two-storey stack of stone boxes
+        Gfx.round(hx - 52, hy - 78, 104, 78, 5, '#4d4a5c');
+        Gfx.round(hx - 48, hy - 74, 96, 70, 4, '#7a6d8a');
+        Gfx.round(hx - 40, hy - 122, 80, 48, 5, '#4d4a5c');
+        Gfx.round(hx - 36, hy - 118, 72, 42, 4, '#9391a6');
+        for (const [wx, wy, ww] of [[-30, -60, 22], [6, -60, 22], [-16, -108, 24]]) {
+          Gfx.round(hx + wx, hy + wy, ww, 20, 3, '#241c2e');
+          Gfx.round(hx + wx + 2, hy + wy + 2, ww - 4, 16, 2, '#ffa832');
+        }
+        for (let k = 0; k < 8; k++) Gfx.rectA(hx - 46 + k * 12, hy - 70, 10, 3, '#574a66', 0.6);
+        Gfx.round(hx - 46, hy - 130, 92, 10, 4, '#3a2415');
+      } else {                                             // a ruin somebody still lives in
+        Gfx.sprite('prop_hut_ruin', hx, hy, { anchor: 'bc', scale: 1.15 });
+        Gfx.sprite('prop_barrel', hx - 52, hy + 2, { anchor: 'bc' });
+        for (let k = 0; k < 5; k++)                         // washing on a line
+          Gfx.round(hx - 30 + k * 16, hy - 86 + Math.sin(t * 1.4 + k) * 2, 12, 18, 3,
+            ['#a03a68', '#3570c0', '#e0b93a', '#6cc95c', '#e06a9b'][k]);
+        Gfx.line(hx - 36, hy - 88, hx + 48, hy - 84, '#3a2415', 2);
+      }
+      // somebody outside, doing something
+      const who = ['villager', 'villager2'][i % 2];
+      const act = i % 3;
+      const px = hx + 56 + jitter(x + 3, 24);
+      if (act === 0) Gfx.sprite(who + '_walk', px, hy + 2, { anchor: 'bc', scale: 0.85, frame: Math.floor(t * 7 + i) % 4 });
+      else if (act === 1) {
+        Gfx.sprite(who + '_idle', px, hy + 2, { anchor: 'bc', scale: 0.85, frame: Math.floor(t * 2 + i) % 2 });
+        Gfx.sprite('prop_pot', px + 20, hy + 2, { anchor: 'bc', scale: 0.8 });
+      } else {
+        Gfx.sprite(who + '_idle', px, hy + 2, { anchor: 'bc', scale: 0.85, flip: true, frame: Math.floor(t * 2 + i) % 2 });
+        const kx = px - 26;
+        Gfx.sprite('kid_a_walk', kx, hy + 2, { anchor: 'bc', scale: 0.7, frame: Math.floor(t * 9 + i) % 4 });
+      }
+      // the crossing, and the chameleon that runs it
+      if (i % 2 === 0) World.crossing(t, hx + 150, i);
+    }
+  },
+  // A chameleon on a pole IS the traffic light: it turns red, amber or green
+  // on its own schedule and nobody has ever argued with it.
+  crossing(t, cx, seed) {
+    for (let k = 0; k < 5; k++)                            // the painted crossing
+      Gfx.rectA(cx - 40 + k * 18, GY + 6, 12, 40, '#e8dfc6', 0.55);
+    Gfx.rect(cx - 4, GY - 96, 8, 100, '#3a2415');          // the pole
+    Gfx.rect(cx - 4, GY - 96, 3, 100, '#85562f');
+    Gfx.round(cx - 22, GY - 118, 44, 26, 6, '#5c3a20');    // the branch it sits on
+    const phase = Math.floor((t * 0.5 + seed * 0.37) % 3);
+    const col = ['#ef6a5e', '#ffe08a', '#6cc95c'][phase];
+    const dark = ['#7d1d2b', '#a8801f', '#27632f'][phase];
+    // the animal, tinted to whatever it has decided
+    const bob = Math.sin(t * 2 + seed) * 1.5;
+
+    Gfx.round(cx - 20, GY - 130 + bob, 40, 16, 7, dark);   // body
+    Gfx.round(cx - 18, GY - 132 + bob, 34, 12, 6, col);
+    Gfx.round(cx + 12, GY - 134 + bob, 18, 14, 6, col);    // head
+    Gfx.circle(cx + 24, GY - 130 + bob, 4, '#120c16');     // eye turret
+    Gfx.circle(cx + 25, GY - 130 + bob, 1.6, col);
+    for (let k = 0; k < 4; k++)                            // crest
+      Gfx.rect(cx - 14 + k * 8, GY - 138 + bob, 4, 6, dark);
+    for (let k = 0; k < 7; k++) {                          // the curled tail
+      const a = -0.2 - k * 0.55, r = 13 - k * 1.4;
+      Gfx.circle(cx - 24 + Math.cos(a) * r, GY - 122 + bob + Math.sin(a) * r, 3.4 - k * 0.3, k % 2 ? col : dark);
+    }
+    Gfx.line(cx - 8, GY - 120 + bob, cx - 12, GY - 112 + bob, dark, 4);
+    Gfx.line(cx + 6, GY - 120 + bob, cx + 10, GY - 112 + bob, dark, 4);
+    Gfx.glow(cx + 20, GY - 130 + bob, 60, col, 0.30);
+    Gfx.text(['STOP', 'WAIT', 'GO'][phase], cx, GY - 158, { color: col, align: 'center', scale: 1.2, outline: true });
+  },
+  // Other people's vehicles, both directions, at their own speeds.
+  traffic(t, camX, L, R) {
+    const LANES = [
+      { y: GY - 2, dir: 1, speed: 78, span: 1500, n: 3, scale: 1.0 },
+      { y: GY + 26, dir: -1, speed: 112, span: 1800, n: 3, scale: 1.1 },
+    ];
+    for (let li = 0; li < LANES.length; li++) {
+      const ln = LANES[li];
+      for (let i = 0; i < ln.n; i++) {
+        const base = (i * ln.span / ln.n + li * 420 + t * ln.speed * ln.dir);
+        const vx = ((base % ln.span) + ln.span) % ln.span + L - 200;
+        const kind = (i + li) % 3;
+        const bounce = Math.sin(t * 9 + i * 2) * 2;
+        Gfx.shadow(vx, ln.y + 2, 96 * ln.scale, 0.3);
+        if (kind === 2) {                                   // somebody riding a triceratops
+          Gfx.sprite('tricera_walk', vx, ln.y, { anchor: 'bc', scale: ln.scale * 0.8, flip: ln.dir < 0, frame: Math.floor(t * 8 + i) % 4 });
+          Gfx.sprite('villager_idle', vx - 4 * ln.dir, ln.y - 34 * ln.scale + bounce * 0.4, { anchor: 'bc', scale: ln.scale * 0.55, flip: ln.dir < 0 });
+        } else {
+          Gfx.sprite('car', vx, ln.y + bounce * 0.3, { anchor: 'bc', scale: ln.scale, flip: ln.dir < 0, frame: Math.floor(Math.abs(vx) / 18) % 4 });
+          Gfx.sprite(kind ? 'villager2_idle' : 'villager_idle', vx - 8 * ln.dir, ln.y - 16 * ln.scale + bounce,
+            { anchor: 'bc', scale: ln.scale * 0.55, flip: ln.dir < 0 });
+        }
+        if (chance(Time.dt * 3)) Particles.dust(vx - 40 * ln.dir, ln.y, 1);
+      }
+    }
   },
 
   // The strip that runs in FRONT of the action, scrolling faster than the
@@ -1047,67 +1152,165 @@ const World = {
   },
 
   // ----------------------------------------------------------------- QUARRY
+  // A working mine. Every face is veined with something worth digging out, and
+  // the whole place is scaffolded, carted, lamped and full of people.
   quarry(t, o = {}, camX = 0) {
     const L = camX - 160, R = camX + VW + 160;
-    World.skyRamp(L, R, -460, 240, ['#3f0e18', '#7d1d2b', '#a03a68', '#e06a1b', '#ffa832']);
+    Gfx.rect(L, -400, R - L, 460, '#3f0e18');
+    World.skyRamp(L, R, 60, 250, ['#3f0e18', '#7d1d2b', '#a03a68', '#e06a1b', '#ffa832']);
     const ctx = Gfx.ctx;
     // terraced pit walls stepping down, each one a band of cut rock
-    const face = ['#3b3048', '#574a66', '#7a6d8a', '#9391a6'];
-    const lit = ['#574a66', '#7a6d8a', '#9391a6', '#bdbccd'];
+    const face = ['#241c2e', '#3b3048', '#574a66', '#7a6d8a'];
+    const lit = ['#4d4a5c', '#7a6d8a', '#9391a6', '#bdbccd'];
     for (let s2 = 0; s2 < 4; s2++) {
       const y = 190 + s2 * 46;
+      const hy = x => y + Math.sin((x + s2 * 300) * 0.009) * 7 + Math.sin(x * 0.03) * 3;
       ctx.fillStyle = face[s2];
       ctx.beginPath(); ctx.moveTo(L, y);
-      for (let x = L; x <= R; x += 24) ctx.lineTo(x, y + Math.sin((x + s2 * 300) * 0.009) * 7 + Math.sin(x * 0.03) * 3);
+      for (let x = L; x <= R; x += 24) ctx.lineTo(x, hy(x));
       ctx.lineTo(R, GY + 200); ctx.lineTo(L, GY + 200); ctx.fill();
-      // the cut face: strata, chisel marks and a lit lip
-      for (let x = Math.floor(L / 8) * 8; x < R; x += 8) {
-        const ty = y + Math.sin((x + s2 * 300) * 0.009) * 7 + Math.sin(x * 0.03) * 3;
-        Gfx.rect(x, ty, 8, 3, lit[s2]);
-        Gfx.rectA(x, ty + 3, 8, 2, '#120c16', 0.25);
+      for (let x = Math.floor(L / 8) * 8; x < R; x += 8) {        // the cut lip
+        Gfx.rect(x, hy(x), 8, 3, lit[s2]);
+        Gfx.rectA(x, hy(x) + 3, 8, 2, '#120c16', 0.25);
       }
-      for (let k = 1; k < 5; k++) {                       // strata lines
-        const sy = y + k * 10;
+      for (let k = 1; k < 5; k++)                                 // strata
         for (let x = Math.floor(L / 16) * 16; x < R; x += 16)
-          Gfx.rectA(x + jitter(x + k, 10), sy + Math.sin((x + s2 * 300) * 0.009) * 7, 11, 2, k % 2 ? '#120c16' : lit[s2], 0.20);
-      }
-      for (let x = Math.floor(L / 30) * 30; x < R; x += 30) {   // chips
-        const cy = y + 8 + jitter(x + s2, 34);
+          Gfx.rectA(x + jitter(x + k, 10), hy(x) + k * 10, 11, 2, k % 2 ? '#120c16' : lit[s2], 0.20);
+      // ---- the ore. This is why anyone is here.
+      World.oreSeam(t, L, R, hy, s2);
+      for (let x = Math.floor(L / 30) * 30; x < R; x += 30) {      // chips
+        const cy = hy(x) + 8 + jitter(x + s2, 34);
         Gfx.rectA(x + jitter(x, 22), cy, 5, 3, '#120c16', 0.3);
         Gfx.rectA(x + jitter(x + 4, 22), cy - 1, 3, 2, lit[s2], 0.35);
       }
+      if (s2 < 3) World.scaffold(t, L, R, hy, s2);
     }
-    // mine mouths cut into the terraces
+    // mine mouths cut into the terraces, lit from inside
     for (let i = 0; i < 4; i++) {
       const mx = 260 + i * 520;
-      if (mx < L - 200 || mx > R + 200) continue;
+      if (mx < L - 220 || mx > R + 220) continue;
       Gfx.round(mx - 80, 236, 160, 130, 62, '#241c2e');
       Gfx.round(mx - 68, 248, 136, 118, 54, '#120c16');
+      Gfx.glow(mx, 320, 120, '#ffa832', 0.28 + Math.sin(t * 3 + i) * 0.05);
+      for (let k = 0; k < 5; k++) {                               // rails running out of it
+        Gfx.rectA(mx - 40 + k * 20, 352, 6, 14, '#3a2415', 0.8);
+      }
       Gfx.rect(mx - 78, 352, 156, 14, '#3a2415');
-      for (let b = 0; b < 3; b++) Gfx.rect(mx - 62 + b * 52, 248, 10, 110, '#5c3a20');
+      for (let b = 0; b < 3; b++) { Gfx.rect(mx - 62 + b * 52, 248, 10, 110, '#5c3a20'); Gfx.rect(mx - 62 + b * 52, 248, 3, 110, '#85562f'); }
       Gfx.rect(mx - 86, 240, 172, 12, '#5c3a20');
       Gfx.rect(mx - 86, 240, 172, 4, '#85562f');
-      for (let b = 0; b < 5; b++) Gfx.rectA(mx - 70 + b * 34, 262, 3, 96, '#120c16', 0.4);
+      // a lamp on the lintel, and somebody coming out
+      Gfx.sprite('house_lamp', mx + 60, 252, { anchor: 'tc', scale: 1.1 });
+      Gfx.glow(mx + 60, 272, 90, '#ff9a20', 0.24);
+      const wx = mx - 40 + ((t * 26 + i * 130) % 240);
+      Gfx.sprite('villager_walk', wx, 366, { anchor: 'bc', scale: 0.7, frame: Math.floor(t * 8 + i) % 4, alpha: 0.95 });
     }
     // the pit floor
     Gfx.rect(L, GY - 6, R - L, 300, '#7a6d8a');
     Gfx.rect(L, GY - 6, R - L, 5, '#bdbccd');
     Gfx.rectA(L, GY - 6, R - L, 300, '#3a2415', 0.20);
-    for (let x = Math.floor(L / 16) * 16; x < R; x += 16) {          // broken stone underfoot
+    for (let x = Math.floor(L / 16) * 16; x < R; x += 16) {
       const yy = GY + 6 + jitter(x, 86);
       Gfx.rectA(x + jitter(x + 1, 14), yy, 7 + jitter(x + 4, 9), 3, '#574a66', 0.6);
       Gfx.rectA(x + jitter(x + 2, 14), yy - 1, 5, 1, '#bdbccd', 0.5);
-      if (((x / 16) | 0) % 5 === 0) Gfx.rectA(x + jitter(x + 6, 14), yy + 7, 3, 2, '#9391a6', 0.4);
+      if (((x / 16) | 0) % 7 === 0) World.oreLump(x + jitter(x + 6, 12), yy + 4, 0.8, Math.abs((x / 16) | 0) % 5);
     }
-    // cart tracks running the length of the pit
-    Gfx.rectA(L, GY + 34, R - L, 4, '#3a2415', 0.7);
-    Gfx.rectA(L, GY + 52, R - L, 4, '#3a2415', 0.7);
+    // cart tracks, and the carts on them
+    Gfx.rectA(L, GY + 34, R - L, 4, '#3a2415', 0.8);
+    Gfx.rectA(L, GY + 52, R - L, 4, '#3a2415', 0.8);
     for (let x = Math.floor(L / 26) * 26; x < R; x += 26) Gfx.rectA(x, GY + 34, 7, 22, '#5c3a20', 0.5);
+    for (let i = 0; i < 3; i++) {
+      const cx2 = ((i * 700 - t * 44) % 2100 + 2100) % 2100 + L - 200;
+      World.oreCart(cx2, GY + 46, i);
+    }
+    // heaps, barrels and the tools left where they were dropped
     for (let x = Math.floor(L / 150) * 150; x < R; x += 150) {
       Gfx.sprite('prop_rock', x + jitter(x, 50), GY + 4, { anchor: 'bc', scale: 0.9 + jitter(x + 1, 0.4) });
       if (((x / 150) | 0) % 3 === 0) Gfx.sprite('prop_barrel', x + 70, GY + 4, { anchor: 'bc' });
+      if (((x / 150) | 0) % 4 === 1) World.orePile(x + 92, GY + 4, Math.abs((x / 150) | 0) % 5);
+      if (((x / 150) | 0) % 5 === 2) Gfx.sprite('art_club', x + 40, GY - 10, { anchor: 'bc', scale: 1.2, rot: -0.7 });
     }
     for (let x = Math.floor(L / 700) * 700; x < R; x += 700) Gfx.sprite('prop_stage', x, GY + 4, { anchor: 'bc', scale: 0.8, alpha: 0.9 });
+  },
+  // Five ores, and each one looks like itself: amber, copper, amethyst,
+  // emerald and the plain grey stone that pays the wages.
+  oreCols: [['#e06a1b', '#ffa832', '#5c1607'], ['#18706a', '#2cb3a2', '#0f3838'],
+            ['#7c3eb2', '#b177e6', '#281040'], ['#3f9a45', '#6cc95c', '#14331e'],
+            ['#3570c0', '#6aa9ee', '#101f3d']],
+  oreLump(x, y, s, kind) {
+    const c = World.oreCols[kind % 5];
+    Gfx.round(x - 7 * s, y - 6 * s, 14 * s, 11 * s, 3, c[2]);
+    Gfx.round(x - 5 * s, y - 5 * s, 10 * s, 8 * s, 2, c[0]);
+    Gfx.round(x - 4 * s, y - 5 * s, 4 * s, 3 * s, 1, c[1]);
+    Gfx.glow(x, y - 2 * s, 18 * s, c[0], 0.22);
+  },
+  // An ore vein: not a cable. It runs in broken lenses through the host rock,
+  // thick in places and pinched out in others, with crystal growing where it
+  // has broken the surface.
+  oreSeam(t, L, R, hy, band) {
+    const c = World.oreCols[band % 5];
+    for (let x = Math.floor(L / 4) * 4; x < R; x += 4) {
+      const n = (x + band * 411) * 0.021;
+      // the lens: thickness swells and pinches right out
+      const swell = Math.sin(n) * 0.5 + Math.sin(n * 2.7 + band) * 0.35 + Math.sin(n * 0.31) * 0.4;
+      if (swell < 0.12) continue;
+      const th = Math.max(1, Math.round(swell * 7));
+      const y = hy(x) + 24 + band * 4 + Math.sin(n * 0.8) * 8 + Math.sin(x * 0.006) * 5;
+      Gfx.rect(x, y, 4, th, c[0]);
+      Gfx.rect(x, y - 1, 4, 1, '#120c16');                     // host rock, above and below
+      Gfx.rect(x, y + th, 4, 1, '#120c16');
+      if (th > 2) Gfx.rect(x, y, 4, 1, c[1]);
+      if (((x / 4) | 0) % 3 === 0) Gfx.rect(x + 1, y + th - 1, 2, 1, c[2]);
+      if (th >= 5 && ((x / 4) | 0) % 17 === 0) {               // crystal, where it has broken out
+        for (let k = 0; k < 5; k++) {
+          const a = -2.3 + k * 0.42, len = 9 + (k % 3) * 6;
+          const ex = x + Math.cos(a) * len, ey = y + Math.sin(a) * len;
+          Gfx.line(x, y, ex, ey, '#120c16', 7);
+          Gfx.line(x, y, ex, ey, c[0], 5);
+          Gfx.line(x, y, x + Math.cos(a) * len * 0.75, y + Math.sin(a) * len * 0.75, c[1], 2);
+          Gfx.circle(ex, ey, 2, c[1]);
+        }
+        Gfx.glow(x, y - 6, 34, c[1], 0.20 + Math.sin(t * 2 + x) * 0.05);
+      }
+    }
+  }
+,
+  // timber scaffolding across a terrace, with a ladder and a lamp
+  scaffold(t, L, R, hy, band) {
+    for (let x = Math.floor(L / 340) * 340; x < R; x += 340) {
+      const sx = x + band * 90 + jitter(x + band, 60);
+      const y = hy(sx) + 2;
+      Gfx.rect(sx - 44, y + 34, 88, 5, '#3a2415');              // the deck
+      Gfx.rect(sx - 44, y + 34, 88, 2, '#85562f');
+      for (const px of [sx - 40, sx + 36]) {                     // legs
+        Gfx.rect(px, y + 38, 6, 26, '#3a2415');
+        Gfx.rect(px, y + 38, 2, 26, '#85562f');
+      }
+      Gfx.line(sx - 38, y + 64, sx + 38, y + 38, '#3a2415', 3);  // a brace
+      for (let k = 0; k < 5; k++) Gfx.rect(sx + 10, y + 36 - k * 8, 22, 3, '#5c3a20');  // the ladder
+      Gfx.rect(sx + 10, y - 6, 3, 44, '#3a2415'); Gfx.rect(sx + 29, y - 6, 3, 44, '#3a2415');
+      Gfx.sprite('house_lamp', sx - 30, y + 8, { anchor: 'tc', scale: 0.9 });
+      Gfx.glow(sx - 30, y + 26, 70, '#ff9a20', 0.22);
+    }
+  },
+  orePile(x, y, kind) {
+    Gfx.shadow(x, y, 46, 0.3);
+    for (let i = 0; i < 9; i++) {
+      const a = i * 1.9;
+      World.oreLump(x + Math.cos(a) * (7 + i), y - 4 - (i % 3) * 5, 0.9, (kind + i) % 5);
+    }
+  },
+  oreCart(x, y, seed) {
+    Gfx.shadow(x, y + 2, 66, 0.32);
+    Gfx.round(x - 30, y - 26, 60, 26, 4, '#3a2415');
+    Gfx.round(x - 27, y - 24, 54, 21, 3, '#5c3a20');
+    for (let k = 0; k < 5; k++) Gfx.rect(x - 24 + k * 11, y - 24, 4, 21, '#3a2415');
+    for (let i = 0; i < 7; i++) World.oreLump(x - 20 + i * 7, y - 28 - (i % 3) * 4, 0.85, (seed + i) % 5);
+    for (const wx of [x - 17, x + 17]) {
+      Gfx.circle(wx, y - 2, 9, '#241c2e'); Gfx.circle(wx, y - 2, 6, '#574a66');
+      Gfx.circle(wx, y - 2, 2, '#9391a6');
+    }
+    Gfx.rect(x - 34, y - 14, 10, 4, '#3a2415');
   },
 
   // ----------------------------------------------------------------- CANYON
@@ -1152,6 +1355,138 @@ const World = {
     World.verge(t, camX, L, R, ['#241109', '#3a2415', '#5c3a20'], '#120c16', 'prop_bones', 0.8);
     if (o.embers) for (let i = 0; i < 2; i++) if (chance(0.5))
       Particles.spawn(camX + rnd(0, VW), GY - rnd(0, 200), { n: 1, color: ['#ffa832', '#e06a1b'], speed: 12, gravity: -20, life: 3, size: 3, sizeEnd: 0 });
+  },
+
+  // ------------------------------------------------------ THE CAMP, AT NIGHT
+  // A clearing at the end of a long day's walking. One fire, one man, and a
+  // treeline with more in it than trees. Everything here is lit by the fire
+  // and by nothing else, so a single flicker value drives the whole painting -
+  // the pool on the ground, the rim on the stones, the reach of the dark.
+  camp(t, o = {}, camX = 0) {
+    const ctx = Gfx.ctx;
+    const L = camX - 240, R = camX + VW + 240;
+    const FX2 = o.fireX ?? CAMP.fire;
+    const lick = 0.80 + Math.sin(t * 9.3) * 0.13 + Math.sin(t * 22.7) * 0.07;
+    const j = (i, m) => Math.abs(jitter(i, m));
+
+    // ---- a long way down into the blue. no sunset left, no moonrise yet.
+    World.skyRamp(L, R, -520, GY - 40, ['#07060f', '#0b0a18', '#140f26', '#1d1230', '#281040', '#3a1638']);
+    const soff = camX * 0.05;
+    for (let x = Math.floor((L + soff) / 44) * 44; x < R + soff; x += 44) {
+      const i = Math.abs((x / 44) | 0);
+      const sy = -500 + j(i * 1.7, 640);
+      if (sy > 210) continue;
+      const big = j(i + 9, 10) > 7.6;
+      const tw = 0.30 + Math.abs(Math.sin(t * (0.9 + j(i, 2.2)) + i)) * 0.62;
+      Gfx.rectA(x - soff, sy, big ? 2 : 1, big ? 2 : 1, big ? '#fffaea' : '#d6cfe0', tw);
+    }
+    // the moon, with a bite out of it
+    const mx = 300 - camX * 0.03, my = -168;
+    Gfx.glow(mx, my, 300, '#b177e6', 0.18);
+    Gfx.circle(mx, my, 40, '#e8dfc6');
+    Gfx.circle(mx + 16, my - 10, 34, '#140f26');
+    Gfx.circle(mx - 14, my + 7, 6, '#c4b89a');
+    Gfx.circle(mx - 3, my + 21, 4, '#c4b89a');
+    for (let i = 0; i < 3; i++) {                              // something high up, crossing it
+      const px = ((i * 700 - camX * 0.09 + t * 19) % 2100 + 2100) % 2100 + L - 300;
+      Gfx.sprite('ptero_fly', px, -60 + i * 46 + Math.sin(t * 0.6 + i) * 10,
+        { anchor: 'c', scale: 0.3 + i * 0.1, frame: Math.floor(t * 4 + i) % 4, tint: '#1d1230', tintAmount: 0.8, alpha: 0.8 });
+    }
+
+    // ---- three walls of trees, each darker and slower than the one behind it
+    const wall = (depth, base, col, scale, step, seed) => {
+      const off = camX * depth;
+      for (let x = Math.floor((L + off) / step) * step; x < R + off; x += step) {
+        const i = Math.abs((x / step) | 0) + seed;
+        const spr = ['prop_tree', 'prop_palm', 'prop_tree', 'prop_deadtree'][i % 4];
+        Gfx.sprite(spr, x - off + j(i * 3.1, step * 0.55), base + j(i + 5, 12),
+          { anchor: 'bc', scale: scale * (0.82 + j(i + 2, 0.5)), tint: col, tintAmount: 1 });
+      }
+    };
+    wall(0.40, GY - 52, '#241c2e', 1.5, 112, 0);
+    wall(0.26, GY - 26, '#1d1230', 1.9, 142, 7);
+    wall(0.13, GY - 4, '#07060f', 2.4, 176, 13);
+    // undergrowth packed in at their feet, so the wall has no gaps under it
+    for (let x = Math.floor((L + camX * 0.13) / 46) * 46; x < R + camX * 0.13; x += 46) {
+      const i = Math.abs((x / 46) | 0);
+      Gfx.sprite(i % 3 ? 'prop_bush' : 'prop_fern', x - camX * 0.13 + j(i, 30), GY + 2,
+        { anchor: 'bc', scale: 1.1 + j(i + 4, 0.7), tint: '#07060f', tintAmount: 1 });
+    }
+
+    // ---- the floor of the clearing, trodden flat where people sit
+    Gfx.rect(L, GY - 4, R - L, 320, '#140f26');
+    Gfx.rect(L, GY - 4, R - L, 3, '#281040');
+    // the bare patch people have worn into it - flat, or it reads as a bench
+    Gfx.ctx.globalAlpha = 0.85; Gfx.round(FX2 - 236, GY - 6, 472, 18, 9, '#1d1230'); Gfx.ctx.globalAlpha = 1;
+    Gfx.ctx.globalAlpha = 0.7; Gfx.round(FX2 - 186, GY - 4, 372, 13, 6, '#241109'); Gfx.ctx.globalAlpha = 1;
+    for (let x = Math.floor(L / 22) * 22; x < R; x += 22) {
+      const i = Math.abs((x / 22) | 0);
+      Gfx.rectA(x + j(i, 16), GY + 4 + j(i + 3, 78), 6 + j(i + 7, 7), 2, '#281040', 0.5);
+      if (i % 5 === 0) Gfx.rectA(x + j(i + 1, 16), GY + 12 + j(i + 4, 62), 3, 2, '#3a2415', 0.55);
+      if (i % 11 === 0) Gfx.sprite('prop_bones', x + j(i + 2, 18), GY + 26 + j(i + 8, 40),
+        { anchor: 'bc', scale: 0.7, tint: '#241c2e', tintAmount: 0.8 });
+    }
+
+    // ---- the pool of firelight, before anything stands in it
+    Gfx.glow(FX2, GY - 34, 320 * lick, '#e06a1b', 0.24);
+    Gfx.glow(FX2, GY - 14, 180 * lick, '#ffa832', 0.20);
+
+    // ---- the fire: a ring of stones, three logs and a bed of embers
+    const stone = (i, a) => {
+      const sx2 = FX2 + Math.cos(a) * 70, sy2 = GY - 4 + Math.sin(a) * 12;
+      const w2 = 14 + (i % 3) * 5;
+      Gfx.round(sx2 - w2 / 2, sy2 - 12, w2, 14, 5, '#3b3048');
+      Gfx.round(sx2 - w2 / 2 + 2, sy2 - 13, w2 - 5, 5, 2, '#574a66');
+      Gfx.rectA(sx2 - w2 / 2 + 1, sy2 - 10, w2 - 3, 6, '#ffa832', 0.30 * lick);
+    };
+    for (let i = 0; i < 5; i++) stone(i, Math.PI + i / 4 * Math.PI);          // the back of the ring
+    const log = (lx, ly, lw, lh, col, lit) => {
+      Gfx.round(lx, ly, lw, lh, lh / 2, col);
+      Gfx.round(lx + 3, ly + 1, lw - 6, 2, 1, lit);
+      Gfx.rectA(lx + 2, ly + lh - 4, lw - 4, 3, '#e06a1b', 0.45 * lick);
+    };
+    log(FX2 - 48, GY - 16, 68, 11, '#241109', '#5c3a20');
+    log(FX2 - 14, GY - 21, 62, 10, '#3a2415', '#85562f');
+    log(FX2 - 36, GY - 28, 56, 9, '#241109', '#5c3a20');
+    for (let i = 0; i < 13; i++) {
+      const ex = FX2 - 42 + i * 7, ey = GY - 13 + (i % 3);
+      Gfx.rectA(ex, ey, 4, 3, i % 2 ? '#e06a1b' : '#ffa832', 0.45 + Math.abs(Math.sin(t * 5 + i * 1.3)) * 0.55);
+    }
+    for (let i = 0; i < 5; i++) {
+      const k = i / 4;
+      const h2 = (50 + Math.abs(Math.sin(t * 6.3 + i * 1.9)) * 44) * (1 - Math.abs(k - 0.5) * 0.66) * lick;
+      World.flame(FX2 - 34 + k * 68, GY - 22, h2, 15 - Math.abs(k - 0.5) * 9,
+        Math.sin(t * 4.7 + i * 2.1) * 6, ['#e06a1b', '#ffa832', '#ffe98a']);
+    }
+    Gfx.glow(FX2, GY - 56, 130 * lick, '#ffe98a', 0.28);
+    for (let i = 0; i < 4; i++) stone(i + 5, 0.16 + i / 3 * 0.68 * Math.PI);  // and the front of it
+    if (chance(0.6)) Particles.spawn(FX2 + rnd(-26, 26), GY - 36,
+      { n: 1, color: ['#ffa832', '#e06a1b', '#ffe98a'], speed: 26, gravity: -34, life: 2.2, size: 3, sizeEnd: 0 });
+
+    // ---- and the dark, which is the real set. it closes on the fire.
+    const g = ctx.createRadialGradient(FX2, GY - 64, 96, FX2, GY - 64, 560);
+    g.addColorStop(0, 'rgba(7,6,15,0)');
+    g.addColorStop(0.42, 'rgba(7,6,15,0.20)');
+    g.addColorStop(1, 'rgba(7,6,15,0.80)');
+    ctx.fillStyle = g; ctx.fillRect(L, -520, R - L, GY + 400);
+
+    // low mist crawling across the clearing floor
+    for (let i = 0; i < 5; i++) {
+      const mxx = FX2 - 500 + ((t * (8 + i * 4) + i * 240) % 1000);
+      Gfx.ctx.globalAlpha = 0.07;
+      Gfx.round(mxx, GY - 20 + i * 6, 240, 15, 7, '#7c3eb2');
+      Gfx.ctx.globalAlpha = 1;
+    }
+
+    // there is more than one thing out there, and none of it is close enough
+    for (let i = 0; i < (o.watchers || 0); i++) {
+      const wx = FX2 + [-360, 330, -210, 450][i % 4], wy = GY - 74 - (i % 3) * 30;
+      if (Math.sin(t * 0.8 + i * 2.3) < -0.88) continue;                      // it blinks
+      for (const s of [-1, 1]) {
+        Gfx.glow(wx + s * 7, wy + 1, 20, '#ffa832', 0.22);
+        Gfx.rectA(wx + s * 7, wy, 3, 2, '#ffe98a', 0.7);
+      }
+    }
   },
 };
 

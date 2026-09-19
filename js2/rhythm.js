@@ -6,10 +6,10 @@
 // into a bone strum bar, and you strike whichever string they land on. The
 // struck string then whips and rings.
 //
-// Between phrases the song hands you a VOCAL LINE - an ember ribbon swoops in
-// from the top and you hold the chant and steer your voice along it. The synth
-// sings the pitch you are actually on, so drifting off the ribbon sounds as
-// wrong as it looks. Strums carry the damage; the chant carries the crowd.
+// Between phrases the song hands you a VOCAL LINE. Rune circles light up over
+// the stage in the order you have to call them, each with a ring closing in on
+// it; you click or tap each one as its ring lands, and the synth sings that
+// note back. Strums carry the damage; the chant carries the crowd.
 // ---------------------------------------------------------------------------
 'use strict';
 
@@ -33,9 +33,12 @@ const STRUM_X = 244;
 const NECK_TOP = 380, NECK_BOT = 532;
 const STR_Y = [404, 436, 468, 500];
 const NOTE_R = 17;
-// the chant ribbon only occupies the top band while a vocal phrase is running
-const CH_TOP = 58, CH_BOT = 200;
-const CH_TOL = 26;                       // px from the ribbon centre that counts
+// the chant circles live in the band above the neck while a phrase is running
+const CH_TOP = 66, CH_BOT = 320;
+const CH_L = 92, CH_R = W - 92;
+const CH_R0 = 30;                        // the hit circle's radius
+const CH_APPROACH = 1.05;                // how long the ring takes to close
+const CH_WIN = [0.10, 0.18, 0.28];       // perfect / good / late, in seconds
 
 const RATINGS = [
   { name: 'SICK!', win: 0.048, mult: 1.0, col: '#86e8d2', heal: 0.030, score: 350 },
@@ -56,8 +59,9 @@ class Riff {
     this.held = new Map();                 // sustains being held, by string
     this.bopT = 0; this.flare = 0; this.ghostSing = -1;
     // chant state
-    this.chanting = false; this.chantVis = 0; this.markerY = (CH_TOP + CH_BOT) / 2;
-    this.chantGood = 0; this.chantSpan = 0; this.chantHeat = 0; this.voiceT = 0; this.curPhrase = null;
+    this.chanting = false; this.chantVis = 0;
+    this.chantGood = 0; this.chantTotal = 0; this.chantHeat = 0; this.curPhrase = null;
+    this.chantPops = []; this.chantJudge = null;
     const diff = (typeof Settings !== 'undefined' ? Settings.difficulty : 'normal');
     const dm = diff === 'easy' ? 1.5 : diff === 'hard' ? 0.76 : 1;
     // TRAINING WHEELS. The first riffs of a run are deliberately very easy:
@@ -127,7 +131,7 @@ class Riff {
     if (this.lesson < 2) this.buildChant();
     AudioSys.muteLead(this.startTime - 0.02, this.endTime + 0.06);
     this.lastTime = Math.max(...this.notes.map(n => n.time + n.sustain));
-    this.finishTime = Math.max(this.lastTime + 0.5, this.startTime + 0.6, ...this.phrases.map(p => p.to + 0.3));
+    this.finishTime = Math.max(this.lastTime + 0.5, this.startTime + 0.6, ...this.phrases.map(p => p.to + 0.6));
   }
   encoreEvents(bars) {
     const steps = parsePattern(ENCORE_RIFFS[this.o.act] || ENCORE_RIFFS[1]);
@@ -156,19 +160,31 @@ class Riff {
     }
     gaps.sort((a, b) => (b.to - b.from) - (a.to - a.from));
     const want = clamp(Math.round((this.o.bars || 1) * 0.8), 1, 3);
+    let index = 0;
     for (const g of gaps.slice(0, want)) {
-      const span = g.to - g.from, n = clamp(Math.round(span / (beat * 0.5)), 2, 8);
-      const pts = [];
-      for (let i = 0; i <= n; i++) {
-        const t = i / n;
-        // wander between the two notes that bracket the hole, with a lift in the middle
-        const base = g.m0 + (g.m1 - g.m0) * t;
-        pts.push({ t: g.from + span * t, midi: base + Math.sin(t * Math.PI) * 4 + Math.sin(t * Math.PI * 2.7) * 1.5 });
+      const span = g.to - g.from;
+      const n = clamp(Math.round(span / (beat * 0.5)), 2, 6);
+      const dots = [];
+      // a readable path: circles walk across the band on a gentle wave, never
+      // landing on top of each other and never under the guitar neck
+      const dir = index % 2 ? -1 : 1;
+      for (let i = 0; i < n; i++) {
+        const k = n === 1 ? 0.5 : i / (n - 1);
+        const kk = dir > 0 ? k : 1 - k;
+        const x = CH_L + kk * (CH_R - CH_L);
+        const y = CH_TOP + 40 + Math.sin(k * Math.PI * 1.2 + index) * (CH_BOT - CH_TOP - 110) * 0.5
+          + (CH_BOT - CH_TOP - 110) * 0.35;
+        dots.push({
+          t: g.from + (span * 0.94) * k + 0.06, x, y, n: i + 1,
+          midi: g.m0 + (g.m1 - g.m0) * k + Math.sin(k * Math.PI) * 4,
+          judged: 0, pop: 0,
+        });
       }
-      this.phrases.push({ from: g.from, to: g.to, pts, goodT: 0, sungT: 0, span, live: false, done: false });
+      this.phrases.push({ from: dots[0].t, to: dots[dots.length - 1].t, dots, hit: 0, total: n, live: false, done: false });
+      index++;
     }
     this.phrases.sort((a, b) => a.from - b.from);
-    this.chantSpan = this.phrases.reduce((a, p) => a + p.span, 0);
+    this.chantTotal = this.phrases.reduce((a, p) => a + p.total, 0);
   }
   // --------------------------------------------------------------- geometry
   noteX(t, now) { return STRUM_X + (t - now) / this.travel * (W + 80 - STRUM_X); }
@@ -193,7 +209,7 @@ class Riff {
   }
   // touch: the whole right side of a string's band strums it
   stringRect(i) { return { x: STRUM_X - 56, y: STR_Y[i] - 18, w: W - (STRUM_X - 56), h: 36 }; }
-  chantRect() { return { x: 0, y: CH_TOP - 40, w: STRUM_X - 64, h: (CH_BOT - CH_TOP) + 120 }; }
+  chantRect() { return { x: 0, y: CH_TOP - 34, w: W, h: (CH_BOT - CH_TOP) + 54 }; }
   laneFromPoint(x, y) {
     for (let i = 0; i < STRINGS; i++) { const r = this.stringRect(i); if (inRect(x, y, r.x, r.y, r.w, r.h)) return i; }
     if (y > NECK_TOP) { let best = 0; for (let i = 1; i < STRINGS; i++) if (Math.abs(y - STR_Y[i]) < Math.abs(y - STR_Y[best])) best = i; return best; }
@@ -294,52 +310,61 @@ class Riff {
     this.bopT = 1 - Math.min(1, (b - Math.floor(b)) * 2.2);
     if (!this.done && now > this.finishTime) this.finish();
   }
+  // Which circle is next in line, if it is close enough to be hit at all.
+  nextDot(now) {
+    for (const p of this.phrases) {
+      for (const d of p.dots) {
+        if (d.judged) continue;
+        if (now < d.t - CH_APPROACH) return null;
+        return { p, d };
+      }
+    }
+    return null;
+  }
+  hitDot(now, px, py) {
+    const nx = this.nextDot(now);
+    if (!nx) return false;
+    const { p, d } = nx;
+    const off = Math.abs(now - d.t);
+    if (off > CH_WIN[2]) return false;
+    if (px !== undefined && Math.hypot(px - d.x, py - d.y) > CH_R0 * 2.2) return false;
+    const rank = off < CH_WIN[0] ? 0 : off < CH_WIN[1] ? 1 : 2;
+    d.judged = rank + 1; d.pop = 1;
+    p.hit += [1, 0.7, 0.35][rank];
+    this.chantGood += [1, 0.7, 0.35][rank];
+    this.chantHeat = Math.min(1, this.chantHeat + 0.5);
+    this.health = clamp(this.health + 0.03, 0, 1);
+    this.score += [320, 200, 90][rank];
+    this.chantJudge = { t: 0, life: 0.5, rank, x: d.x, y: d.y };
+    this.chantPops.push({ x: d.x, y: d.y, t: 0, col: ['#86e8d2', '#a8e878', '#ffa832'][rank] });
+    AudioSys.singNow(d.midi, 0.34, rank === 0 ? 1 : 0.8, rank === 0 ? 'ah' : 'oh');
+    AudioSys.sfx(rank === 0 ? 'perfect' : 'good');
+    Particles.spawn(d.x, d.y, { n: rank === 0 ? 14 : 7, color: ['#ffe98a', '#ffffff', '#ffa832'], speed: 170, spread: 6.28, life: 0.6, size: 4, sizeEnd: 0 });
+    return true;
+  }
   updateChant(dt, now) {
     // which phrase, if any, owns this moment
     let p = null;
-    for (const q of this.phrases) if (now >= q.from - 1.1 && now <= q.to + 0.35) { p = q; break; }
+    for (const q of this.phrases) if (now >= q.from - CH_APPROACH - 0.3 && now <= q.to + 0.5) { p = q; break; }
     this.curPhrase = p;
-    const live = !!p && now >= p.from && now <= p.to;
-    this.chantVis = damp(this.chantVis, p ? 1 : 0, 7, dt);
-    if (!p) { this.chanting = false; return; }
-    // steering: finger on the left band, or the mouse while the chant key is down
-    let want = null, holding = false;
-    if (Input.touch) {
-      const r = this.chantRect();
-      for (const pt of Input.touches.values()) if (inRect(pt.x, pt.y, r.x, r.y, r.w, r.h)) { want = pt.y; holding = true; break; }
-    } else {
-      holding = Input.isDown(...CHANT_KEYS);
-      if (holding && Input.my > -1) want = clamp(Input.my, CH_TOP, CH_BOT);
-    }
-    if (want !== null) this.markerY = damp(this.markerY, clamp(want, CH_TOP, CH_BOT), 22, dt);
-    this.chanting = holding && live;
-    if (!live) { this.chantHeat = damp(this.chantHeat, 0, 5, dt); return; }
-    p.live = true;
-    const tgtY = this.pitchY(this.phraseMidi(p, now));
-    const off = Math.abs(this.markerY - tgtY);
-    if (this.chanting) {
-      p.sungT += dt;
-      const good = off < CH_TOL;
-      if (good) {
-        p.goodT += dt; this.chantGood += dt;
-        this.health = clamp(this.health + dt * 0.10, 0, 1);
-        this.score += dt * 150;
-        this.chantHeat = Math.min(1, this.chantHeat + dt * 2.4);
-        if (chance(dt * 26)) Particles.spawn(STRUM_X, this.markerY, { n: 1, color: ['#ffe98a', '#ffa832', '#ffffff'], speed: 90, life: 0.5, size: 4, sizeEnd: 0, gravity: -40 });
-      } else {
-        this.chantHeat = damp(this.chantHeat, 0, 4, dt);
-        this.health = clamp(this.health - dt * 0.025, 0, 1);
+    this.chantVis = damp(this.chantVis, p ? 1 : 0, 8, dt);
+    this.chanting = !!p && now >= p.from - 0.2 && now <= p.to + 0.2;
+    for (const q of this.chantPops) q.t += dt;
+    this.chantPops = this.chantPops.filter(q => q.t < 0.45);
+    if (this.chantJudge) { this.chantJudge.t += dt; if (this.chantJudge.t > this.chantJudge.life) this.chantJudge = null; }
+    this.chantHeat = damp(this.chantHeat, 0, 2.2, dt);
+    if (!p) return;
+    // a click or a tap lands on the circle it is over; a key calls the next one
+    for (const c of Input.clicks) if (c.y < CH_BOT + 20) this.hitDot(now, c.x, c.y);
+    for (const k of Input.keys) if (CHANT_KEYS.includes(k.code)) this.hitDot(now);
+    // anything left too long is gone
+    for (const q of this.phrases) for (const d of q.dots) {
+      if (!d.judged && now > d.t + CH_WIN[2]) {
+        d.judged = 4;
+        this.health = clamp(this.health - 0.035, 0, 1);
+        this.chantJudge = { t: 0, life: 0.5, rank: 3, x: d.x, y: d.y };
       }
-      // the synth sings whatever pitch you are actually holding
-      this.voiceT -= dt;
-      if (this.voiceT <= 0) {
-        this.voiceT = 0.19;
-        const midi = good ? this.phraseMidi(p, now) : this.yPitch(this.markerY);
-        AudioSys.singNow(midi, 0.3, good ? 0.95 : 0.6, good ? 'ah' : 'eh');
-      }
-    } else {
-      this.chantHeat = damp(this.chantHeat, 0, 5, dt);
-      this.health = clamp(this.health - dt * 0.035, 0, 1);
+      if (d.pop > 0) d.pop = Math.max(0, d.pop - dt * 3);
     }
   }
   finish() {
@@ -348,14 +373,14 @@ class Riff {
     const total = this.total || 1;
     const weighted = this.hits.reduce((a, c, i) => a + c * RATINGS[i].mult, 0);
     const strumAcc = weighted / total;
-    const chantAcc = this.chantSpan > 0.01 ? clamp(this.chantGood / this.chantSpan, 0, 1) : 1;
+    const chantAcc = this.chantTotal > 0 ? clamp(this.chantGood / this.chantTotal, 0, 1) : 1;
     // the strings carry the song, the voice carries the room
-    const acc = this.chantSpan > 0.01 ? strumAcc * 0.76 + chantAcc * 0.24 : strumAcc;
+    const acc = this.chantTotal > 0 ? strumAcc * 0.76 + chantAcc * 0.24 : strumAcc;
     const r = {
       sick: this.hits[0], good: this.hits[1], bad: this.hits[2], awful: this.hits[3],
       hits: this.hits.reduce((a, b) => a + b, 0), misses: this.misses, notes: total,
       maxCombo: this.maxCombo, score: Math.round(this.score), health: this.health,
-      strumAcc, chantAcc, sang: this.chantSpan > 0.01,
+      strumAcc, chantAcc, sang: this.chantTotal > 0,
       acc, mult: 0.35 + acc * 1.15,
     };
     r.grade = acc >= 0.97 ? 'S+' : acc >= 0.9 ? 'S' : acc >= 0.8 ? 'A' : acc >= 0.65 ? 'B' : acc >= 0.5 ? 'C' : acc >= 0.3 ? 'D' : 'F';
@@ -462,57 +487,65 @@ class Riff {
     const v = this.chantVis;
     if (v < 0.02) return;
     const p = this.curPhrase;
-    const slide = (1 - Ease.outCubic(v)) * -140;
-    ctx.save(); ctx.translate(0, slide);
-    Gfx.rectA(0, CH_TOP - 44, W, (CH_BOT - CH_TOP) + 78, '#120c16', 0.58 * v);
-    Gfx.rectA(0, CH_TOP - 44, W, 2, '#ffa832', 0.5 * v);
-    Gfx.rectA(0, CH_BOT + 32, W, 2, '#ffa832', 0.5 * v);
-    Gfx.text('CHANT', 16, CH_BOT + 12, { color: '#ffe98a', scale: 1.2 });
-    Gfx.text(Input.touch ? 'HOLD THE LEFT EDGE AND SLIDE' : 'HOLD SPACE - STEER WITH THE MOUSE',
-      W - 16, CH_BOT + 12, { color: '#7a6d8a', scale: 1, align: 'right' });
+    Gfx.rectA(0, CH_TOP - 34, W, (CH_BOT - CH_TOP) + 54, '#120c16', 0.34 * v);
+    Gfx.rectA(0, CH_TOP - 34, W, 2, '#ffa832', 0.45 * v);
+    Gfx.rectA(0, CH_BOT + 18, W, 2, '#ffa832', 0.45 * v);
+    Gfx.text('CHANT', 16, CH_BOT - 2, { color: '#ffe98a', scale: 1.3, outline: true });
+    Gfx.text(Input.touch ? 'TAP EACH RUNE AS ITS RING LANDS' : 'CLICK EACH RUNE, OR SPACE',
+      W - 56, CH_BOT - 2, { color: '#d6cfe0', scale: 1.1, align: 'right', outline: true });
     if (p) {
-      // the ribbon: the melody drawn as a thick ember trail through time
-      const t0 = Math.max(p.from, now - (STRUM_X / (W + 80 - STRUM_X)) * this.travel);
-      const t1 = Math.min(p.to, now + this.travel);
-      if (t1 > t0) {
-        const pts = [];
-        for (let i = 0; i <= 48; i++) { const t = t0 + (t1 - t0) * i / 48; pts.push([this.noteX(t, now), this.pitchY(this.phraseMidi(p, t))]); }
-        const stroke = (w, col, a) => {
-          ctx.globalAlpha = a * v; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-          ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.stroke(); ctx.globalAlpha = 1;
-        };
-        stroke(CH_TOL * 2, '#5c1607', 0.55);
-        stroke(CH_TOL * 1.25, '#9c3510', 0.75);
-        stroke(10, '#e06a1b', 0.95);
-        stroke(4, this.chanting && this.chantHeat > 0.3 ? '#ffe08a' : '#ffa832', 1);
+      // the path between the circles, so the order is never a guess
+      const live = p.dots.filter(d => !d.judged);
+      if (live.length > 1) {
+        ctx.save();
+        ctx.setLineDash([5, 7]); ctx.lineDashOffset = -Time.t * 26;
+        ctx.strokeStyle = `rgba(255,168,50,${0.5 * v})`; ctx.lineWidth = 2;
+        ctx.beginPath();
+        live.forEach((d, i) => i ? ctx.lineTo(d.x, d.y) : ctx.moveTo(d.x, d.y));
+        ctx.stroke(); ctx.setLineDash([]); ctx.restore();
       }
-      // a countdown pip while the phrase is still on its way in
-      if (now < p.from) {
-        const k = clamp((p.from - now) / 1.1, 0, 1);
-        Gfx.text('SING', STRUM_X, CH_BOT + 12, { color: '#ffe98a', align: 'center', scale: 1.4 + (1 - k) * 0.6, outline: true });
+      for (let i = p.dots.length - 1; i >= 0; i--) {
+        const d = p.dots[i];
+        const lead = d.t - now;
+        if (lead > CH_APPROACH || d.judged === 4) continue;
+        if (d.judged && d.pop <= 0) continue;
+        const col = ['#ffe98a', '#86e8d2', '#a8e878', '#ffa832'][d.n % 4];
+        if (d.judged) {                                   // the burst it leaves
+          const k = 1 - d.pop;
+          Gfx.ring(d.x, d.y, CH_R0 * (1 + k * 1.4), `rgba(255,233,138,${d.pop * 0.8})`, 3);
+          continue;
+        }
+        const fade = clamp((CH_APPROACH - lead) / 0.22, 0, 1) * v;
+        ctx.globalAlpha = fade;
+        // the rune itself
+        Gfx.circle(d.x, d.y, CH_R0 + 4, '#120c16');
+        Gfx.circle(d.x, d.y, CH_R0, '#3b3048');
+        Gfx.ring(d.x, d.y, CH_R0, col, 3);
+        Gfx.circle(d.x - CH_R0 * 0.3, d.y - CH_R0 * 0.3, CH_R0 * 0.24, 'rgba(255,255,255,0.22)');
+        Gfx.text(String(d.n), d.x, d.y - 11, { color: col, align: 'center', scale: 2.2, outline: true, outlineWidth: 2 });
+        // the ring closing in on it
+        const ar = CH_R0 + Math.max(0, lead / CH_APPROACH) * CH_R0 * 2.4;
+        Gfx.ring(d.x, d.y, ar, `rgba(255,255,255,${0.85 * fade})`, 3);
+        if (lead < CH_WIN[1]) Gfx.glow(d.x, d.y, CH_R0 * 2.4, col, 0.3 * fade);
+        ctx.globalAlpha = 1;
+      }
+      if (now < p.from - 0.15) {
+        Gfx.text('SING', W / 2, CH_TOP + 4, { color: '#ffe98a', align: 'center', scale: 1.8, outline: true, outlineWidth: 2 });
       }
     }
-    // the marker: your voice
-    const live = p && now >= p.from && now <= p.to;
-    const my = this.markerY;
-    if (live) {
-      const heat = this.chantHeat;
-      Gfx.glow(STRUM_X, my, 34 + heat * 44, '#ffe08a', (0.18 + heat * 0.4) * v);
-      Gfx.circle(STRUM_X, my, 13, '#120c16');
-      Gfx.circle(STRUM_X, my, 10, this.chanting ? (heat > 0.3 ? '#ffe98a' : '#ffa832') : '#7a6d8a');
-      Gfx.circle(STRUM_X - 3, my - 3, 4, '#fffaea');
-      if (this.chanting) for (let i = 0; i < 3; i++) {
-        const a = Time.t * 9 + i * 2.1;
-        Gfx.ring(STRUM_X, my, 16 + ((a % 2.1) / 2.1) * 26, `rgba(255,224,138,${(1 - (a % 2.1) / 2.1) * 0.5 * v})`, 2);
-      }
-      if (!this.chanting) Gfx.text(Input.touch ? 'HOLD LEFT' : 'HOLD SPACE', STRUM_X, my + 20, { color: '#ffe98a', align: 'center', scale: 1, outline: true });
+    for (const q of this.chantPops) {
+      const k = q.t / 0.45;
+      ctx.globalAlpha = clamp(1 - k, 0, 1) * 0.8;
+      Gfx.ring(q.x, q.y, CH_R0 * (1 + k * 1.8), q.col, 2);
+      ctx.globalAlpha = 1;
     }
-    ctx.restore();
-    // the touch pad for the voice, so the thumb knows where to live
-    if (Input.touch && v > 0.05) {
-      const r = this.chantRect();
-      Gfx.rectA(r.x, r.y + slide, r.w, r.h, '#ffa832', 0.06 * v);
-      Gfx.outlineRound(r.x + 4, r.y + 4 + slide, r.w - 8, r.h - 8, 10, `rgba(255,168,50,${0.3 * v})`);
+    if (this.chantJudge) {
+      const j = this.chantJudge, k = j.t / j.life;
+      const txt = ['PERFECT', 'GREAT', 'LATE', 'MISS'][j.rank];
+      const col = ['#86e8d2', '#a8e878', '#ffa832', '#ef6a5e'][j.rank];
+      ctx.globalAlpha = clamp(1 - k, 0, 1);
+      Gfx.text(txt, j.x, j.y - 36 - k * 16, { color: col, align: 'center', scale: 1.6, outline: true, outlineWidth: 2 });
+      ctx.globalAlpha = 1;
     }
   }
   // --- chrome --------------------------------------------------------------

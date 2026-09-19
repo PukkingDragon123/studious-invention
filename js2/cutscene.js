@@ -446,11 +446,17 @@ function* introScript(S) {
   // --- the big one: chase the raptor, with the tyrant on your heels
   const chase = yield* S.mini(new SideScroll({
     vehicle: 'car', vehicleScale: 1, startX: 0, goal: 2200, speed: 320, grip: 5,
+    jump: true,
+    obstacles: Array.from({ length: 11 }, (_, i) => ({
+      x: 260 + i * 170 + (i % 3) * 40,
+      spr: i % 3 === 0 ? 'prop_deadtree' : i % 3 === 1 ? 'prop_rock' : 'prop_bones',
+      scale: i % 3 === 0 ? 0.8 : 1.1, w: 40, h: i % 3 === 0 ? 54 : 36,
+    })),
     paint: Scroll('canyon', { embers: true }),
     ahead: { spr: 'blaze_walk', gap: 420, speed: 258, scale: 1, carry: 'vela_cry' },
-    pursuer: { spr: 'trex_walk', gap: 400, speed: 244, scale: 1.1 },
-    pursuerRamp: 30, leash: 560, catchTime: 3.0,
-    title: 'ONE IN FRONT, ONE BEHIND', sub: 'a normal tuesday',
+    pursuer: { spr: 'trex_walk', roarSpr: 'trex_roar', gap: 400, speed: 244, scale: 1.15 },
+    pursuerRamp: 30, leash: 520, catchTime: 3.0,
+    title: 'ONE IN FRONT, ONE BEHIND', sub: 'jump, or be lunch',
   }));
 
   // =============================================== 10. THE BREAKDOWN
@@ -548,4 +554,159 @@ function* introScript(S) {
   yield 0.3;
   S.overlay = null;
   Game.startVillage();
+}
+
+// ---------------------------------------------------------------------------
+// THE CAMPFIRE
+// Played once an act, the first time he sits down at a fire. A man, a borrowed
+// guitar, and whatever came to the edge of the light to listen. Nothing
+// attacks. That is the whole point of it.
+// ---------------------------------------------------------------------------
+function* campfireScript(S) {
+  const heal = S.o.heal || 0;
+  S.set = 'camp'; S.setOpt = { fireX: CAMP.fire, watchers: 0 };
+  S.zoomMul = 0.72;                          // stand back. the dark is half the picture.
+  S.cam.lookAt(656, 306, true);
+  AudioSys.play('rest', { fade: 1.4 });
+
+  const bronk = S.add('bronk', { base: 'bronk', x: CAMP.bronk, y: GY + 12, scale: 1, facing: 1 });
+  bronk.play('play'); bronk.shadow = false; bronk.sortY = GY - 40;
+  // the actor exists for its animation clock only - it is painted by hand in
+  // the overlay, because a flat silhouette is a blob and this needs to read as
+  // a tyrannosaur: mostly swallowed by the dark, with one fire-lit edge.
+  const rex = S.add('rex', { base: 'trex', x: CAMP.rex, y: GY + 8, scale: 1.3, facing: -1 });
+  rex.play('idle'); rex.shadow = false; rex.visible = false;
+
+  // it is standing there from the first frame. `lit` is only how much of it the
+  // fire is picking out - at 0 it is the same black as the trees behind it.
+  let lit = 0, eyes = 0, drool = 0;
+  const hx = () => rex.x - 53, hy = () => rex.y - 114 + rex.bob;    // the eye
+  const jx = () => rex.x - 50, jy = () => rex.y - 88 + rex.bob;     // the jaw line
+
+  S.overlay = world => {
+    if (!world) return;
+    const T = Time.t;
+    // the log he is sitting on, drawn over his legs so he is behind it
+    Gfx.round(CAMP.bronk - 64, GY - 18, 112, 22, 10, '#241109');
+    Gfx.round(CAMP.bronk - 60, GY - 17, 104, 5, 2, '#5c3a20');
+    for (let i = 0; i < 5; i++) Gfx.rectA(CAMP.bronk - 52 + i * 21, GY - 12, 13, 2, '#0b0a18', 0.5);   // bark
+    Gfx.rectA(CAMP.bronk - 60, GY - 6, 104, 7, '#e06a1b', 0.24 + Math.sin(T * 9) * 0.05);
+    Gfx.round(CAMP.bronk + 40, GY - 19, 15, 24, 7, '#3a2415');      // the cut end, rings and all
+    Gfx.round(CAMP.bronk + 43, GY - 15, 9, 15, 4, '#5c3a20');
+    Gfx.round(CAMP.bronk + 46, GY - 11, 4, 7, 2, '#85562f');
+    // the rock-axe, catching the fire on every downstroke
+    Gfx.glow(bronk.x + 15, bronk.y + bronk.bob - 46, 70, '#ffa832', 0.26 + Math.sin(T * 5) * 0.07);
+    Gfx.sprite('art_bass', bronk.x + 16, bronk.y + bronk.bob - 46,
+      { anchor: 'c', scale: 1.05, rot: -0.34 + Math.sin(T * 4.2) * 0.06 });
+    // the animal itself: a warm rim on the fire side, then the body over it.
+    // it never fades out - it just stops being lit, which is worse.
+    {
+      const spr = rex.sprite, common = { anchor: 'bc', scale: rex.scale, frame: rex.frame, flip: true };
+      if (lit > 0.02) Gfx.sprite(spr, rex.x - 4, rex.y + rex.bob,
+        Object.assign({ tint: '#e06a1b', tintAmount: 1, alpha: 0.55 * lit }, common));
+      Gfx.sprite(spr, rex.x, rex.y + rex.bob,
+        Object.assign({ tint: '#07060f', tintAmount: 1 - 0.26 * lit }, common));
+    }
+    // two eyes, a long way back, at the height of a second-storey window
+    if (eyes > 0.01) {
+      const blink = Math.sin(T * 0.7) < -0.93 ? 0 : 1;
+      const a = eyes * blink;
+      const near = [hx(), hy()], far = [hx() + 12, hy() - 4];
+      for (const [ex, ey, s] of [[near[0], near[1], 1], [far[0], far[1], 0.6]]) {
+        Gfx.glow(ex, ey, 40 * s, '#ffa832', 0.34 * a * s);
+        Gfx.rectA(ex - 3, ey - 2, 7, 4, '#ffe98a', 0.95 * a);
+        Gfx.rectA(ex - 1, ey - 1, 2, 2, '#ef6a5e', 0.9 * a);        // the slit
+      }
+    }
+    // and the drool: three strands off the jaw, and they do not stop
+    if (drool > 0.01) {
+      for (let i = 0; i < 3; i++) {
+        const dx = jx() - 14 + i * 14;
+        const len = (10 + Math.abs(Math.sin(T * (0.9 + i * 0.4) + i * 2.2)) * 26) * drool;
+        for (let k = 0; k < len; k += 3)
+          Gfx.rectA(dx + Math.sin(T * 2 + k * 0.1 + i) * 1.2, jy() + k, k > len - 7 ? 3 : 1, 3,
+            '#6aa9ee', (0.16 + 0.34 * (k / len)) * drool);
+      }
+      if (chance(0.22)) Particles.spawn(jx() - 14 + rnd(0, 28), jy() + 24,
+        { n: 1, color: ['#a8d8ff', '#6aa9ee'], speed: 6, gravity: 240, life: 1.1, size: 2, sizeEnd: 1 });
+    }
+  };
+
+  // ------------------------------------------------------- 1. alone with it
+  yield 0.9;
+  yield* S.titleCard('CAMP', 'somewhere past the third ridge', 2.4);
+  AudioSys.sfx('fire_whoosh', { vol: 0.35 });
+  for (let i = 0; i < 10; i++) { Particles.fire(CAMP.fire + rnd(-16, 16), GY - 30, 1); yield 0.04; }
+  yield 0.7;
+  yield* S.say('BRONK', 'Just me, then.', { at: bronk });
+  yield 0.5;
+
+  // ------------------------------------------------- 2. something is out there
+  AudioSys.sfx('thud', { vol: 0.4 });
+  bronk.play('idle'); bronk.facing = 1;
+  Emotes.show(bronk, '?', 1.1);
+  yield* S.pan(742, 300, 0.9);
+  AudioSys.sfx('roar', { pitch: 30, vol: 0.45, len: 1.9 });
+  Juice.shake(3, 0.5);
+  for (let i = 0; i < 46; i++) { lit = Math.min(1, lit + Time.dt * 1.2); eyes = Math.min(1, eyes + Time.dt * 1.1); yield 0; }
+  yield 0.5;
+  yield* S.say('BRONK', '...', { at: bronk });
+  Emotes.show(bronk, 'sweat', 1.6);
+  yield 0.4;
+  for (let i = 0; i < 40; i++) { drool = Math.min(1, drool + Time.dt * 1.6); yield 0; }
+  yield* S.say('BRONK', 'Nope. Nope. Absolutely not.', { at: bronk });
+  yield 0.4;
+
+  // ---------------------------------------------- 3. it does not come closer
+  yield* S.pan(600, 310, 0.8);
+  yield* S.say('', 'It does not come closer. It does not leave. It has picked a spot, and it is sitting in it.',
+    { at: null, portrait: 'trex_idle' });
+  yield 0.3;
+  yield* S.say('BRONK', 'You want the fire? Take the fire. I have had a day.', { at: bronk });
+  yield 0.5;
+  yield* S.say('', 'The head tips. Very slightly. Toward the guitar.', { at: null, portrait: 'trex_idle' });
+  yield 0.4;
+  yield* S.say('BRONK', 'Oh.', { at: bronk });
+  yield* S.say('BRONK', "You're not hungry. You're a fan.", { at: bronk });
+  yield 0.4;
+
+  // ------------------------------------------------------- 4. play it anyway
+  bronk.play('play');
+  AudioSys.sfx('strum', { vol: 0.7 });
+  Juice.punch(0.03);
+  yield* S.pan(640, 304, 0.4);
+  Particles.sparkle(bronk.x + 16, GY - 60, 16, ['#ffe98a', '#ffa832']);
+  yield 1.3;
+  for (let i = 0; i < 3; i++) {
+    Popups.add(bronk.x + rnd(-10, 40), GY - 80 - i * 6, '~', '#ffe98a', { scale: 2.2, life: 1.8, vy: -22 });
+    AudioSys.sfx('strum', { vol: 0.5, pitch: 60 + i * 5 });
+    yield 0.5;
+  }
+  yield 0.4;
+  yield* S.say('BRONK', 'Tough crowd.', { at: bronk });
+  yield 0.5;
+
+  // ---------------------------------------------------------- 5. and it goes
+  AudioSys.sfx('roar', { pitch: 26, vol: 0.3, len: 2.2 });
+  Juice.shake(4, 0.6);
+  for (let i = 0; i < 56; i++) {
+    eyes = Math.max(0, eyes - Time.dt * 0.9);
+    drool = Math.max(0, drool - Time.dt * 1.4);
+    lit = Math.max(0, lit - Time.dt * 0.62);
+    rex.x += Time.dt * 30;
+    yield 0;
+  }
+  yield 0.5;
+  yield* S.say('BRONK', 'Same time tomorrow, I guess.', { at: bronk });
+  yield 0.6;
+  if (heal) {
+    Popups.add(bronk.x, GY - 110, `+${heal} HP`, '#a8e878', { scale: 2.2, life: 2.0 });
+    Particles.sparkle(bronk.x, GY - 70, 20, ['#a8e878', '#ffe98a']);
+    AudioSys.sfx('heal');
+    yield 1.2;
+  }
+  S.fadeTarget = 1;
+  yield 0.7;
+  S.overlay = null;
+  Game.leaveEvent();
 }

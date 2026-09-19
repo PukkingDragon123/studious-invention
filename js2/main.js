@@ -37,7 +37,7 @@ const Game = {
       seed, hp: 76, maxHp: 76, stamina: 100, maxStamina: 100, gold: 40,
       deck, relics: ['bone_pick'], band: [], act: 1, fights: 0, startHype: 0,
       zone: null, pos: null, seenEvents: [], seenFights: [],
-      bait: 0, baitNeed: 3, riffsPlayed: 0,
+      bait: 0, baitNeed: 3, riffsPlayed: 0, campSeen: 0,
       stats: { kills: 0, notes: 0, sick: 0, taken: 0 },
     };
     this.go(new CutsceneScene(introScript, { onSkip: () => this.startVillage() }));
@@ -50,7 +50,7 @@ const Game = {
       seed: r.seed, hp: r.hp, maxHp: r.maxHp, stamina: r.stamina, maxStamina: r.maxStamina,
       gold: r.gold, relics: r.relics, band: r.band, act: r.act, fights: r.fights,
       startHype: r.startHype, seenEvents: r.seenEvents, stats: r.stats, pos: r.pos,
-      bait: r.bait, baitNeed: r.baitNeed, riffsPlayed: r.riffsPlayed,
+      bait: r.bait, baitNeed: r.baitNeed, riffsPlayed: r.riffsPlayed, campSeen: r.campSeen || 0,
       deck: r.deck.map(c => Cards.toSave(c)),
     };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { }
