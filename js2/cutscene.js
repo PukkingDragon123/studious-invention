@@ -13,6 +13,7 @@ class CutsceneScene {
   constructor(script, o = {}) {
     this.scriptFn = script; this.o = o;
     this.cam = new Camera(); this.cam.zoom = this.cam.tzoom = VIEW;
+    this.zoomMul = 1;                                  // a beat may pull the camera back
     this.actors = {}; this.set = 'home'; this.setOpt = {};
     this.t = 0; this.fade = 0; this.fadeTarget = 0; this.title = null; this.skipT = 0;
     this.flash = 0; this.riffGame = null;
@@ -52,8 +53,8 @@ class CutsceneScene {
     while (!a.moveTo(x, y ?? a.y, Time.dt, speed || a.speed)) yield 0;
     a.play('idle');
   }
-  camX() { return this.cam.x - VW / 2; }
-  camY() { return this.cam.y - VH / 2; }
+  camX() { return this.cam.x - W / (2 * this.cam.zoom); }
+  camY() { return this.cam.y - H / (2 * this.cam.zoom); }
   // A mini-game draws over the whole screen, so the scene fade has to be down
   // while it runs or the stage is simply black behind it.
   *mini(game) {
@@ -81,7 +82,7 @@ class CutsceneScene {
     this.t += dt;
     this.fade = damp(this.fade, this.fadeTarget, 6, dt);
     this.flash = Math.max(0, this.flash - dt * 2.6);
-    this.cam.zoom = this.cam.tzoom = VIEW;              // one scale, always
+    this.cam.zoom = this.cam.tzoom = VIEW * this.zoomMul;   // one scale, unless a beat says otherwise
     this.cam.update(dt);
     for (const k in this.actors) this.actors[k].update(dt);
     if (this.riffGame) this.riffGame.update(dt);
@@ -151,7 +152,8 @@ function* introScript(S) {
   // shark in the air and a spinosaurus with two guns, because this is not a
   // place with rules.
   S.set = 'concert'; S.setOpt = { beat: 0 };
-  S.cam.lookAt(SX + 10, 306, true);
+  S.zoomMul = 0.72;                                  // stand back: it is a dream, not a room
+  S.cam.lookAt(SX + 10, 302, true);
   AudioSys.play('boss3', { fade: 0.8, intensity: 2 });
   const rex = S.add('rex', { base: 'trex', x: SX + 34, y: GY - 46, scale: 1, facing: -1 });
   rex.play('roar');
@@ -159,20 +161,6 @@ function* introScript(S) {
   star.play('play'); star.sortY = GY + 40; star.shadow = false;
   const spino = S.add('spino', { base: 'spino', x: SX + 148, y: GY - 44, scale: 0.9, facing: -1 });
   spino.play('fire');
-  const mega = S.add('mega', { base: 'mega', x: SX + 300, y: 214, scale: 0.9, facing: 1 });
-  mega.play('fly'); mega.shadow = false;
-  // the shark does laps; the dream does not explain why
-  Co.run(function* () {
-    for (let i = 0; i < 6000; i++) {
-      if (S.set !== 'concert') return;
-      mega.x -= Time.dt * 190;
-      mega.y = 236 + Math.sin(Time.t * 1.2) * 20;
-      if (mega.x < SX - 330) { mega.x = SX + 330; }
-      if (chance(Time.dt * 8)) Particles.spawn(mega.x + 70, mega.y + rnd(-14, 14),
-        { n: 1, color: ['#a8d8ff', '#ffffff'], speed: 30, life: 0.7, size: 4, sizeEnd: 0 });
-      yield 0;
-    }
-  }());
   // fire off the tyrannosaur, muzzle flashes off the spinosaurus, rocks in the air
   // fire pours off the tyrannosaur - drawn BEHIND the performers, or it burns
   // the man standing on it
@@ -227,48 +215,38 @@ function* introScript(S) {
   yield 0.4;
   yield* S.say('CROWD', 'BON-GA! BON-GA! BON-GA!', { at: null, portrait: 'icon_fire' });
 
-  // ================================================== 1. THE ALARM DODO
-  // The scream cuts through the dream and you are awake, mid-note.
-  AudioSys.sfx('roar', { pitch: 620, vol: 0.9, len: 0.5 });
-  Juice.shake(12, 0.4);
+  // ================================================== 1. WAKING UP
+  // The dream lets go all at once and he is flat on his back in the dark.
+  Juice.shake(10, 0.4);
   S.flash = 1;
   AudioSys.stop(0.15);
   yield 0.18;
-  S.overlay = null; S.backdrop = null;
-  S.hide('rex', 'star', 'spino', 'mega');
+  S.overlay = null; S.backdrop = null; S.zoomMul = 1;
+  S.hide('rex', 'star', 'spino');
   yield* S.cut('home', { night: true, fire: 0 }, [HOME.bed + 40, 330], 0.9);
   AudioSys.play('home', { fade: 1.0 });
   const bronk = S.add('bronk', { base: 'bronk', x: HOME.bed + 6, y: GY, scale: 1, facing: 1 });
   bronk.play('sleep');
-  const dodo = S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 52, scale: 0.8, facing: -1 });
-  yield 0.6;
+  const dodo = S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 58, scale: 0.8, facing: -1 });
+  dodo.play('idle');
+  yield 0.8;
   yield* S.say('BRONK', '...thank you. thank you. I love you all...', { at: bronk });
-  yield 0.3;
-  yield* S.say('', 'This dodo has gone off every morning for four years. It has never once been thanked.', { at: dodo, portrait: 'dodo_idle' });
-  // --- ONE swing. It leaves as paper.
-  dodo.visible = false;
-  const CX = HOME.perch - VW * 0.62, CY = GY - VH * 0.74;
-  yield* S.mini(new SmackGame({
-    groundY: GY, bedX: HOME.bed + 6, perchX: HOME.perch, camX: CX, camY: CY,
-    paint: () => World.home(S.t, S.setOpt, CX),
-  }));
-  S.cam.lookAt(HOME.bed + 60, 326, true);
-  bronk.visible = true; bronk.play('idle'); bronk.x = HOME.bed + 22; bronk.squash(0.25);
-  AudioSys.sfx('thud');
-  yield 0.5;
-  yield* S.say('BRONK', 'Every morning. Every single morning.', { at: bronk });
   yield 0.4;
 
   // ================================================ 2. VELA, AND PANCAKES
-  const vela = S.add('vela', { base: 'vela', x: HOME.rug + 90, y: GY, scale: 1, facing: -1 });
+  const vela = S.add('vela', { base: 'vela', x: HOME.rug + 120, y: GY, scale: 1, facing: -1 });
   vela.play('walk');
   yield* S.pan(HOME.bed + 96, 324);
-  while (!vela.moveTo(HOME.bed + 78, GY, Time.dt, 90)) yield 0;
+  while (!vela.moveTo(HOME.bed + 78, GY, Time.dt, 100)) yield 0;
   vela.play('idle'); vela.facing = -1;
   yield 0.3;
   yield* S.say('VELA', 'Up. Now.', { at: vela });
   yield* S.say('BRONK', 'I was headlining. There were thousands of them.', { at: bronk });
   yield* S.say('VELA', "There are four of us and one of you is still in bed.", { at: vela });
+  Emotes.show(vela, 'anger', 1.2);
+  yield 0.3;
+  bronk.play('sleep');
+  yield* S.say('BRONK', 'mmnnh. five more... centuries...', { at: bronk });
   yield 0.3;
   yield* S.say('VELA', "Fine. I'll just let the pancakes go cold.", { at: vela });
   // the nose knows
@@ -318,21 +296,23 @@ function* introScript(S) {
   yield* S.say('', 'BLAZE the cook-fire raptor has been chained to this pit for six years. He has views.', { at: blaze, portrait: 'blaze_idle' });
   Emotes.show(blaze, 'anger', 1.6); AudioSys.sfx('detect');
   yield* S.say('BRONK', "Don't give me that. You get fed. You get a roof. You get to sit down all day.", { at: bronk });
-  bronk.visible = false; blaze.visible = false; vela.visible = false;
-  const kCX = HOME.stove - VW * 0.52, kCY = GY - VH * 0.74;
-  const cook = yield* S.mini(new KickGame({
-    groundY: GY, camX: kCX, camY: kCY,
-    heroX: HOME.stove - 74, foeX: HOME.stove + 10, panX: HOME.stove - 30,
-    paint: () => World.home(S.t, { fire: 0.8, eggGone: true }, kCX),
-  }));
-  bronk.visible = true; blaze.visible = true; vela.visible = true;
-  setOpt({ fire: 1 });
-  Juice.flash('#ffa832', 0.4, 3); AudioSys.sfx('fire_whoosh');
-  Particles.fire(HOME.stove, GY - 40, 24);
-  yield* S.snap(HOME.stove - 40, 326);
-  if (cook && cook.win) { run.hp = Math.min(run.maxHp, run.hp + 8); yield* S.say('VELA', "Perfect. See? He responds to encouragement.", { at: vela }); }
-  else yield* S.say('VELA', "It's black, Bronk. You have cooked a stone.", { at: vela });
+  yield 0.3;
+  // one boot, and breakfast is on
+  bronk.play('dash', { fps: 16 });
+  for (let i = 0; i < 3; i++) { bronk.x += 8; yield 0.06; }
+  Juice.stop(0.12); Juice.shake(12, 0.4); Juice.flash('#ffa832', 0.45, 3);
+  Juice.pow((W / 2) + 40, H * 0.58, { r: 64, spikes: 11, col: '#ffa832', word: 'BOOT!' });
+  AudioSys.sfx('thud'); AudioSys.sfx('fire_whoosh');
   Emotes.show(blaze, 'anger', 2);
+  Particles.fire(HOME.stove, GY - 30, 30);
+  setOpt({ fire: 1 });
+  yield 0.5;
+  bronk.play('idle'); bronk.x = HOME.stove - 80;
+
+  yield* S.say('BLAZE', 'ONE DAY, BRONK.', { at: blaze });
+  run.hp = Math.min(run.maxHp, run.hp + 8);
+  Popups.add(bronk.x, bronk.top, 'BREAKFAST  +8 HP', '#86e8d2', { scale: 1.2, life: 1.8 });
+  yield* S.say('VELA', "Perfect. See? He responds to encouragement.", { at: vela });
   yield 0.4;
 
   // ============================================= 5. THE MAMMOTH SHOWER

@@ -170,14 +170,17 @@ def figure(spec, pose):
 
 # --- face --------------------------------------------------------------------
 def face(g, m, spec, pose):
-    """Saturday-morning cartoon face, and the mouth is the loudest thing on it.
+    """Two faces come out of here.
 
-    Eyes are plain black dots - no white, no iris, no catchlight. Brows are
-    thick black dashes above them. The mouth is huge: when it opens the jaw
-    drops clean off the bottom of the head."""
+    The men and the children get the caveman one: a heavy jutting lower jaw
+    with two bottom tusks riding up over the top lip, a bulb nose and thick
+    charcoal brows. The women get the doll one: a small soft jaw, lashes, thin
+    arched brows and painted lips. Both have the same eyes - a black dot, and
+    a small one."""
     cx, hy, hr = m['cx'], m['headY'], m['headR']
+    doll = bool(spec.get('doll'))
     eyeY = hy - hr * 0.02
-    dx = hr * 0.44
+    dx = hr * (0.42 if doll else 0.44)
     shut = pose.get('eyes') == 'shut'
     wide = pose.get('eyes') == 'wide'
     angry = pose.get('angry')
@@ -186,109 +189,163 @@ def face(g, m, spec, pose):
 
     # --- ear on the near side, with an inner fold
     ex0 = cx - hr * 0.97
-    g.ellipse(ex0, hy + hr * 0.10, hr * 0.24, hr * 0.32, SKIN['base'])
-    g.ellipse(ex0 + 0.6, hy + hr * 0.10, hr * 0.12, hr * 0.18, SKIN['mid'])
+    g.ellipse(ex0, hy + hr * 0.10, hr * (0.19 if doll else 0.24), hr * (0.26 if doll else 0.32), SKIN['base'])
+    g.ellipse(ex0 + 0.6, hy + hr * 0.10, hr * 0.10, hr * 0.15, SKIN['mid'])
 
-    # --- eyes: two black dots, and nothing else
+    # --- eyes: a black dot, and nothing else in it
     look = pose.get('look', 0)
     for side in (-1, 1):
         X = cx + side * dx
         if shut:
-            # a shut eye is a heavy black curve, lashes and all
-            for i in range(7):
-                g.px(X - 3 + i, eyeY + 1 + (0.6 if 0 < i < 6 else 0), INK)
-                g.px(X - 3 + i, eyeY + 2 + (0.6 if 0 < i < 6 else 0), INK)
-            g.px(X - 4, eyeY + 0.4, INK); g.px(X + 4, eyeY + 0.4, INK)
+            for i in range(6):
+                g.px(X - 2.5 + i, eyeY + 1 + (0.5 if 0 < i < 5 else 0), INK)
+                g.px(X - 2.5 + i, eyeY + 2 + (0.5 if 0 < i < 5 else 0), INK)
         else:
-            r = 3.1 if wide else 2.3
-            g.ellipse(X + look, eyeY + 0.5, r, r * 1.12, INK)
-            if wide:                                   # blown-out panic eyes
-                g.ellipse(X + look, eyeY + 0.5, r * 1.05, r * 1.2, INK)
+            r = (1.9 if wide else 1.4) if doll else (2.2 if wide else 1.7)
+            g.ellipse(X + look, eyeY + 0.5, r, r * 1.16, INK)
+        if doll:                                       # lashes, out and up
+            for k in range(3):
+                lx = X + side * (2.4 + k * 1.1)
+                g.px(lx, eyeY - 0.6 - k * 0.7, INK)
+                g.px(lx + side * 0.6, eyeY - 1.4 - k * 0.7, INK)
 
-    # --- brows: thick black dashes, the whole expression lives here
+    # --- brows
     for side in (-1, 1):
         X = cx + side * dx
-        by = eyeY - hr * 0.46 - (1.0 if wide else 0)
-        n = int(hr * 0.48) + 1
-        for i in range(n):
-            x = X - (n - 1) / 2 + i
-            tilt = (i - n / 2) * (0.34 * side if angry else (-0.18 * side if wide else 0))
-            for k in range(2): g.px(x, by + tilt + k, bc)
+        by = eyeY - hr * (0.40 if doll else 0.46) - (1.0 if wide else 0)
+        if doll:                                       # thin, arched, plucked
+            n = int(hr * 0.40) + 1
+            for i in range(n):
+                t = i / max(1, n - 1)
+                x = X - (n - 1) / 2 + i
+                arc = -math.sin(t * math.pi) * 1.0
+                tilt = (i - n / 2) * (0.26 * side if angry else 0)
+                g.px(x, by + arc + tilt, bc)
+        else:                                          # a charcoal slab
+            n = int(hr * 0.50) + 2
+            for i in range(n):
+                x = X - (n - 1) / 2 + i
+                tilt = (i - n / 2) * (0.34 * side if angry else (-0.18 * side if wide else 0))
+                for k in range(3 if not wide else 2): g.px(x, by + tilt + k, bc)
 
-    # --- nose: a bulb, because a caveman's nose arrives before he does
-    ny = eyeY + hr * 0.24
-    g.ellipse(cx + hr * 0.04, ny, hr * 0.26, hr * 0.22, SKIN['base'])
-    g.ellipse(cx + hr * 0.14, ny + hr * 0.06, hr * 0.16, hr * 0.13, SKIN['mid'])
-    g.ellipse(cx - hr * 0.06, ny - hr * 0.06, hr * 0.10, hr * 0.08, SKIN['hi'])
-    for i in range(int(hr * 0.42)):
-        g.px(cx - hr * 0.16 + i, ny + hr * 0.22, SKIN['dark'])          # underside
-    g.px(cx + hr * 0.20, ny + hr * 0.14, SKIN['line'])                  # nostril
+    # --- nose
+    ny = eyeY + hr * (0.22 if doll else 0.24)
+    if doll:
+        g.ellipse(cx + hr * 0.03, ny, hr * 0.15, hr * 0.13, SKIN['base'])
+        g.ellipse(cx - hr * 0.04, ny - hr * 0.04, hr * 0.07, hr * 0.06, SKIN['hi'])
+        g.px(cx + hr * 0.13, ny + hr * 0.08, SKIN['mid'])
+    else:
+        g.ellipse(cx + hr * 0.04, ny, hr * 0.28, hr * 0.24, SKIN['base'])
+        g.ellipse(cx + hr * 0.15, ny + hr * 0.07, hr * 0.17, hr * 0.14, SKIN['mid'])
+        g.ellipse(cx - hr * 0.06, ny - hr * 0.07, hr * 0.11, hr * 0.09, SKIN['hi'])
+        for i in range(int(hr * 0.44)):
+            g.px(cx - hr * 0.17 + i, ny + hr * 0.24, SKIN['dark'])       # underside
+        g.px(cx + hr * 0.21, ny + hr * 0.15, SKIN['line'])               # nostril
 
     # --- mouth
     mo = pose.get('mouth', 'flat')
-    my = hy + hr * 0.78
+    my = hy + hr * (0.72 if doll else 0.78)
+
+    # The caveman jaw: a mass of chin pushed forward under the mouth, with the
+    # bottom two teeth riding up over the top lip. This is the whole species.
+    def tusks(w, top):
+        base = max(2, int(round(hr * 0.22)))
+        hgt = max(2, int(round(hr * 0.24)))
+        for side in (-1, 1):
+            tx = cx + side * w * 0.80
+            for k in range(hgt):
+                wdt = max(1, base - int(k * base / hgt))
+                for i in range(wdt):
+                    g.px(tx - wdt / 2 + i, top - k, '$' if k < hgt - 1 else '@')
+            for i in range(base): g.px(tx - base / 2 + i, top + 1, SKIN['line'])
+
+    if not doll:
+        jx, jy0 = cx + hr * 0.12, my + hr * 0.20
+        g.ellipse(jx, jy0, hr * 0.52, hr * 0.30, SKIN['base'])
+        g.ellipse(jx + hr * 0.20, jy0 + hr * 0.07, hr * 0.34, hr * 0.22, SKIN['mid'])
+        g.ellipse(jx + hr * 0.34, jy0 + hr * 0.08, hr * 0.19, hr * 0.15, SKIN['dark'])
+        g.ellipse(jx - hr * 0.20, jy0 - hr * 0.13, hr * 0.24, hr * 0.10, SKIN['hi'])
 
     def maw(w, h, drop):
         """a dropped jaw with a cavern in it: skin first, then the hole"""
         jy = my + drop
-        # the jaw itself, hand-shaded because the silhouette pass already ran
         g.ellipse(cx, jy, w + 2.4, h + 2.6, SKIN['base'])
         g.ellipse(cx + w * 0.42, jy + h * 0.30, w * 0.70, h * 0.90, SKIN['mid'])
         g.ellipse(cx + w * 0.78, jy + h * 0.34, w * 0.42, h * 0.62, SKIN['dark'])
         g.ellipse(cx - w * 0.30, jy - h * 0.55, w * 0.60, h * 0.34, SKIN['hi'])
-        # the cavern
         g.ellipse(cx, jy, w + 0.9, h + 0.9, SKIN['line'])
         g.ellipse(cx, jy, w, h, INK)
-        # top teeth in a band across the roof
-        for i in range(int(w * 1.7)):
+        for i in range(int(w * 1.7)):                                    # top teeth
             tx = cx - w * 0.85 + i
             g.px(tx, jy - h * 0.62, '$')
             g.px(tx, jy - h * 0.62 + 1, '$' if i % 3 else '@')
-        # bottom teeth, just a hint
-        for i in range(int(w * 1.1)):
-            g.px(cx - w * 0.55 + i, jy + h * 0.80, '@')
+        if doll:
+            for i in range(int(w * 1.1)):
+                g.px(cx - w * 0.55 + i, jy + h * 0.80, '@')
+        else:                                                            # the tusks
+            for i in range(int(w * 1.5)):
+                g.px(cx - w * 0.75 + i, jy + h * 0.74, '@')
+            tusks(w, jy - h * 0.10)
         g.ellipse(cx, jy + h * 0.52, w * 0.60, h * 0.34, 'E')            # tongue
         g.ellipse(cx, jy + h * 0.44, w * 0.34, h * 0.16, 'F')
         return jy
 
-    if mo == 'shout':
-        maw(hr * 0.66, hr * 0.60, hr * 0.22)
-    elif mo == 'open':
-        maw(hr * 0.48, hr * 0.40, hr * 0.10)
+    LIP = spec.get('lip', 'W')
+    if mo in ('shout', 'open'):
+        w, h, drop = (hr * 0.60, hr * 0.54, hr * 0.20) if mo == 'shout' else (hr * 0.44, hr * 0.36, hr * 0.10)
+        if doll: w, h = w * 0.72, h * 0.80
+        jy = maw(w, h, drop)
+        if doll:                                                         # painted lips round it
+            for i in range(int(w * 2.2)):
+                g.px(cx - w * 1.1 + i, jy - h - 1, LIP)
+                g.px(cx - w * 1.1 + i, jy + h + 1, LIP)
     elif mo == 'grin':
-        # ear to ear, and every tooth in it
-        w, h = hr * 0.74, hr * 0.30
-        g.ellipse(cx, my, w + 0.9, h + 0.9, SKIN['line'])
+        w, h = hr * (0.52 if doll else 0.70), hr * (0.22 if doll else 0.28)
+        g.ellipse(cx, my, w + 0.9, h + 0.9, LIP if doll else SKIN['line'])
         g.ellipse(cx, my, w, h, INK)
         for i in range(int(w * 1.9)):
             g.px(cx - w * 0.95 + i, my - h * 0.34, '$')
             g.px(cx - w * 0.95 + i, my - h * 0.34 + 1, '$')
         for i in range(0, int(w * 1.9), 3):
-            g.px(cx - w * 0.95 + i, my - h * 0.34, '@')                 # tooth gaps
+            g.px(cx - w * 0.95 + i, my - h * 0.34, '@')
             g.px(cx - w * 0.95 + i, my - h * 0.34 + 1, '@')
         g.ellipse(cx, my + h * 0.55, w * 0.58, h * 0.40, 'E')
-        for side in (-1, 1):                                            # dimples
-            g.px(cx + side * (w + 1.6), my - 1, SKIN['mid'])
+        if not doll: tusks(w, my - h * 0.2)
+    elif doll:
+        # a small painted mouth: two lobes on top, one soft curve under
+        w = hr * 0.30
+        for i in range(int(w * 2) + 1):
+            t = i / max(1, int(w * 2))
+            x = cx - w + i
+            g.px(x, my + math.sin(t * math.pi) * 1.5, LIP)
+            g.px(x, my + math.sin(t * math.pi) * 1.5 + 1, LIP)
+        for side in (-1, 1):
+            g.px(cx + side * w * 0.45, my - 1, LIP)
+            g.px(cx + side * w * 0.45, my - 2, spec.get('lipHi', 'X'))
+        g.px(cx - w * 0.3, my + 1, spec.get('lipHi', 'X'))
     else:
-        # a closed mouth is one long curved line with the corners turned up
-        w = hr * 0.56
+        # shut, but the jaw still juts: a heavy line with two teeth over it
+        w = hr * 0.52
         n = int(w * 2)
         for i in range(n + 1):
             t = i / n
             x = cx - w + i
-            dip = -math.sin(t * math.pi) * 1.1
+            dip = -math.sin(t * math.pi) * 0.9
             g.px(x, my + dip, INK)
             g.px(x, my + dip + 1, INK)
             g.px(x, my + dip + 2, SKIN['dark'])
-        for k, dy in enumerate((0, -1.2, -2.4)):                    # the corners turn up
+        for k, dy in enumerate((0, -1.2, -2.2)):
             g.px(cx - w - k, my + dy, INK); g.px(cx + w + k, my + dy, INK)
-            g.px(cx - w - k, my + dy + 1, INK); g.px(cx + w + k, my + dy + 1, INK)
-    # cheek
+        tusks(w, my - 1)
+    # cheek, and a doll gets blush on it
     g.px(cx - hr * 0.72, my - 2, SKIN['mid']); g.px(cx - hr * 0.72, my - 1, SKIN['mid'])
+    if doll:
+        for side in (-1, 1):
+            for k in range(3):
+                g.px(cx + side * hr * 0.66 - k * side * 0.9, eyeY + hr * 0.30 + (k % 2), spec.get('blush', 'X'))
 
     if spec.get('beard'):
         bc2 = spec.get('beardCol', '6')
-        # sits below the mouth and to the sides of it, never over it
         g.ellipse(cx, my + 5.4, hr * 0.50, hr * 0.40, SKIN['dark'])
         g.ellipse(cx, my + 5.0, hr * 0.46, hr * 0.36, bc2)
         g.ellipse(cx - 1, my + 4.6, hr * 0.30, hr * 0.22, '7')
@@ -480,7 +537,7 @@ ADULT = dict(w=52, h=76, headR=13, headY=19, waistY=50, shoW=29, hipW=20,
 CAST = {
   'bronk':     dict(ADULT, build='fat', shoW=32, hipW=25, headR=13.5, waistY=52, furLen=12,
                     hair='f', hair2='g', hair3='0', hairStyle='mop', stubble=True, neck=True),
-  'vela':      dict(ADULT, build='slim', female=True, w=50, shoW=23, hipW=19, headR=12.4,
+  'vela':      dict(ADULT, build='slim', female=True, doll=True, lip='W', lipHi='X', blush='X', brow='g', w=50, shoW=23, hipW=19, headR=12.4,
                     hair='A', hair2='B', hair3='z', hairStyle='curls', hairBone=True,
                     furLen=15, strap=True, neck=True, iris='u'),
   'elder':     dict(ADULT, build='slim', shoW=25, hipW=19, headR=12.4, hair='6', hair2='7',
@@ -491,14 +548,15 @@ CAST = {
                     hairStyle='spike', furLen=11, neck=True, abs=True, iris='y'),
   'villager':  dict(ADULT, build='strong', shoW=28, hipW=20, hair='g', hair2='h', hair3='f',
                     hairStyle='mop', furLen=10, neck=True),
-  'villager2': dict(ADULT, build='slim', female=True, shoW=23, hipW=19, hair='h', hair2='i',
+  'villager2': dict(ADULT, build='slim', female=True, doll=True, lip='V', lipHi='W', blush='X', brow='g', shoW=23, hipW=19, hair='h', hair2='i',
                     hair3='g', hairStyle='bun', furLen=14, strap=True, neck=True),
   'kid_a':     dict(w=34, h=50, build='kid', headR=10.4, headY=14, waistY=32, shoW=17, hipW=13,
                     armR=2.7, legR=3.1, furLen=7, brow='0', iris='j',
                     hair='z', hair2='A', hair3='y', hairStyle='spike'),
   'kid_b':     dict(w=34, h=50, build='kid', headR=10.4, headY=14, waistY=32, shoW=16, hipW=13,
-                    armR=2.7, legR=3.1, furLen=8, brow='0', iris='g',
-                    hair='g', hair2='h', hair3='f', hairStyle='bun', female=True, hairBone=True),
+                    armR=2.7, legR=3.1, furLen=8, brow='g', iris='g',
+                    hair='g', hair2='h', hair3='f', hairStyle='bun', female=True, doll=True,
+                    lip='W', lipHi='X', blush='X', hairBone=True),
 }
 
 def build(name, pose):

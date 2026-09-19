@@ -531,7 +531,7 @@ class VillageScene {
     this.zone = Game.run.zone && Game.run.zone.act === this.act ? Game.run.zone : new Zone(this.act, Game.run.seed);
     Game.run.zone = this.zone;
     this.cam = new Camera();
-    this.cam.zoom = this.cam.tzoom = VIEW;
+    this.cam.zoom = this.cam.tzoom = VIEW * 0.75;
     this.cam.setBounds(0, 0, this.zone.w * TILE, this.zone.h * TILE);
     this.t = 0; this.locked = false; this.hidden = false; this.co = null;
     this.prompt = null; this.intro = 2.2;
@@ -659,7 +659,7 @@ class VillageScene {
     this.updateAmbience(dt);
     // camera: look a little ahead of the player, and pull back when sprinting
     this.cam.lead = 0.18;
-    this.cam.zoomTo(p.sprinting ? VIEW * 0.9 : VIEW);
+    this.cam.zoomTo(VIEW * (p.sprinting ? 0.68 : 0.75));
     this.cam.update(dt);
     if (Input.pressed('Escape')) Game.pause();
     if (Input.pressed('KeyM')) this.showMap = !this.showMap;
@@ -792,29 +792,33 @@ class VillageScene {
   }
   drawHud() {
     const run = Game.run;
-    // health + stamina, bottom left, out of the way of the action
-    const x = 14, y = H - 62;
-    Gfx.sprite('icon_heart', x, y, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2 });
-    Gfx.bar(x + 24, y + 2, 180, 12, run.hp / run.maxHp, '#c2333c', { bg: '#3f0e18' });
-    Gfx.text(`${run.hp}/${run.maxHp}`, x + 114, y + 3, { color: '#fffaea', align: 'center', outline: true });
-    Gfx.sprite('icon_stamina', x + 2, y + 22, { anchor: 'tl' });
+    // ---- vitals, framed, bottom left
+    const x = 14, y = H - 82;
+    Gfx.round(x - 6, y - 6, 268, 72, 4, SKIN.ink);
+    Gfx.round(x - 4, y - 4, 264, 68, 3, '#3b3048');
+    Gfx.sprite('icon_heart', x, y + 2, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2, scale: 1.2 });
+    Gfx.bar(x + 32, y + 4, 216, 18, run.hp / run.maxHp, '#c2333c', { bg: '#3f0e18' });
+    Gfx.text(`${run.hp}/${run.maxHp}`, x + 140, y + 6, { color: '#fffaea', align: 'center', scale: 1.3, outline: true });
+    Gfx.sprite('icon_stamina', x + 2, y + 32, { anchor: 'tl', scale: 1.2 });
     const st = run.stamina / run.maxStamina;
-    Gfx.bar(x + 24, y + 24, 180, 10, st, st > 0.3 ? '#6cc95c' : '#ffa832', { bg: '#14331e' });
-    if (st <= 0.02) Gfx.text('WINDED!', x + 114, y + 24, { color: '#ef6a5e', align: 'center', outline: true });
-    // shells
-    Gfx.sprite('icon_coin', W - 108, 14, { anchor: 'tl' });
-    Gfx.text(String(run.gold), W - 86, 16, { color: '#ffe98a', scale: 1.2 });
-    // relics
+    Gfx.bar(x + 32, y + 34, 216, 16, st, st > 0.3 ? '#6cc95c' : '#ffa832', { bg: '#14331e' });
+    if (st <= 0.02) Gfx.text('WINDED!', x + 140, y + 35, { color: '#ef6a5e', align: 'center', scale: 1.3, outline: true });
+    // ---- shells
+    Gfx.round(W - 156, 10, 108, 32, 4, SKIN.ink);
+    Gfx.round(W - 154, 12, 104, 28, 3, '#3b3048');
+    Gfx.sprite('icon_coin', W - 146, 16, { anchor: 'tl', scale: 1.2 });
+    Gfx.text(String(run.gold), W - 116, 18, { color: SKIN.goldLit, scale: 1.4 });
+    // ---- relics, in gold slots
     let rx = 14;
-    for (const id of run.relics) { Relics.drawIcon(id, rx, 12); rx += 26; }
+    for (const id of run.relics) { UI.slot(rx, 10, 32, { fill: '#241c2e' }); Relics.drawIcon(id, rx + 6, 16); rx += 36; }
     // objective compass
     const goal = this.zone.entities.find(e => e instanceof ZoneGoal);
     if (goal) {
       const dx = goal.x - this.player.x, dy = goal.y - this.player.y;
       const a = Math.atan2(dy, dx), d = Math.hypot(dx, dy);
-      const cx = W - 52, cy = H - 52;
-      Gfx.circle(cx, cy, 27, '#120c16'); Gfx.circle(cx, cy, 24, '#241c2e');
-      Gfx.ring(cx, cy, 24, '#4d4a5c', 1);
+      const cx = W - 60, cy = H - 60;
+      Gfx.circle(cx, cy, 34, '#120c16'); Gfx.circle(cx, cy, 30, '#241c2e');
+      Gfx.ring(cx, cy, 30, SKIN.gold, 2);
       const ctx = Gfx.ctx;
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
       ctx.fillStyle = '#ffa832';
@@ -822,24 +826,25 @@ class VillageScene {
       ctx.fillStyle = '#7a6d8a';
       ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-1, -6); ctx.lineTo(-4, 0); ctx.lineTo(-1, 6); ctx.closePath(); ctx.fill();
       ctx.restore();
-      Gfx.text(`${Math.round(d / 32)}`, cx, cy + 30, { color: '#a79bb4', align: 'center' });
+      Gfx.text(`${Math.round(d / 32)}`, cx, cy + 36, { color: '#d6cfe0', align: 'center', scale: 1.3, outline: true });
     }
     // the objective: three kills makes a trail the raptor will follow
     {
-      const r = Game.run, ready = r.bait >= r.baitNeed, bx = 20, by = 44;
-      Gfx.rectA(bx - 8, by - 6, 208, 44, '#120c16', 0.66);
-      Gfx.rectA(bx - 8, by - 6, 3, 44, ready ? '#6cc95c' : '#ffa832', 1);
+      const r = Game.run, ready = r.bait >= r.baitNeed, bx = 24, by = 58;
+      Gfx.round(bx - 12, by - 10, 268, 58, 4, SKIN.ink);
+      Gfx.round(bx - 10, by - 8, 264, 54, 3, '#3b3048');
+      Gfx.rect(bx - 10, by - 8, 5, 54, ready ? '#6cc95c' : '#ffa832');
       Gfx.text(ready ? 'BAIT LAID' : 'MAKE RAPTOR BAIT', bx + 2, by - 2,
-        { color: ready ? '#a8e878' : '#ffe98a', scale: 1.1 });
+        { color: ready ? '#a8e878' : '#ffe98a', scale: 1.4 });
       for (let i = 0; i < r.baitNeed; i++) {
-        const gx = bx + 4 + i * 26, got = i < r.bait;
-        Gfx.sprite('icon_skull', gx + 9, by + 24, { anchor: 'c', scale: 1.1, alpha: got ? 1 : 0.22 });
-        if (got) Gfx.sprite('icon_check', gx + 15, by + 28, { anchor: 'c', scale: 0.8 });
+        const gx = bx + 2 + i * 32, got = i < r.bait;
+        Gfx.sprite('icon_skull', gx + 11, by + 30, { anchor: 'c', scale: 1.4, alpha: got ? 1 : 0.22 });
+        if (got) Gfx.sprite('icon_check', gx + 19, by + 34, { anchor: 'c', scale: 1 });
       }
       Gfx.text(ready ? 'head for the gate' : `${r.bait} / ${r.baitNeed} beasts down`,
-        bx + 88, by + 18, { color: '#a79bb4', scale: 1 });
+        bx + 108, by + 24, { color: '#d6cfe0', scale: 1.2 });
     }
-    if (this.hidden) Gfx.text('HIDDEN', W / 2, 62, { color: '#86e8d2', align: 'center', scale: 1.2, outline: true });
+    if (this.hidden) Gfx.text('HIDDEN', W / 2, 62, { color: '#86e8d2', align: 'center', scale: 1.6, outline: true, outlineWidth: 2 });
     // zone banner on arrival
     if (this.intro > 0) {
       const k = clamp(this.intro / 2.2, 0, 1);
@@ -852,8 +857,8 @@ class VillageScene {
     }
     if (this.showMap) this.drawMinimap();
     if (Input.touch) this.drawTouchControls();
-    else Gfx.text('WASD to move  -  SHIFT to run  -  SPACE to dodge  -  E to interact  -  M for the map', W / 2, H - 22, { color: '#7a6d8a', align: 'center' });
-    UI.iconButton(W - 40, 12, 28, 26, 'icon_menu', () => Game.pause(), { tip: 'Menu (Esc)' });
+    else Gfx.text('WASD move   SHIFT run   SPACE dodge   E interact   M map', W / 2, H - 20, { color: '#9391a6', align: 'center', scale: 1.2, outline: true });
+    UI.iconButton(W - 46, 10, 36, 32, 'icon_menu', () => Game.pause(), { tip: 'Menu (Esc)', scale: 1.2 });
   }
   drawTouchControls() {
     const base = { x: 110, y: H - 110 };

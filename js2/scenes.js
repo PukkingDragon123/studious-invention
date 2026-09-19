@@ -202,44 +202,67 @@ class GameOverScene {
 class PauseOverlay {
   constructor(settingsOnly) { this.settingsOnly = settingsOnly; this.mode = settingsOnly ? 'settings' : 'menu'; this.confirm = false; }
   update() { if (Input.pressed('Escape')) { if (this.mode === 'settings' && !this.settingsOnly) this.mode = 'menu'; else Game.overlay = null; } }
-  slider(x, y, w, label, val, min, max, step, fmt, onChange) {
-    Gfx.text(label, x, y, { color: '#e8dfc6' });
-    Gfx.text(fmt(val), x + w, y, { color: '#ffe98a', align: 'right' });
-    const sy = y + 16;
-    Gfx.rect(x, sy, w, 12, '#120c16');
-    Gfx.rect(x + 1, sy + 1, Math.round((w - 2) * (val - min) / (max - min)), 10, '#a03a68');
-    const kx = x + (w - 2) * (val - min) / (max - min);
-    Gfx.circle(kx, sy + 6, 8, '#ffe98a');
-    UI.hit(x, sy - 8, w, 28, () => { let v = min + clamp((Input.mx - x) / w, 0, 1) * (max - min); onChange(+(Math.round(v / step) * step).toFixed(3)); });
-    return sy + 26;
+  // a labelled row of blocks with an arrow at each end, off the reference sheet
+  slider(x, y, w, label, val, min, max, step, fmt, onChange, o = {}) {
+    Gfx.text(label, x + 2, y + 1, { color: SKIN.faceDark, scale: 1.4 });
+    Gfx.text(label, x + 2, y, { color: SKIN.text, scale: 1.4 });
+    Gfx.text(fmt(val), x + w, y, { color: SKIN.barDark, align: 'right', scale: 1.4 });
+    const sy = y + 22, ah = 22;
+    const step1 = d => onChange(+clamp(Math.round((val + d * step) / step) * step, min, max).toFixed(3));
+    UI.arrow(x, sy - 2, ah, 'left', () => step1(-1), { disabled: val <= min + 1e-6 });
+    UI.arrow(x + w - ah, sy - 2, ah, 'right', () => step1(1), { disabled: val >= max - 1e-6 });
+    const bx = x + ah + 10, bw = w - ah * 2 - 20;
+    UI.segbar(bx, sy + 3, bw, 14, (val - min) / (max - min), { segments: o.segments || 14, col: o.col, colLit: o.colLit });
+    UI.hit(bx - 4, sy - 4, bw + 8, 28, () => {
+      const v = min + clamp((Input.mx - bx) / bw, 0, 1) * (max - min);
+      onChange(+(Math.round(v / step) * step).toFixed(3));
+    });
+    return sy + 34;
   }
   draw() {
-    Gfx.rectA(0, 0, W, H, '#120c16', 0.78);
+    Gfx.rectA(0, 0, W, H, '#120c16', 0.7);
     if (this.mode === 'menu') {
-      Gfx.panel(W / 2 - 150, 90, 300, 350, { title: 'PAUSED', fill: '#241c2e' });
-      let y = 120;
-      UI.button(W / 2 - 120, y, 240, 44, 'RESUME', () => Game.overlay = null, { scale: 1.2 }); y += 54;
-      UI.button(W / 2 - 120, y, 240, 44, 'SETTINGS', () => this.mode = 'settings', { scale: 1.2 }); y += 54;
-      UI.button(W / 2 - 120, y, 240, 44, 'HOW TO PLAY', () => Game.overlay = new HowToOverlay(() => Game.overlay = new PauseOverlay()), { scale: 1.2 }); y += 54;
-      if (Game.run) { UI.button(W / 2 - 120, y, 240, 44, 'YOUR DECK', () => Game.overlay = new DeckOverlay(Game.run.deck, 'YOUR DECK', { onClose: () => Game.overlay = new PauseOverlay() }), { scale: 1.2 }); y += 54; }
-      if (!this.confirm) UI.button(W / 2 - 120, y, 240, 44, 'ABANDON', () => this.confirm = true, { color: '#ef6a5e', scale: 1.2 });
+      const PW = 340, PH = 356;
+      const r = UI.window(W / 2 - PW / 2, 56, PW, PH, 'PAUSED', { onClose: () => Game.overlay = null });
+      let y = r.y + 8;
+      const B = (label, cb, o) => { UI.wbutton(r.x + 14, y, r.w - 28, 46, label, cb, o); y += 58; };
+      B('RESUME', () => Game.overlay = null);
+      B('SETTINGS', () => this.mode = 'settings');
+      B('HOW TO PLAY', () => Game.overlay = new HowToOverlay(() => Game.overlay = new PauseOverlay()));
+      if (Game.run) B('YOUR DECK', () => Game.overlay = new DeckOverlay(Game.run.deck, 'YOUR DECK', { onClose: () => Game.overlay = new PauseOverlay() }));
+      if (!this.confirm) B('ABANDON', () => this.confirm = true, { danger: true });
       else {
-        Gfx.text('Give up on them?', W / 2, y - 14, { color: '#ef6a5e', align: 'center' });
-        UI.button(W / 2 - 120, y, 115, 44, 'YES', () => { Game.clearSave(); Game.run = null; Game.overlay = null; Game.go(new TitleScene()); }, { color: '#ef6a5e' });
-        UI.button(W / 2 + 5, y, 115, 44, 'NO', () => this.confirm = false);
+        Gfx.text('Give up on them?', W / 2, y - 16, { color: SKIN.redDark, align: 'center', scale: 1.3 });
+        UI.wbutton(r.x + 14, y, (r.w - 36) / 2, 46, 'YES', () => { Game.clearSave(); Game.run = null; Game.overlay = null; Game.go(new TitleScene()); }, { danger: true });
+        UI.wbutton(r.x + 22 + (r.w - 36) / 2, y, (r.w - 36) / 2, 46, 'NO', () => this.confirm = false);
       }
     } else {
-      Gfx.panel(W / 2 - 230, 60, 460, 400, { title: 'SETTINGS', fill: '#241c2e' });
-      let y = 92; const x = W / 2 - 200, w = 400;
-      y = this.slider(x, y, w, 'Music', Settings.music, 0, 1, 0.05, v => Math.round(v * 100) + '%', v => { Settings.music = v; AudioSys.setMusicVolume(v); Game.saveSettings(); }) + 6;
-      y = this.slider(x, y, w, 'Sound', Settings.sfx, 0, 1, 0.05, v => Math.round(v * 100) + '%', v => { Settings.sfx = v; AudioSys.setSfxVolume(v); Game.saveSettings(); AudioSys.sfx('sick'); }) + 6;
-      y = this.slider(x, y, w, 'Note speed', Settings.noteSpeed, 0.7, 2.2, 0.05, v => v.toFixed(2) + 's', v => { Settings.noteSpeed = v; Game.saveSettings(); }) + 6;
-      y = this.slider(x, y, w, 'Timing offset', Settings.offset, -0.15, 0.15, 0.005, v => Math.round(v * 1000) + 'ms', v => { Settings.offset = v; Game.saveSettings(); }) + 10;
-      Gfx.text('Timing windows', x, y, { color: '#e8dfc6' }); y += 18;
-      ['easy', 'normal', 'hard'].forEach((d, i) => UI.button(x + i * 136, y, 128, 36, d.toUpperCase(), () => { Settings.difficulty = d; Game.saveSettings(); }, { fill: Settings.difficulty === d ? '#a03a68' : undefined, border: Settings.difficulty === d ? '#ffffff' : undefined }));
-      y += 50;
-      Gfx.textWrap('Notes landing late? Lower the offset. Early? Raise it. Easy windows are much more forgiving.', x, y, w, { color: '#7a6d8a' });
-      UI.button(W / 2 - 80, 410, 160, 40, 'BACK', () => { if (this.settingsOnly) Game.overlay = null; else this.mode = 'menu'; }, { scale: 1.1 });
+      const PW = 520, PH = 456;
+      const r = UI.window(W / 2 - PW / 2, 56, PW, PH, 'SETTINGS',
+        { onClose: () => { if (this.settingsOnly) Game.overlay = null; else this.mode = 'menu'; } });
+      let y = r.y + 6; const x = r.x + 14, w = r.w - 28;
+      y = this.slider(x, y, w, 'MUSIC', Settings.music, 0, 1, 0.05, v => Math.round(v * 100) + '%',
+        v => { Settings.music = v; AudioSys.setMusicVolume(v); Game.saveSettings(); }, { segments: 16 });
+      y = this.slider(x, y, w, 'SOUND', Settings.sfx, 0, 1, 0.05, v => Math.round(v * 100) + '%',
+        v => { Settings.sfx = v; AudioSys.setSfxVolume(v); Game.saveSettings(); AudioSys.sfx('sick'); }, { segments: 16 });
+      y = this.slider(x, y, w, 'NOTE SPEED', Settings.noteSpeed, 0.7, 2.2, 0.05, v => v.toFixed(2) + 's',
+        v => { Settings.noteSpeed = v; Game.saveSettings(); }, { col: '#a03a68', colLit: '#e06a9b', segments: 12 });
+      y = this.slider(x, y, w, 'TIMING OFFSET', Settings.offset, -0.15, 0.15, 0.005, v => Math.round(v * 1000) + 'ms',
+        v => { Settings.offset = v; Game.saveSettings(); }, { col: '#3570c0', colLit: '#6aa9ee', segments: 12 });
+      y += 4;
+      Gfx.text('TIMING WINDOWS', x + 2, y, { color: SKIN.text, scale: 1.4 }); y += 22;
+      ['easy', 'normal', 'hard'].forEach((d, i) => {
+        const bw = (w - 16) / 3;
+        const on = Settings.difficulty === d;
+        UI.wbutton(x + i * (bw + 8), y, bw, 40, d.toUpperCase(),
+          () => { Settings.difficulty = d; Game.saveSettings(); }, { scale: 1.3, key: 'diff' + d });
+        if (on) Gfx.outlineRound(x + i * (bw + 8) - 2, y - 2, bw + 4, 44, 4, SKIN.goldLit);
+      });
+      y += 52;
+      UI.checkbox(x + 2, y, 22, Settings.shake !== false, () => { Settings.shake = Settings.shake === false; Game.saveSettings(); }, { label: 'SCREEN SHAKE' });
+      y += 30;
+      Gfx.textWrap('Notes landing late? Lower the offset. Early? Raise it.', x + 2, y, w - 210, { color: SKIN.textDim, lineHeight: 14 });
+      UI.wbutton(W / 2 - 90, 56 + PH - 56, 180, 44, 'BACK', () => { if (this.settingsOnly) Game.overlay = null; else this.mode = 'menu'; });
     }
   }
 }
@@ -249,8 +272,8 @@ class HowToOverlay {
   update() { if (Input.pressed('Escape')) this.close(); }
   close() { Game.overlay = null; if (this.onClose) this.onClose(); }
   draw() {
-    Gfx.rectA(0, 0, W, H, '#120c16', 0.85);
-    Gfx.panel(70, 40, W - 140, H - 130, { title: 'HOW TO PLAY', fill: '#241c2e' });
+    Gfx.rectA(0, 0, W, H, '#120c16', 0.8);
+    const r = UI.window(60, 30, W - 120, H - 60, 'HOW TO PLAY', { onClose: () => this.close() });
     const pages = [
       ['{y}THE STORY{/}', 'A flaming raptor named BLAZE spent six years chained in your kitchen as the family stove. This morning he snapped the chain and took your wife and children. You are not fast. You are not fit. You are, however, extremely loud.', '',
         '{y}THE VALLEY{/}', 'Walk the ruins with the arrows or WASD. SHIFT runs, and running burns the stamina you do not have. Rest at campfires. Hide in bushes. Beasts patrol with a cone of vision: stay out of it, or answer for it.'],
@@ -261,12 +284,16 @@ class HowToOverlay {
         '{y}HYPE{/}', 'Landed notes and rally cards fill the Hype column. At full, {p}ENCORE{/} unleashes a free solo that hits every beast on the field for every note you land.', '',
         '{y}THE MAMMOTH{/}', 'The shop walks. A mammoth loaded with other people\'s belongings wanders every zone. Find it, trade shells, move on.'],
     ];
-    let y = 60;
-    for (const line of pages[this.page]) { if (!line) { y += 8; continue; } y += Gfx.textWrap(line, 96, y, W - 192, { scale: 1.1, lineHeight: 15 }) + 4; }
-    UI.button(100, H - 80, 120, 40, 'PREV', () => this.page = Math.max(0, this.page - 1), { disabled: this.page === 0 });
-    UI.button(W / 2 - 60, H - 80, 120, 40, 'CLOSE', () => this.close());
-    UI.button(W - 220, H - 80, 120, 40, 'NEXT', () => this.page = Math.min(pages.length - 1, this.page + 1), { disabled: this.page === pages.length - 1 });
-    Gfx.text(`${this.page + 1} / ${pages.length}`, W / 2, H - 96, { color: '#7a6d8a', align: 'center' });
+    let y = r.y + 10;
+    for (const line of pages[this.page]) {
+      if (!line) { y += 10; continue; }
+      y += Gfx.textWrap(line, r.x + 16, y, r.w - 32, { scale: 1.25, lineHeight: 18, color: SKIN.text, onLight: true }) + 5;
+    }
+    const by = r.y + r.h - 46;
+    UI.arrow(r.x + 16, by, 40, 'left', () => this.page = Math.max(0, this.page - 1), { disabled: this.page === 0 });
+    UI.arrow(r.x + r.w - 56, by, 40, 'right', () => this.page = Math.min(pages.length - 1, this.page + 1), { disabled: this.page === pages.length - 1 });
+    UI.wbutton(W / 2 - 80, by - 2, 160, 42, 'CLOSE', () => this.close());
+    Gfx.text(`${this.page + 1} / ${pages.length}`, W / 2, by - 24, { color: SKIN.textDim, align: 'center', scale: 1.2 });
   }
 }
 
@@ -279,23 +306,24 @@ class DeckOverlay {
   }
   close() { Game.overlay = null; if (this.o.onClose) this.o.onClose(); }
   draw() {
-    Gfx.rectA(0, 0, W, H, '#120c16', 0.88);
-    Gfx.text(this.title, W / 2, 16, { color: '#ffe98a', align: 'center', scale: 2.2 });
-    Gfx.text(`${this.cards.length} riffs${this.o.onPick ? '  -  pick one' : ''}`, W / 2, 46, { color: '#7a6d8a', align: 'center' });
-    const ctx = Gfx.ctx; ctx.save(); ctx.beginPath(); ctx.rect(0, 66, W, 400); ctx.clip();
+    Gfx.rectA(0, 0, W, H, '#120c16', 0.8);
+    const r = UI.window(24, 20, W - 48, H - 40, this.title, { onClose: () => this.close() });
+    Gfx.text(`${this.cards.length} riffs${this.o.onPick ? '  -  pick one' : ''}`, W / 2, r.y + 2, { color: SKIN.textDim, align: 'center', scale: 1.2 });
+    const TOP = r.y + 22, BOT = r.y + r.h - 54;
+    const ctx = Gfx.ctx; ctx.save(); ctx.beginPath(); ctx.rect(r.x, TOP, r.w, BOT - TOP); ctx.clip();
     const sorted = this.cards.slice().sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name));
     let zoom = null;
     for (let i = 0; i < sorted.length; i++) {
       const c = sorted[i];
-      const x = 60 + (i % 6) * (CARD_W + 26), y = 72 + Math.floor(i / 6) * (CARD_H + 18) - this.scroll;
-      if (y > H || y + CARD_H < 60) continue;
-      const hov = UI.hovered(x, Math.max(66, y), CARD_W, Math.min(CARD_H, 460 - y));
+      const x = r.x + 18 + (i % 6) * (CARD_W + 24), y = TOP + 6 + Math.floor(i / 6) * (CARD_H + 18) - this.scroll;
+      if (y > BOT || y + CARD_H < TOP) continue;
+      const hov = UI.hovered(x, Math.max(TOP, y), CARD_W, Math.min(CARD_H, BOT - y));
       Cards.draw(c, x, y, { hover: hov && !!this.o.onPick });
       if (hov) zoom = { c, x: x + CARD_W / 2 + (x < W / 2 ? 190 : -190), y: clamp(y + CARD_H / 2, 150, 380) };
       if (this.o.onPick) UI.hit(x, y, CARD_W, CARD_H, () => this.o.onPick(c));
     }
     ctx.restore();
     if (zoom) Cards.zoom(zoom.c, zoom.x, zoom.y);
-    UI.button(W / 2 - 80, H - 58, 160, 42, 'CLOSE', () => this.close(), { scale: 1.1 });
+    UI.wbutton(W / 2 - 90, r.y + r.h - 48, 180, 44, 'CLOSE', () => this.close());
   }
 }

@@ -176,7 +176,10 @@ const Juice = {
   shakeX: 0, shakeY: 0, _mag: 0, _t: 0, _dur: 0,
   flashes: [], hitstop: 0, vignette: 0, chroma: 0, zoomPunch: 0, bars: 0, barsTarget: 0,
   speed: 0, pows: [],
-  shake(mag, t = 0.25) { this._mag = Math.max(this._mag, mag); this._t = Math.max(this._t, t); this._dur = Math.max(this._dur, t); },
+  shake(mag, t = 0.25) {
+    if (typeof Settings !== 'undefined' && Settings.shake === false) return;
+    this._mag = Math.max(this._mag, mag); this._t = Math.max(this._t, t); this._dur = Math.max(this._dur, t);
+  },
   flash(color = '#fff', a = 0.5, decay = 3) { this.flashes.push({ color, a, decay }); },
   stop(t = 0.06) { this.hitstop = Math.max(this.hitstop, t); },
   punch(amount = 0.06) { this.zoomPunch = Math.max(this.zoomPunch, amount); },

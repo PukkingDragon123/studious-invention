@@ -354,7 +354,7 @@ const Cards = {
     // ---- the rules, chalked onto the rough part of the face
     const ty = y + ah + 51;
     ctx.save(); ctx.beginPath(); ctx.rect(x + 5, ty - 2, w - 10, h - (ty - y) - 8); ctx.clip();
-    Gfx.textWrap(this.desc(c, o.combat), x + 9, ty, w - 18, { color: '#241c2e', lineHeight: 11 });
+    Gfx.textWrap(this.desc(c, o.combat), x + 9, ty, w - 18, { color: '#241c2e', lineHeight: 11, onLight: true });
     Gfx.textWrap(this.desc(c, o.combat), x + 9, ty - 1, w - 18, { color: '#fffaea', lineHeight: 11 });
     ctx.restore();
     if (c.def.exhaust && !c.v.noExhaust) Gfx.sprite('icon_fire', x + w - 16, y + h - 20, { anchor: 'c', scale: 0.8, tint: '#ffa832', tintAmount: 0.5 });

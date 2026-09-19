@@ -780,16 +780,16 @@ const World = {
       Gfx.glow(fx2, GY - 44, 40 + beat * 26, i % 2 ? '#ffe98a' : '#86e8d2', 0.34);
     }
     for (const rx of [SX - 210, SX + 210]) {
-      Gfx.rect(rx - 6, GY - 152, 12, 152, '#3a2415');
-      Gfx.rect(rx - 9, GY - 156, 18, 10, '#5c3a20');
+      Gfx.rect(rx - 6, GY - 134, 12, 134, '#3a2415');
+      Gfx.rect(rx - 9, GY - 138, 18, 10, '#5c3a20');
       for (let i = 0; i < 3; i++) {
-        Gfx.round(rx - 12, GY - 136 + i * 30, 24, 18, 6, '#241c2e');
-        Gfx.circle(rx, GY - 126 + i * 30, 6, i === 1 ? '#86e8d2' : '#ffe98a');
-        Gfx.glow(rx, GY - 126 + i * 30, 60 + beat * 40, i === 1 ? '#86e8d2' : '#ffe98a', 0.35);
+        Gfx.round(rx - 12, GY - 118 + i * 28, 24, 17, 6, '#241c2e');
+        Gfx.circle(rx, GY - 109 + i * 28, 6, i === 1 ? '#86e8d2' : '#ffe98a');
+        Gfx.glow(rx, GY - 109 + i * 28, 60 + beat * 40, i === 1 ? '#86e8d2' : '#ffe98a', 0.35);
       }
     }
-    Gfx.rect(SX - 216, GY - 162, 432, 12, '#3a2415');
-    Gfx.rect(SX - 216, GY - 162, 432, 4, '#5c3a20');
+    Gfx.rect(SX - 216, GY - 128, 432, 11, '#3a2415');
+    Gfx.rect(SX - 216, GY - 128, 432, 4, '#5c3a20');
     // the pyro: a wall of cartoon flame across the front of the stage
     World.pyro(t, SX, beat);
     // smoke rolling across the stage
@@ -824,6 +824,16 @@ const World = {
     }
     Gfx.rectA(L, GY - 300, R - L, 400, '#e06a1b', 0.05);
     Gfx.glow(SX, GY - 90, 420, '#ffa832', 0.10 + beat * 0.08);
+    // the dream wash: slow coloured light sliding over everything, and soft edges
+    for (let i = 0; i < 3; i++) {
+      const wx = SX + Math.sin(t * (0.21 + i * 0.07) + i * 2.1) * 320;
+      Gfx.glow(wx, GY - 150 + Math.cos(t * 0.3 + i) * 50, 300,
+        ['#b177e6', '#86e8d2', '#ffb0cf'][i], 0.07);
+    }
+    { const ctx = Gfx.ctx;
+      const g = ctx.createRadialGradient(SX, GY - 120, 120, SX, GY - 120, 460);
+      g.addColorStop(0, 'rgba(124,62,178,0)'); g.addColorStop(1, 'rgba(40,16,64,0.42)');
+      ctx.fillStyle = g; ctx.fillRect(L, -420, R - L, GY + 440); }
     if (beat > 0.4) Gfx.rectA(L, -420, R - L, GY + 420, '#ffe98a', (beat - 0.4) * 0.10);
   },
 

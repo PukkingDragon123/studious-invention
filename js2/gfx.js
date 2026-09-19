@@ -320,7 +320,10 @@ const Gfx = {
   // inline colour tags: {y}gold{/} {g}green{/} {r}red{/} {c}cyan{/} {p}pink{/} {b}blue{/} {o}orange{/} {w}white{/} {d}dim{/}
   rich(str, x, y, o = {}) {
     const scale = o.scale || 1;
-    const cols = { y: '#ffe98a', g: '#a8e878', r: '#ef6a5e', c: '#86e8d2', o: '#ffa832', w: '#ffffff', p: '#ffb0cf', b: '#6aa9ee', d: '#7a6d8a', s: '#bdbccd' };
+    // two tag palettes: one for dark backgrounds, one for the parchment panels
+    const cols = o.onLight
+      ? { y: '#7d1d2b', g: '#27632f', r: '#c2333c', c: '#18706a', o: '#9c3510', w: '#14331e', p: '#a03a68', b: '#1d3d72', d: '#574a66', s: '#3b3048' }
+      : { y: '#ffe98a', g: '#a8e878', r: '#ef6a5e', c: '#86e8d2', o: '#ffa832', w: '#ffffff', p: '#ffb0cf', b: '#6aa9ee', d: '#7a6d8a', s: '#bdbccd' };
     const base = o.color || '#e8dfc6';
     const segs = []; let re = /\{([^}]*)\}/g, last = 0, m, col = base;
     while ((m = re.exec(str))) {
@@ -400,6 +403,19 @@ const Input = {
 // ---------------------------------------------------------------------------
 // Immediate-mode UI
 // ---------------------------------------------------------------------------
+// The look of every window in the game: dark ink outline, parchment face,
+// a green title bar with a close box, and buttons that are chunky enough to
+// hit with a thumb.
+const SKIN = {
+  ink: '#120c16', inkSoft: '#241c2e',
+  face: '#e8dfc6', faceMid: '#c4b89a', faceDark: '#8a7f68', faceLit: '#fffaea',
+  bar: '#3f9a45', barDark: '#27632f', barLit: '#6cc95c', barInk: '#14331e',
+  btn: '#6cc95c', btnLit: '#a8e878', btnDark: '#27632f', btnFace: '#3f9a45',
+  gold: '#e0b93a', goldLit: '#ffe98a', goldDark: '#6b4a10',
+  red: '#ef6a5e', redDark: '#7d1d2b',
+  text: '#14331e', textLit: '#fffaea', textDim: '#574a66',
+};
+
 const UI = {
   items: [], tips: [], hoverAny: false, locked: false, hot: new Map(),
   begin() { this.items.length = 0; this.tips.length = 0; this.hoverAny = false; },
@@ -447,6 +463,140 @@ const UI = {
     this.items.push({ x, y, w, h, cb, disabled: this.locked });
     if (hov && o.tip) this.tooltip(x, y + h + 4, o.tip);
     return hov;
+  },
+  // ------------------------------------------------------------- windows
+  // A window: ink border, parchment face, a green title bar with the name
+  // carved into it and a close box on the right. Returns the inner rect.
+  window(x, y, w, h, title, o = {}) {
+    x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
+    const BAR = title ? 26 : 0;
+    if (o.shadow !== false) Gfx.rectA(x + 6, y + 8, w, h, '#000', 0.45);
+    Gfx.round(x, y, w, h, 5, SKIN.ink);                       // the outer ink line
+    Gfx.round(x + 2, y + 2, w - 4, h - 4, 4, SKIN.faceDark);  // a bevel under it
+    Gfx.round(x + 3, y + 3, w - 6, h - 6, 4, SKIN.face);
+    Gfx.rectA(x + 5, y + 4 + BAR, w - 10, 2, SKIN.faceLit, 0.8);
+    Gfx.rectA(x + 5, y + h - 7, w - 10, 3, SKIN.faceMid, 0.9);
+    Gfx.rectA(x + 4, y + 5 + BAR, 2, h - 12 - BAR, SKIN.faceLit, 0.5);
+    Gfx.rectA(x + w - 6, y + 6 + BAR, 2, h - 13 - BAR, SKIN.faceMid, 0.7);
+    if (title) {
+      Gfx.round(x + 3, y + 3, w - 6, BAR, 4, SKIN.barDark);
+      Gfx.round(x + 4, y + 4, w - 8, BAR - 3, 3, SKIN.bar);
+      Gfx.rectA(x + 6, y + 5, w - 12, 2, SKIN.barLit, 0.9);
+      Gfx.rect(x + 3, y + 3 + BAR, w - 6, 2, SKIN.ink);
+      Gfx.text(title, x + w / 2, y + 8, { color: SKIN.barInk, align: 'center', scale: o.titleScale || 1.4 });
+      Gfx.text(title, x + w / 2, y + 7, { color: SKIN.faceLit, align: 'center', scale: o.titleScale || 1.4 });
+      if (o.onClose) {
+        const bx = x + w - 24, by = y + 5;
+        const hov = this.hit(bx - 2, by - 2, 22, 22, o.onClose);
+        Gfx.round(bx, by, 17, 17, 3, SKIN.ink);
+        Gfx.round(bx + 1, by + 1, 15, 15, 2, hov ? SKIN.red : SKIN.faceMid);
+        for (let i = 0; i < 9; i++) {
+          Gfx.rect(bx + 4 + i, by + 4 + i, 2, 2, SKIN.ink);
+          Gfx.rect(bx + 12 - i, by + 4 + i, 2, 2, SKIN.ink);
+        }
+      }
+    }
+    return { x: x + 8, y: y + 6 + BAR + (title ? 4 : 0), w: w - 16, h: h - 14 - BAR };
+  },
+  // The chunky green button off the reference sheet: lit top, dark skirt, and
+  // it sinks when you press it.
+  wbutton(x, y, w, h, label, cb, o = {}) {
+    x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
+    const key = o.key || (label + x + ',' + y);
+    const hov = !this.locked && !o.disabled && this.hovered(x, y, w, h);
+    if (hov) this.hoverAny = true;
+    const k = this.anim(key, hov ? 1 : 0, 18);
+    const down = hov && Input.down;
+    const dy = down ? 3 : 0;
+    const face = o.disabled ? '#7a6d8a' : (o.danger ? SKIN.red : (k > 0.4 ? SKIN.btn : SKIN.btnFace));
+    const lit = o.disabled ? '#9391a6' : (o.danger ? '#ffb0cf' : SKIN.btnLit);
+    const dark = o.disabled ? '#574a66' : (o.danger ? SKIN.redDark : SKIN.btnDark);
+    Gfx.round(x, y + 4, w, h - 2, 4, SKIN.ink);               // the skirt
+    Gfx.round(x, y + dy, w, h, 4, SKIN.ink);
+    Gfx.round(x + 1, y + 1 + dy, w - 2, h - 2, 3, dark);
+    Gfx.round(x + 2, y + 2 + dy, w - 4, h - 5, 3, face);
+    Gfx.rect(x + 3, y + 3 + dy, w - 6, 2, lit);
+    const scale = o.scale || 1.5;
+    const ty = y + dy + Math.round((h - Gfx.fontOf(o.font).gh * scale) / 2) - 1;
+    if (o.icon) Gfx.sprite(o.icon, x + 16, y + dy + h / 2, { anchor: 'c', scale: o.iconScale || 1.4 });
+    Gfx.text(label, x + w / 2 + (o.icon ? 10 : 0), ty + 1, { color: SKIN.ink, align: 'center', scale, font: o.font });
+    Gfx.text(label, x + w / 2 + (o.icon ? 10 : 0), ty, { color: o.disabled ? '#d6cfe0' : SKIN.textLit, align: 'center', scale, font: o.font });
+    this.items.push({ x, y, w, h: h + 4, cb, disabled: o.disabled || this.locked });
+    return hov;
+  },
+  // A value drawn as a row of blocks, the way the reference sheet does volume.
+  segbar(x, y, w, h, frac, o = {}) {
+    const n = o.segments || 14, gap = 2;
+    const sw = Math.floor((w - gap * (n - 1)) / n);
+    const on = Math.round(clamp(frac, 0, 1) * n);
+    Gfx.round(x - 3, y - 3, n * (sw + gap) - gap + 6, h + 6, 3, SKIN.ink);
+    Gfx.round(x - 2, y - 2, n * (sw + gap) - gap + 4, h + 4, 2, SKIN.faceMid);
+    for (let i = 0; i < n; i++) {
+      const bx = x + i * (sw + gap);
+      Gfx.rect(bx, y, sw, h, i < on ? (o.col || SKIN.bar) : SKIN.faceDark);
+      Gfx.rect(bx, y, sw, 2, i < on ? (o.colLit || SKIN.barLit) : '#9391a6');
+    }
+    return n * (sw + gap) - gap;
+  },
+  checkbox(x, y, size, on, cb, o = {}) {
+    const hov = this.hit(x, y, size, size, cb);
+    Gfx.round(x, y, size, size, 3, SKIN.ink);
+    Gfx.round(x + 2, y + 2, size - 4, size - 4, 2, on ? SKIN.bar : SKIN.faceMid);
+    if (on) { Gfx.rect(x + 4, y + 4, size - 8, 2, SKIN.barLit); }
+    if (hov) Gfx.outlineRound(x - 1, y - 1, size + 2, size + 2, 3, SKIN.goldLit);
+    if (o.label) Gfx.text(o.label, x + size + 10, y + (size - Gfx.fontOf().gh * 1.4) / 2, { color: SKIN.text, scale: 1.4 });
+    return hov;
+  },
+  // A big green triangle, for paging and for anything that needs an arrow.
+  arrow(x, y, size, dir, cb, o = {}) {
+    const hov = this.hit(x, y, size, size, cb, { disabled: o.disabled });
+    const ctx = Gfx.ctx;
+    const pts = { left: [[1, 0.5], [0, 0.5], [0.62, 0.06], [0.62, 0.94]],
+                  right: [[0, 0.5], [1, 0.5], [0.38, 0.06], [0.38, 0.94]],
+                  up: [[0.5, 1], [0.5, 0], [0.06, 0.62], [0.94, 0.62]],
+                  down: [[0.5, 0], [0.5, 1], [0.06, 0.38], [0.94, 0.38]] }[dir] || [];
+    const tri = (ox, oy, col) => {
+      ctx.beginPath();
+      const p = dir === 'left' ? [[0.08, 0.5], [0.86, 0.06], [0.86, 0.94]]
+        : dir === 'right' ? [[0.92, 0.5], [0.14, 0.06], [0.14, 0.94]]
+          : dir === 'up' ? [[0.5, 0.08], [0.06, 0.86], [0.94, 0.86]]
+            : [[0.5, 0.92], [0.06, 0.14], [0.94, 0.14]];
+      p.forEach(([px, py], i) => (i ? ctx.lineTo(x + ox + px * size, y + oy + py * size)
+        : ctx.moveTo(x + ox + px * size, y + oy + py * size)));
+      ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+    };
+    tri(0, 2, SKIN.ink);
+    tri(0, 0, o.disabled ? '#7a6d8a' : (hov ? SKIN.btnLit : SKIN.bar));
+    tri(1, 2, o.disabled ? '#9391a6' : SKIN.barLit);
+    tri(1, 3, o.disabled ? '#7a6d8a' : (hov ? SKIN.btnLit : SKIN.bar));
+    return hov;
+  },
+  dropdown(x, y, w, h, value, cb) {
+    const hov = this.hit(x, y, w, h, cb);
+    Gfx.round(x, y, w, h, 3, SKIN.ink);
+    Gfx.round(x + 2, y + 2, w - 4, h - 4, 2, SKIN.faceMid);
+    Gfx.rect(x + 3, y + 3, w - 6, 2, SKIN.faceLit);
+    Gfx.text(value, x + 10, y + (h - Gfx.fontOf().gh * 1.4) / 2, { color: SKIN.text, scale: 1.4 });
+    this.arrow(x + w - h + 2, y + 2, h - 4, 'down', cb, {});
+    return hov;
+  },
+  // The gold item slot off the second reference: ornate corners, sunken face.
+  slot(x, y, size, o = {}) {
+    Gfx.round(x, y, size, size, 4, SKIN.ink);
+    Gfx.round(x + 1, y + 1, size - 2, size - 2, 4, o.rare ? SKIN.goldLit : SKIN.gold);
+    Gfx.round(x + 2, y + 2, size - 4, size - 4, 3, SKIN.goldDark);
+    Gfx.round(x + 4, y + 4, size - 8, size - 8, 3, o.fill || '#5c3a20');
+    Gfx.rectA(x + 5, y + 5, size - 10, 2, '#85562f', 0.8);
+    Gfx.rectA(x + 5, y + size - 8, size - 10, 3, '#3a2415', 0.7);
+    for (const [cx2, cy2, fx, fy] of [[4, 4, 1, 1], [size - 5, 4, -1, 1], [4, size - 5, 1, -1], [size - 5, size - 5, -1, -1]]) {
+      Gfx.rect(x + cx2 - (fx < 0 ? 4 : 0), y + cy2 - (fy < 0 ? 1 : 0), 5, 2, SKIN.goldLit);
+      Gfx.rect(x + cx2 - (fx < 0 ? 1 : 0), y + cy2 - (fy < 0 ? 4 : 0), 2, 5, SKIN.goldLit);
+      Gfx.rect(x + cx2 + fx * 3 - (fx < 0 ? 1 : 0), y + cy2 + fy * 3 - (fy < 0 ? 1 : 0), 2, 2, SKIN.gold);
+    }
+    if (o.icon) Gfx.sprite(o.icon, x + size / 2, y + size / 2, { anchor: 'c', scale: o.iconScale || 1.6 });
+    if (o.hot) Gfx.outlineRound(x - 1, y - 1, size + 2, size + 2, 4, SKIN.goldLit);
+    if (o.count !== undefined) Gfx.text(String(o.count), x + size - 5, y + size - 13, { color: SKIN.textLit, align: 'right', scale: 1.2, outline: true });
+    return { x, y, size };
   },
   tooltip(x, y, lines, o = {}) { this.tips.push({ x, y, lines: Array.isArray(lines) ? lines : [lines], o }); },
   drawTips() {

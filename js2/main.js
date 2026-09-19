@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
-const Settings = { music: 0.8, sfx: 0.9, noteSpeed: 1.15, difficulty: 'normal', offset: 0 };
+const Settings = { music: 0.8, sfx: 0.9, noteSpeed: 1.15, difficulty: 'normal', offset: 0, shake: true };
 const SAVE_KEY = 'ongabonga_v2_save', SET_KEY = 'ongabonga_v2_settings';
 
 const Game = {

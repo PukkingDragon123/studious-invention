@@ -567,48 +567,65 @@ class Combat {
     }
   }
   drawHud() {
-    // top strip
-    Gfx.rectA(0, 0, W, 34, '#120c16', 0.72);
-    Gfx.sprite('icon_heart', 10, 8, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2 });
-    Gfx.bar(34, 11, 150, 12, this.hp / this.maxHp, '#c2333c', { bg: '#3f0e18' });
-    Gfx.text(`${this.hp}/${this.maxHp}`, 109, 12, { color: '#fffaea', align: 'center', outline: true });
-    Gfx.sprite('icon_coin', 200, 8, { anchor: 'tl' });
-    Gfx.text(String(this.run.gold), 222, 10, { color: '#ffe98a' });
-    let rx = 290;
+    // ---- the top bar: a proper sunken strip with framed readouts
+    Gfx.rect(0, 0, W, 44, SKIN.inkSoft);
+    Gfx.rect(0, 0, W, 2, SKIN.faceDark);
+    Gfx.rect(0, 42, W, 3, SKIN.ink);
+    // health
+    Gfx.round(8, 7, 250, 30, 4, SKIN.ink);
+    Gfx.round(10, 9, 246, 26, 3, '#3b3048');
+    Gfx.sprite('icon_heart', 16, 12, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2, scale: 1.2 });
+    Gfx.bar(46, 14, 190, 16, this.hp / this.maxHp, '#c2333c', { bg: '#3f0e18' });
+    Gfx.text(`${this.hp}/${this.maxHp}`, 141, 15, { color: '#fffaea', align: 'center', scale: 1.3, outline: true });
+    // shells
+    Gfx.round(268, 7, 110, 30, 4, SKIN.ink);
+    Gfx.round(270, 9, 106, 26, 3, '#3b3048');
+    Gfx.sprite('icon_coin', 276, 12, { anchor: 'tl', scale: 1.2 });
+    Gfx.text(String(this.run.gold), 306, 14, { color: SKIN.goldLit, scale: 1.4 });
+    // relics, each in its own little gold slot
+    let rx = 392;
     for (const id of this.run.relics) {
-      if (this.relicFlash[RELICS[id].name] > 0) { Gfx.circle(rx + 11, 19, 16, '#ffe98a'); }
-      Relics.drawIcon(id, rx, 7); rx += 26;
+      if (this.relicFlash[RELICS[id].name] > 0) Gfx.circle(rx + 15, 22, 20, '#ffe98a');
+      UI.slot(rx, 6, 32, { fill: '#241c2e' });
+      Relics.drawIcon(id, rx + 6, 12); rx += 36;
     }
-    Gfx.text(`TURN ${this.turn}`, W - 60, 12, { color: '#a79bb4', align: 'right' });
-    if (!this.riff) UI.iconButton(W - 40, 4, 28, 26, 'icon_menu', () => Game.pause());
+    Gfx.text(`TURN ${this.turn}`, W - 74, 14, { color: '#d6cfe0', align: 'right', scale: 1.4 });
+    if (!this.riff) UI.iconButton(W - 50, 6, 36, 32, 'icon_menu', () => Game.pause(), { scale: 1.2 });
     if (this.riff) return;
-    // energy orb
-    const ex = 58, ey = H - 108;
-    Gfx.circle(ex, ey, 30, '#120c16'); Gfx.circle(ex, ey, 27, this.energy > 0 ? '#1d3d72' : '#3b3048');
-    Gfx.circle(ex - 7, ey - 9, 9, this.energy > 0 ? '#6aa9ee' : '#574a66');
-    Gfx.text(`${this.energy}`, ex, ey - 12, { color: '#ffffff', align: 'center', scale: 2.2, outline: true, outlineWidth: 2 });
-    Gfx.text(`/${this.maxEnergy + Relics.mod('energy') + (this.powers.groove || 0)}`, ex, ey + 8, { color: '#86e8d2', align: 'center' });
-    // hype
-    const hx = 18, hy = 120, hh = 220;
-    Gfx.text('HYPE', hx - 2, hy - 18, { color: '#e06a9b' });
-    Gfx.rect(hx - 2, hy - 2, 20, hh + 4, '#120c16');
+    // ---- energy: a big carved stone bead
+    const ex = 70, ey = H - 118;
+    Gfx.circle(ex, ey, 38, SKIN.ink);
+    Gfx.circle(ex, ey, 34, this.energy > 0 ? '#1d3d72' : '#3b3048');
+    Gfx.circle(ex - 9, ey - 12, 12, this.energy > 0 ? '#6aa9ee' : '#574a66');
+    Gfx.ring(ex, ey, 36, SKIN.gold, 2);
+    Gfx.text(`${this.energy}`, ex, ey - 17, { color: '#ffffff', align: 'center', scale: 2.8, outline: true, outlineWidth: 2 });
+    Gfx.text(`/${this.maxEnergy + Relics.mod('energy') + (this.powers.groove || 0)}`, ex, ey + 12, { color: '#86e8d2', align: 'center', scale: 1.2 });
+    // ---- hype: a tall framed column
+    const hx = 18, hy = 118, hh = 240, hw = 24;
+    Gfx.text('HYPE', hx - 2, hy - 22, { color: '#e06a9b', scale: 1.3 });
+    Gfx.round(hx - 4, hy - 4, hw + 8, hh + 8, 4, SKIN.ink);
+    Gfx.round(hx - 2, hy - 2, hw + 4, hh + 4, 3, '#3b3048');
     const fh = Math.round(hh * this.hype / 100);
-    Gfx.rect(hx, hy + hh - fh, 16, fh, this.encoreReady ? (Math.floor(this.t * 6) % 2 ? '#ffffff' : '#e06a9b') : '#a03a68');
-    Gfx.text(String(Math.floor(this.hype)), hx + 8, hy + hh + 6, { color: '#e06a9b', align: 'center' });
-    if (this.encoreReady && this.phase === 'player' && !this.busy) UI.button(10, hy + hh + 22, 106, 34, 'ENCORE!', () => this.playEncore(), { fill: '#a03a68', hover: '#e06a9b', border: '#ffffff', scale: 1.2 });
-    // piles
-    Cards.back(14, H - 62, 0.34);
-    Gfx.text(String(this.drawPile.length), 34, H - 22, { color: '#e8dfc6', align: 'center', outline: true });
-    UI.hit(14, H - 62, 48, 60, () => Game.overlay = new DeckOverlay(this.drawPile, 'DRAW PILE'));
-    Cards.back(W - 58, H - 62, 0.34);
-    Gfx.text(String(this.discard.length), W - 38, H - 22, { color: '#e8dfc6', align: 'center', outline: true });
-    UI.hit(W - 58, H - 62, 48, 60, () => Game.overlay = new DeckOverlay(this.discard, 'DISCARD'));
-    UI.button(W - 186, H - 62, 116, 42, Input.touch ? 'END TURN' : 'END TURN (E)', () => this.endTurn(), { disabled: this.busy || this.phase !== 'player', scale: 1.1 });
+    Gfx.rect(hx, hy + hh - fh, hw, fh, this.encoreReady ? (Math.floor(this.t * 6) % 2 ? '#ffffff' : '#e06a9b') : '#a03a68');
+    Gfx.rect(hx, hy + hh - fh, hw, 3, '#ffb0cf');
+    for (let i = 1; i < 4; i++) Gfx.rectA(hx, hy + hh * i / 4, hw, 2, SKIN.ink, 0.6);
+    Gfx.text(String(Math.floor(this.hype)), hx + hw / 2, hy + hh + 10, { color: '#e06a9b', align: 'center', scale: 1.3 });
+    if (this.encoreReady && this.phase === 'player' && !this.busy)
+      UI.wbutton(8, hy + hh + 28, 132, 40, 'ENCORE!', () => this.playEncore(), { scale: 1.3, danger: true, key: 'encore' });
+    // ---- the piles, in gold slots
+    UI.slot(12, H - 78, 56, { fill: '#3b3048', count: this.drawPile.length });
+    Cards.back(20, H - 70, 0.36);
+    UI.hit(12, H - 78, 56, 56, () => Game.overlay = new DeckOverlay(this.drawPile, 'DRAW PILE'));
+    UI.slot(W - 68, H - 78, 56, { fill: '#3b3048', count: this.discard.length });
+    Cards.back(W - 60, H - 70, 0.36);
+    UI.hit(W - 68, H - 78, 56, 56, () => Game.overlay = new DeckOverlay(this.discard, 'DISCARD'));
+    UI.wbutton(W - 172, H - 146, 158, 46, Input.touch ? 'END TURN' : 'END TURN (E)', () => this.endTurn(),
+      { disabled: this.busy || this.phase !== 'player', scale: 1.2, key: 'endturn' });
   }
   drawHand() {
     if (this.handSlide > 0.97) return;
     const n = this.hand.length; if (!n) return;
-    const spacing = Math.min(CARD_W + 8, 620 / Math.max(1, n));
+    const spacing = Math.min(CARD_W + 8, 560 / Math.max(1, n));
     const total = spacing * (n - 1) + CARD_W;
     const x0 = W / 2 - total / 2;
     const baseY = H - CARD_H - 20 + this.handSlide * 240;
