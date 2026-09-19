@@ -623,25 +623,25 @@
   "file": "art_world"
  },
  "house_table": {
-  "w": 72,
-  "h": 40,
+  "w": 132,
+  "h": 54,
   "frames": 1,
-  "note": "stone slab table on rock legs, with plates carved from shell.",
-  "file": "art_world"
+  "note": "thick stone slab table on carved log trestles",
+  "file": "art_house"
  },
  "house_bed": {
-  "w": 72,
-  "h": 44,
+  "w": 120,
+  "h": 62,
   "frames": 1,
-  "note": "bed of furs on a stone ledge.",
-  "file": "art_world"
+  "note": "carved stone bed ledge with a bone headboard and a heap of furs",
+  "file": "art_house"
  },
  "house_shelf": {
-  "w": 52,
-  "h": 36,
+  "w": 110,
+  "h": 48,
   "frames": 1,
-  "note": "wall shelf with clay pots and a skull.",
-  "file": "art_world"
+  "note": "two plank shelves on bracket pegs, with pots and stone tablets",
+  "file": "art_house"
  },
  "stove_pit": {
   "w": 88,
@@ -1040,140 +1040,140 @@
   "h": 30,
   "frames": 1,
   "note": "a hand strumming a bone guitar. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_shield": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a stone shield taking a hit. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_club": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a club mid-swing. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_drum": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "log drums with sticks. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_note": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a music note with motion lines. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_fire": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a burst of flame. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_skull": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a screaming skull. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_heart": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a heart with a sparkle. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_star": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a shooting star. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_bolt": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a lightning bolt. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_crowd": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "three tiny cheering silhouettes. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_boulder": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a falling boulder. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_horn": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a war horn blowing. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_flute": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a bone flute. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_bass": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a huge bass instrument. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_meat": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a meat leg. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_wave": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a sound wave. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_foot": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a stomping foot. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_spiral": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a hypnotic spiral. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "art_moon": {
   "w": 30,
   "h": 30,
   "frames": 1,
   "note": "a crescent moon. Card illustration: bold, centred, reads at a glance on a dark card.",
-  "file": "art_ui"
+  "file": "art_cave"
  },
  "fx_ring": {
   "w": 56,
@@ -1258,5 +1258,103 @@
   "w": 52,
   "h": 76,
   "frames": 4
+ },
+ "house_stool": {
+  "w": 34,
+  "h": 30,
+  "frames": 1,
+  "note": "log-legged stone stool with a fur pad",
+  "file": "art_house"
+ },
+ "house_basket": {
+  "w": 56,
+  "h": 46,
+  "frames": 1,
+  "note": "woven storage basket with a hide lid",
+  "file": "art_house"
+ },
+ "house_lamp": {
+  "w": 26,
+  "h": 32,
+  "frames": 1,
+  "note": "hanging stone oil lamp with a live flame",
+  "file": "art_house"
+ },
+ "house_potrack": {
+  "w": 86,
+  "h": 36,
+  "frames": 1,
+  "note": "three clay pots hung off a bone rail",
+  "file": "art_house"
+ },
+ "house_hiderack": {
+  "w": 76,
+  "h": 84,
+  "frames": 1,
+  "note": "drying frame with a hide laced into it",
+  "file": "art_house"
+ },
+ "house_drum": {
+  "w": 52,
+  "h": 48,
+  "frames": 1,
+  "note": "hide drum on log legs",
+  "file": "art_house"
+ },
+ "house_wallart": {
+  "w": 96,
+  "h": 44,
+  "frames": 1,
+  "note": "framed cave painting: three hunters and one very large animal",
+  "file": "art_house"
+ },
+ "house_fossil": {
+  "w": 92,
+  "h": 92,
+  "frames": 1,
+  "note": "ammonite fossil cut into a stone plaque",
+  "file": "art_house"
+ },
+ "house_hearth": {
+  "w": 132,
+  "h": 46,
+  "frames": 1,
+  "note": "ring of blackened hearth stones with a bone spit over it",
+  "file": "art_house"
+ },
+ "house_waterjar": {
+  "w": 34,
+  "h": 44,
+  "frames": 1,
+  "note": "tall clay water jar with looped handles",
+  "file": "art_house"
+ },
+ "house_broom": {
+  "w": 18,
+  "h": 46,
+  "frames": 1,
+  "note": "bundle-of-reeds broom",
+  "file": "art_house"
+ },
+ "house_curtain": {
+  "w": 70,
+  "h": 86,
+  "frames": 1,
+  "note": "hide door curtain hung on a rail",
+  "file": "art_house"
+ },
+ "megalodon_fly": {
+  "w": 148,
+  "h": 70,
+  "frames": 4,
+  "note": "a megalodon flying: torpedo body, swept wing-fins, crescent tail, jaws open on rows of teeth. Dream only.",
+  "file": "art_dream"
+ },
+ "spino_gun": {
+  "w": 156,
+  "h": 122,
+  "frames": 4,
+  "note": "a spinosaurus standing on two legs with a gun in each hand, sail lit like an ember. Frames 1-2 fire.",
+  "file": "art_dream"
  }
 }

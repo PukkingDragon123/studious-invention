@@ -41,6 +41,9 @@ defClips('elder', { idle: { fps: 1.4 } });
 defClips('brute', { idle: { fps: 2 }, walk: { fps: 8 } });
 defClips('blaze', { idle: { fps: 7 }, walk: { fps: 10 }, roar: { fps: 7 }, boss: { fps: 6 } });
 defClips('trex', { idle: { fps: 1.8 }, walk: { fps: 7 }, roar: { fps: 5 } });
+// dream only
+defClips('mega', { idle: { spr: 'megalodon_fly', fps: 7 }, fly: { spr: 'megalodon_fly', fps: 9, bob: 0 }, walk: { spr: 'megalodon_fly', fps: 9 } });
+defClips('spino', { idle: { spr: 'spino_gun', fps: 3 }, fire: { spr: 'spino_gun', fps: 9 }, walk: { spr: 'spino_gun', fps: 7 } });
 defClips('mammoth', { idle: { fps: 1.6 }, walk: { fps: 6 }, trader: { fps: 1.6 }, shower: { fps: 5 } });
 for (const b of ['compy', 'dodo', 'boar', 'raptor', 'tricera', 'lizard', 'stego']) defClips(b, { idle: { fps: 2.4 }, walk: { fps: 9 } });
 defClips('ptero', { idle: { spr: 'ptero_fly', fps: 8 }, walk: { spr: 'ptero_fly', fps: 10 }, fly: { fps: 8 } });

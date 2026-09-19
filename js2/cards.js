@@ -4,13 +4,17 @@
 'use strict';
 
 const CARD_W = 104, CARD_H = 142;
+// Every card is a slab of rock with the move chipped into it. The type only
+// changes the pigment rubbed into the carving, never the shape - a tablet is a
+// tablet. stone/lit/dark are the rock itself, pig/glow are the paint.
 const TYPES = {
-  attack: { name: 'RIFF', frame: '#7d1d2b', deep: '#3f0e18', light: '#ef6a5e', art: ['#5c1622', '#3a0f18', '#240a10'] },
-  skill: { name: 'MOVE', frame: '#1d3d72', deep: '#101f3d', light: '#6aa9ee', art: ['#17305a', '#101f3d', '#0a1428'] },
-  rally: { name: 'RALLY', frame: '#a03a68', deep: '#58203c', light: '#ffb0cf', art: ['#6e2748', '#44182d', '#2a0f1c'] },
-  power: { name: 'POWER', frame: '#4b2070', deep: '#281040', light: '#b177e6', art: ['#3a1758', '#281040', '#180828'] },
-  special: { name: 'SOLO', frame: '#9c3510', deep: '#5c1607', light: '#ffa832', art: ['#7a2a0e', '#4c1608', '#2c0d05'] },
+  attack: { name: 'RIFF', pig: '#9c3510', glow: '#ffa832', wash: '#5c1607' },
+  skill: { name: 'MOVE', pig: '#1d3d72', glow: '#6aa9ee', wash: '#101f3d' },
+  rally: { name: 'RALLY', pig: '#a03a68', glow: '#ffb0cf', wash: '#58203c' },
+  power: { name: 'POWER', pig: '#4b2070', glow: '#b177e6', wash: '#281040' },
+  special: { name: 'SOLO', pig: '#5c1607', glow: '#ffe98a', wash: '#3f0e18' },
 };
+const STONE = { face: '#7a6d8a', lit: '#bdbccd', mid: '#574a66', dark: '#3b3048', ink: '#241c2e' };
 const RARITY_GLOW = { common: null, uncommon: '#6aa9ee', rare: '#ffe98a', band: '#ffb0cf', starter: null, special: '#ffa832' };
 
 // rhythm presets -> Riff options
@@ -243,6 +247,41 @@ const Cards = {
     return out.map(id => this.make(id));
   },
   // -------------------------------------------------------------------- draw
+  // --------------------------------------------------------------- the slab
+  // A hand-chipped stone tablet: the outline is notched, the face is speckled
+  // and cracked, every recess is cut with a lit top edge and a shadowed
+  // bottom one, and the writing is carved rather than printed.
+  slab(x, y, w, h, o = {}) {
+    const ctx = Gfx.ctx;
+    const seed = o.seed || 0;
+    const jit = i => ((Math.sin((i + seed) * 12.9898) * 43758.5453) % 1 + 1) % 1;
+    // the silhouette, walked as a ragged polygon
+    ctx.beginPath();
+    const pts = [];
+    const side = (x0, y0, x1, y1, n, i0) => {
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        const nx = x0 + (x1 - x0) * t, ny = y0 + (y1 - y0) * t;
+        const j = (jit(i0 + i) - 0.5) * 3.4;
+        pts.push([nx + (y0 === y1 ? 0 : j), ny + (x0 === x1 ? 0 : j)]);
+      }
+    };
+    side(x + 4, y, x + w - 4, y, 7, 1);
+    side(x + w, y + 5, x + w, y + h - 5, 9, 20);
+    side(x + w - 4, y + h, x + 4, y + h, 7, 40);
+    side(x, y + h - 5, x, y + 5, 9, 60);
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (const p of pts) ctx.lineTo(p[0], p[1]);
+    ctx.closePath();
+    return ctx;
+  },
+  // a recess cut into the face: dark inside, lit along its top and left
+  carve(x, y, w, h, fill) {
+    Gfx.round(x, y, w, h, 2, STONE.ink);
+    Gfx.round(x + 1, y + 1, w - 2, h - 2, 2, fill);
+    Gfx.rectA(x + 1, y + h - 2, w - 2, 1, STONE.lit, 0.35);
+    Gfx.rectA(x + 1, y + 1, w - 2, 1, '#120c16', 0.45);
+  },
   draw(c, x, y, o = {}) {
     const s = o.scale || 1, w = Math.round(CARD_W * s), h = Math.round(CARD_H * s);
     const T = TYPES[c.def.type] || TYPES.skill;
@@ -250,36 +289,77 @@ const Cards = {
     x = Math.round(x); y = Math.round(y);
     if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
     const glow = RARITY_GLOW[c.def.rarity];
-    if (glow && !o.flat) { ctx.globalAlpha = (o.alpha ?? 1) * (0.25 + Math.sin(Time.t * 3 + c.uid) * 0.08); Gfx.round(x - 4, y - 4, w + 8, h + 8, 8, glow); ctx.globalAlpha = o.alpha ?? 1; }
-    Gfx.rectA(x + 3, y + 6, w, h, '#000', 0.45);
-    Gfx.round(x, y, w, h, 6, '#120c16');
-    Gfx.round(x + 2, y + 2, w - 4, h - 4, 5, o.playable === false ? '#2a2431' : T.frame);
-    Gfx.round(x + 5, y + 5, w - 10, h - 10, 4, T.deep);
-    // art window
-    const ax = x + 8, ay = y + 24, aw = w - 16, ah = Math.round(52 * s);
-    Gfx.round(ax, ay, aw, ah, 3, '#120c16');
-    Gfx.bands(ax + 2, ay + 2, aw - 4, ah - 4, T.art);
-    for (let i = 0; i < 3; i++) Gfx.rectA(ax + 2, ay + 2 + i * 7, aw - 4, 1, '#ffffff', 0.05);
+    if (glow && !o.flat) {
+      ctx.globalAlpha = (o.alpha ?? 1) * (0.22 + Math.sin(Time.t * 3 + c.uid) * 0.08);
+      Gfx.round(x - 5, y - 5, w + 10, h + 10, 6, glow);
+      ctx.globalAlpha = o.alpha ?? 1;
+    }
+    const dead = o.playable === false;
+    // ---- the rock
+    ctx.save();
+    this.slab(x + 3, y + 6, w, h, { seed: c.uid || 1 });
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fill();          // its shadow
+    ctx.restore();
+    ctx.save();
+    this.slab(x, y, w, h, { seed: c.uid || 1 });
+    ctx.fillStyle = dead ? '#4d4a5c' : STONE.face; ctx.fill();
+    ctx.clip();
+    // speckle, grain and two cracks, all fixed to this card
+    const jit = i => ((Math.sin((i + (c.uid || 1)) * 12.9898) * 43758.5453) % 1 + 1) % 1;
+    for (let i = 0; i < 90; i++) {
+      const px = x + 2 + jit(i) * (w - 4), py = y + 2 + jit(i + 200) * (h - 4);
+      Gfx.rectA(px, py, 1 + (i % 3), 1 + (i % 2), i % 3 ? STONE.mid : STONE.lit, 0.35);
+    }
+    for (let k = 0; k < 2; k++) {
+      let cx2 = x + 6 + jit(k * 9) * (w - 12), cy2 = y + 4;
+      for (let i = 0; i < 12; i++) {
+        const nx = cx2 + (jit(k * 30 + i) - 0.5) * 12, ny = cy2 + h / 12;
+        Gfx.line(cx2, cy2, nx, ny, '#3b3048', 1);
+        Gfx.line(cx2 + 1, cy2, nx + 1, ny, STONE.lit, 1);
+        cx2 = nx; cy2 = ny;
+      }
+    }
+    Gfx.rectA(x, y, w, 4, STONE.lit, 0.4);                    // the lit top face
+    Gfx.rectA(x, y + h - 5, w, 5, '#120c16', 0.35);
+    ctx.restore();
+    ctx.save();
+    this.slab(x, y, w, h, { seed: c.uid || 1 });
+    ctx.strokeStyle = STONE.ink; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+
+    // ---- the carved picture window, pigment rubbed into the recess
+    const ax = x + 7, ay = y + 25, aw = w - 14, ah = Math.round(52 * s);
+    this.carve(ax, ay, aw, ah, T.wash);
+    for (let i = 0; i < 18; i++)                              // chisel marks inside it
+      Gfx.rectA(ax + 2 + jit(i + 60) * (aw - 4), ay + 2 + jit(i + 90) * (ah - 4), 2, 1, T.pig, 0.34);
     Gfx.sprite(c.def.art || 'art_note', ax + aw / 2, ay + ah / 2 + 2, { anchor: 'c', scale: Math.max(1, Math.round(s * 1.2)) });
-    Gfx.outlineRound(ax, ay, aw, ah, 3, T.light);
-    // cost gem
-    Gfx.circle(x + 13, y + 14, 12, '#120c16');
-    Gfx.sprite(c.cost <= (o.energy ?? 99) ? 'icon_energy' : 'icon_energy', x + 13, y + 14, { anchor: 'c', frame: c.cost <= (o.energy ?? 99) ? 1 : 0, alpha: c.cost <= (o.energy ?? 99) ? 1 : 0.45 });
-    Gfx.text(String(c.cost), x + 13, y + 9, { color: '#ffffff', align: 'center', scale: 1.1, outline: true });
-    // type flag
-    Gfx.text(T.name + (c.def.riff ? ' ♪' : ''), x + w - 8, y + 9, { color: T.light, align: 'right', scale: 1 });
-    // name plate
-    Gfx.round(x + 5, y + ah + 28, w - 10, 16, 3, '#120c16');
-    let nm = c.name; while (Gfx.measure(nm, 1) > w - 16 && nm.length > 4) nm = nm.slice(0, -1);
-    Gfx.text(nm, x + w / 2, y + ah + 32, { color: c.up ? '#a8e878' : '#fffaea', align: 'center' });
-    // rules text
-    const ty = y + ah + 50;
+
+    // ---- the cost: a coloured pebble set into the corner
+    Gfx.circle(x + 13, y + 14, 13, STONE.ink);
+    Gfx.circle(x + 13, y + 14, 11, dead ? '#3b3048' : T.pig);
+    Gfx.circle(x + 11, y + 12, 6, dead ? '#574a66' : T.glow);
+    Gfx.circle(x + 13, y + 14, 8, dead ? '#2e2b38' : T.wash);
+    Gfx.text(String(c.cost), x + 13, y + 9, { color: dead ? '#7a6d8a' : '#ffffff', align: 'center', scale: 1.1, outline: true });
+
+    // ---- the type, chipped into the top right
+    Gfx.text(T.name + (c.def.riff ? ' ♪' : ''), x + w - 8, y + 10, { color: '#241c2e', align: 'right', scale: 1 });
+    Gfx.text(T.name + (c.def.riff ? ' ♪' : ''), x + w - 8, y + 9, { color: T.glow, align: 'right', scale: 1 });
+
+    // ---- the name, carved across a sunken band
+    this.carve(x + 5, y + ah + 29, w - 10, 17, STONE.mid);
+    let nm = c.name; while (Gfx.measure(nm, 1) > w - 18 && nm.length > 4) nm = nm.slice(0, -1);
+    Gfx.text(nm, x + w / 2, y + ah + 34, { color: '#120c16', align: 'center' });
+    Gfx.text(nm, x + w / 2, y + ah + 33, { color: c.up ? '#a8e878' : '#e8dfc6', align: 'center' });
+
+    // ---- the rules, chalked onto the rough part of the face
+    const ty = y + ah + 51;
     ctx.save(); ctx.beginPath(); ctx.rect(x + 5, ty - 2, w - 10, h - (ty - y) - 8); ctx.clip();
-    Gfx.textWrap(this.desc(c, o.combat), x + 9, ty, w - 18, { color: '#d6cfe0', lineHeight: 11 });
+    Gfx.textWrap(this.desc(c, o.combat), x + 9, ty, w - 18, { color: '#241c2e', lineHeight: 11 });
+    Gfx.textWrap(this.desc(c, o.combat), x + 9, ty - 1, w - 18, { color: '#fffaea', lineHeight: 11 });
     ctx.restore();
     if (c.def.exhaust && !c.v.noExhaust) Gfx.sprite('icon_fire', x + w - 16, y + h - 20, { anchor: 'c', scale: 0.8, tint: '#ffa832', tintAmount: 0.5 });
-    if (o.hover || o.selected) Gfx.outlineRound(x, y, w, h, 6, o.selected ? '#ffe98a' : '#ffffff');
-    else if (o.playable) Gfx.outlineRound(x, y, w, h, 6, '#a8e878');
+    if (o.hover || o.selected) { ctx.save(); this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.strokeStyle = o.selected ? '#ffe98a' : '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore(); }
+    else if (o.playable) { ctx.save(); this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.globalAlpha = (o.alpha ?? 1) * 0.75; ctx.strokeStyle = '#a8e878'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
     if (o.alpha !== undefined) ctx.globalAlpha = 1;
     return { x, y, w, h };
   },
@@ -289,9 +369,16 @@ const Cards = {
   },
   back(x, y, s = 1) {
     const w = Math.round(CARD_W * s), h = Math.round(CARD_H * s);
-    Gfx.round(x, y, w, h, 5, '#120c16');
-    Gfx.round(x + 3, y + 3, w - 6, h - 6, 4, '#5c3a20');
-    Gfx.round(x + 7, y + 7, w - 14, h - 14, 3, '#85562f');
+    const ctx = Gfx.ctx;
+    ctx.save(); this.slab(x, y, w, h, { seed: 7 });
+    ctx.fillStyle = STONE.mid; ctx.fill(); ctx.clip();
+    for (let i = 0; i < 70; i++) {
+      const j = k => ((Math.sin((k + 7) * 12.9898) * 43758.5453) % 1 + 1) % 1;
+      Gfx.rectA(x + 2 + j(i) * (w - 4), y + 2 + j(i + 90) * (h - 4), 2, 1, i % 3 ? STONE.dark : STONE.face, 0.4);
+    }
+    ctx.restore();
+    ctx.save(); this.slab(x, y, w, h, { seed: 7 });
+    ctx.strokeStyle = STONE.ink; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
     Gfx.sprite('art_note', x + w / 2, y + h / 2, { anchor: 'c', scale: Math.max(1, s) });
   }
 };

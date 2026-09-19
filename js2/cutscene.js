@@ -16,7 +16,7 @@ class CutsceneScene {
     this.actors = {}; this.set = 'home'; this.setOpt = {};
     this.t = 0; this.fade = 0; this.fadeTarget = 0; this.title = null; this.skipT = 0;
     this.flash = 0; this.riffGame = null;
-    this.done = false; this.hud = null; this.overlay = null;
+    this.done = false; this.hud = null; this.overlay = null; this.backdrop = null;
   }
   enter() {
     Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
@@ -96,7 +96,10 @@ class CutsceneScene {
     Gfx.clear('#120c16');
     this.cam.apply(Gfx.ctx);
     (World[this.set] || World.home)(this.t, this.setOpt, this.camX());
-    const list = Object.values(this.actors).filter(a => a.visible).map(a => ({ y: a.y, a }));
+    if (this.backdrop) this.backdrop();
+    // sortY lets an actor sit in front of something taller than it - the man
+    // standing on the tyrannosaur is higher up the screen but nearer the camera
+    const list = Object.values(this.actors).filter(a => a.visible).map(a => ({ y: a.sortY ?? a.y, a }));
     list.sort((p, q) => p.y - q.y);
     for (const it of list) it.a.draw();
     Particles.draw(Gfx.ctx, true);
@@ -144,22 +147,61 @@ function* introScript(S) {
   const SX = 580;                               // the dream stage, in world x
 
   // ================================================== 0. THE DREAM
-  // You are already playing. No logo, no black, no waiting.
+  // You are already playing. No logo, no black, no waiting. A live volcano, a
+  // shark in the air and a spinosaurus with two guns, because this is not a
+  // place with rules.
   S.set = 'concert'; S.setOpt = { beat: 0 };
-  S.cam.lookAt(SX + 10, 296, true);
+  S.cam.lookAt(SX + 10, 306, true);
   AudioSys.play('boss3', { fade: 0.8, intensity: 2 });
-  const rex = S.add('rex', { base: 'trex', x: SX + 28, y: GY - 46, scale: 1, facing: -1 });
+  const rex = S.add('rex', { base: 'trex', x: SX + 34, y: GY - 46, scale: 1, facing: -1 });
   rex.play('roar');
-  const star = S.add('star', { base: 'bronk', x: SX + 6, y: GY - 108, scale: 1, facing: 1 });
-  star.play('play');
+  const star = S.add('star', { base: 'bronk', x: SX + 12, y: GY - 108, scale: 1, facing: 1 });
+  star.play('play'); star.sortY = GY + 40; star.shadow = false;
+  const spino = S.add('spino', { base: 'spino', x: SX + 148, y: GY - 44, scale: 0.9, facing: -1 });
+  spino.play('fire');
+  const mega = S.add('mega', { base: 'mega', x: SX + 300, y: 214, scale: 0.9, facing: 1 });
+  mega.play('fly'); mega.shadow = false;
+  // the shark does laps; the dream does not explain why
+  Co.run(function* () {
+    for (let i = 0; i < 6000; i++) {
+      if (S.set !== 'concert') return;
+      mega.x -= Time.dt * 190;
+      mega.y = 236 + Math.sin(Time.t * 1.2) * 20;
+      if (mega.x < SX - 330) { mega.x = SX + 330; }
+      if (chance(Time.dt * 8)) Particles.spawn(mega.x + 70, mega.y + rnd(-14, 14),
+        { n: 1, color: ['#a8d8ff', '#ffffff'], speed: 30, life: 0.7, size: 4, sizeEnd: 0 });
+      yield 0;
+    }
+  }());
+  // fire off the tyrannosaur, muzzle flashes off the spinosaurus, rocks in the air
+  // fire pours off the tyrannosaur - drawn BEHIND the performers, or it burns
+  // the man standing on it
+  S.backdrop = () => {
+    const T = Time.t;
+    for (let i = 0; i < 12; i++) {
+      const t2 = i / 11;
+      const fx = rex.x - 76 + t2 * 150, fy = GY - 92 - Math.sin(t2 * Math.PI) * 54;
+      World.flame(fx, fy, 22 + Math.abs(Math.sin(T * 6 + i)) * 16, 8, Math.sin(T * 5 + i) * 4,
+        ['#e06a1b', '#ffa832', '#ffe98a']);
+    }
+    Gfx.glow(rex.x - 10, GY - 120, 220, '#e06a1b', 0.24 + Math.sin(T * 5) * 0.05);
+    // floating rocks, because gravity is also asleep
+    for (let i = 0; i < 6; i++) {
+      const rx2 = SX - 250 + i * 100, ry2 = GY - 86 - ((i % 3) * 30) + Math.sin(T * 0.9 + i * 1.7) * 9;
+      Gfx.round(rx2 - 9, ry2, 19, 11, 4, '#3b3048');
+      Gfx.round(rx2 - 7, ry2 - 1, 14, 5, 2, '#7a6d8a');
+      Gfx.rectA(rx2 - 7, ry2 + 8, 14, 3, '#e06a1b', 0.5);
+    }
+  };
   S.overlay = world => {
     if (!world) return;
-    Gfx.glow(star.x + 14, star.y + star.bob - 42, 80, '#ffe98a', 0.4 + Math.sin(Time.t * 8) * 0.1);
-    Gfx.sprite('art_bass', star.x + 16, star.y + star.bob - 42, { anchor: 'c', scale: 1.1, rot: -0.45 + Math.sin(Time.t * 7) * 0.08 });
+    const T = Time.t;
+    Gfx.glow(star.x + 14, star.y + star.bob - 42, 90, '#ffe98a', 0.45 + Math.sin(T * 8) * 0.1);
+    Gfx.sprite('art_bass', star.x + 16, star.y + star.bob - 42, { anchor: 'c', scale: 1.1, rot: -0.45 + Math.sin(T * 7) * 0.08 });
   };
   // the crowd keeps time with the song
   Co.run(function* () {
-    for (let i = 0; i < 4000; i++) {
+    for (let i = 0; i < 6000; i++) {
       const b = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : Time.t * 2;
       setOpt({ beat: Math.max(0, 1 - (b - Math.floor(b)) * 3) });
       if (S.set !== 'concert') return;
@@ -168,15 +210,21 @@ function* introScript(S) {
   }());
   Juice.shake(6, 0.5);
   AudioSys.sfx('roar', { pitch: 48, vol: 0.9, len: 1.4 });
-  yield 0.8;
-  yield* S.titleCard('ONGA BONGA', 'a dream, obviously', 2.2);
+  yield 0.5;
+  // the mountain goes off, on cue
+  AudioSys.sfx('rumble', { vol: 1, len: 1.8 });
+  Juice.shake(12, 1.0);
+  for (let i = 0; i < 26; i++) Particles.spawn(rnd(0, W), rnd(40, 160),
+    { n: 1, color: ['#ffa832', '#e06a1b'], speed: 40, gravity: 30, life: 2.4, size: 5, sizeEnd: 0, world: false });
+  yield 0.6;
+  yield* S.titleCard('ONGA BONGA', 'a dream, obviously', 2.0);
   Popups.add(W / 2, 112, 'STRIKE THE STRINGS', '#ffe98a', { world: false, scale: 1.8, life: 2.4, vy: -10 });
-  yield 0.4;
+  yield 0.3;
   yield* S.riff({ bars: 3, density: 0.4, title: 'DREAM', windowMult: 2.6, speedMul: 0.75 });
   AudioSys.sfx('cheer');
   for (let i = 0; i < 30; i++) Particles.confetti(rnd(W * 0.2, W * 0.8), 60, 1);
   Juice.flash('#ffe98a', 0.4, 4);
-  yield 0.5;
+  yield 0.4;
   yield* S.say('CROWD', 'BON-GA! BON-GA! BON-GA!', { at: null, portrait: 'icon_fire' });
 
   // ================================================== 1. THE ALARM DODO
@@ -186,8 +234,8 @@ function* introScript(S) {
   S.flash = 1;
   AudioSys.stop(0.15);
   yield 0.18;
-  S.overlay = null;
-  S.hide('rex', 'star');
+  S.overlay = null; S.backdrop = null;
+  S.hide('rex', 'star', 'spino', 'mega');
   yield* S.cut('home', { night: true, fire: 0 }, [HOME.bed + 40, 330], 0.9);
   AudioSys.play('home', { fade: 1.0 });
   const bronk = S.add('bronk', { base: 'bronk', x: HOME.bed + 6, y: GY, scale: 1, facing: 1 });
@@ -255,41 +303,13 @@ function* introScript(S) {
   yield* S.say('BRONK', 'Where are they. I can smell them. I can smell them in my TEETH.', { at: bronk });
   yield* S.say('VELA', "There are no pancakes, Bronk.", { at: vela });
   yield* S.say('BRONK', '...', { at: bronk });
-  yield* S.say('VELA', 'There is a dodo nest forty paces from that door. Bring me an egg and there will be.', { at: vela });
+  yield* S.say('VELA', 'There is an egg in that pot and a raptor under that pit. Work it out.', { at: vela });
   Emotes.show(bronk, 'sweat', 1.2);
-  yield* S.say('BRONK', 'That bird and I have history.', { at: bronk });
+  yield* S.say('BRONK', 'That raptor and I have history.', { at: bronk });
   yield* S.say('VELA', 'I know. You started it.', { at: vela });
   yield 0.3;
 
-  // ==================================================== 4. THE EGG
-  yield* S.cut('home', { night: false, fire: 0 }, [HOME.nest - 10, 330], 0.6);
-  setOpt({ night: false, fire: 0 });
-  bronk.x = HOME.nest - 62; bronk.facing = 1; bronk.play('idle');
-  vela.visible = false; blaze.visible = false;
-  yield 0.4;
-  yield* S.say('BRONK', 'Morning. Lovely nest. Just borrowing one of these.', { at: bronk });
-  yield 0.3;
-  Emotes.show(bronk, '!', 0.8);
-  AudioSys.sfx('roar', { pitch: 520, vol: 0.8, len: 0.5 });
-  Juice.shake(9, 0.4);
-  yield 0.6;
-  // --- the wrestle. no words, just clicking.
-  bronk.visible = false;
-  const nCX = HOME.nest - VW * 0.52, nCY = GY - VH * 0.74;
-  yield* S.mini(new EggGame({
-    groundY: GY, camX: nCX, camY: nCY,
-    heroX: HOME.nest - 76, foeX: HOME.nest + 68,
-    paint: () => World.home(S.t, { fire: 0, eggGone: true }, nCX),
-  }));
-  bronk.visible = true;
-  setOpt({ eggGone: true });
-  Popups.add(W / 2, 200, 'ONE (1) EGG', '#ffe98a', { world: false, scale: 2, life: 1.6 });
-  AudioSys.sfx('unlock');
-  yield 1.0;
-  yield* S.say('BRONK', 'Worth it.', { at: bronk });
-  yield 0.3;
-
-  // ============================================= 5. COOKING BY RAPTOR
+  // ============================================= 4. COOKING BY RAPTOR
   yield* S.cut('home', { night: false, fire: 0.2, eggGone: true }, [HOME.stove - 30, 326], 0.6);
   bronk.x = HOME.stove - 80; bronk.facing = 1;
   blaze.visible = true; blaze.play('idle');
@@ -315,7 +335,7 @@ function* introScript(S) {
   Emotes.show(blaze, 'anger', 2);
   yield 0.4;
 
-  // ============================================= 6. THE MAMMOTH SHOWER
+  // ============================================= 5. THE MAMMOTH SHOWER
   yield* S.cut('home', { night: false, fire: 1, eggGone: true, showerOn: true }, [HOME.shower + 20, 318], 0.6);
   bronk.x = HOME.shower - 14; bronk.y = GY; bronk.facing = 1; bronk.play('idle');
   vela.visible = false; blaze.visible = false;
@@ -330,7 +350,7 @@ function* introScript(S) {
   Popups.add(bronk.x, bronk.top, 'CLEAN ENOUGH  +6 HP', '#86e8d2', { scale: 1.2, life: 1.8 });
   yield 0.8;
 
-  // ==================================================== 7. OFF TO WORK
+  // ==================================================== 6. OFF TO WORK
   const kidA = S.add('kida', { base: 'kid_a', x: HOME.door + 70, y: GY, scale: 0.9 });
   const kidB = S.add('kidb', { base: 'kid_b', x: HOME.door + 104, y: GY, scale: 0.9, facing: -1 });
   vela.visible = true; vela.x = HOME.door + 44; vela.y = GY; vela.facing = 1; vela.play('idle');
@@ -352,7 +372,7 @@ function* introScript(S) {
   bronk.visible = false;
   yield 0.6;
 
-  // ==================================================== 8. THE CHILL DRIVE
+  // ==================================================== 7. THE CHILL DRIVE
   AudioSys.play('drive', { fade: 0.4 });
   const drive = yield* S.mini(new SideScroll({
     vehicle: 'car', vehicleScale: 1, startX: 0, goal: 2400, speed: 130, auto: 140, grip: 3,
@@ -362,7 +382,7 @@ function* introScript(S) {
   }));
   run.gold += (drive ? drive.got : 0) * 5;
 
-  // ==================================================== 9. THE QUARRY
+  // ==================================================== 8. THE QUARRY
   yield* S.cut('quarry', {}, [440, 318], 0.7);
   bronk.visible = true; bronk.x = 380; bronk.y = GY; bronk.facing = 1; bronk.play('idle');
   AudioSys.play('drive', { fade: 0.6 });
@@ -415,7 +435,7 @@ function* introScript(S) {
   yield* S.say('BRONK', '...it went towards the village. It went towards MY village.', { at: bronk });
   yield 0.3;
 
-  // =============================================== 10. HOME, AT DUSK
+  // =============================================== 9. HOME, AT DUSK
   yield* S.cut('home', { dusk: true, fire: 0, eggGone: true, carGone: true }, [HOME.door + 20, 318], 0.8);
   bronk.x = HOME.door - 40; bronk.play('idle'); bronk.facing = 1;
   AudioSys.stop(0.5);
@@ -453,7 +473,7 @@ function* introScript(S) {
     title: 'ONE IN FRONT, ONE BEHIND', sub: 'a normal tuesday',
   }));
 
-  // =============================================== 11. THE BREAKDOWN
+  // =============================================== 10. THE BREAKDOWN
   yield* S.cut('canyon', { embers: true }, [400, 318], 0.7);
   bronk.x = 380; bronk.y = GY; bronk.facing = 1; bronk.play('hurt');
   S.hide('vela', 'kida', 'kidb', 'blaze');
@@ -473,7 +493,7 @@ function* introScript(S) {
   yield* S.say('BRONK', "...alright. Alright. It's been a good run. Tell the kids I said the rock looked like a face.", { at: bronk });
   yield 0.5;
 
-  // ==================================================== 12. THE BEAM
+  // ==================================================== 11. THE BEAM
   AudioSys.stop(0.2);
   yield 0.4;
   const beamX = trex.x;
@@ -503,7 +523,7 @@ function* introScript(S) {
   Co.run(function* () { for (let i = 0; i < 80; i++) { beam = Math.max(0, beam - Time.dt * 2.2); yield 0; } }());
   yield 0.7;
 
-  // ============================================ 13. THE ROCKSTAR ELDER
+  // ============================================ 12. THE ROCKSTAR ELDER
   AudioSys.play('village', { fade: 1.4 });
   const elder = S.add('elder', { base: 'elder', x: beamX, y: GY, scale: 1, facing: -1 });
   elder.alpha = 0;

@@ -15,16 +15,16 @@ const GY = 428;                      // the floor / ground line, everywhere
 // you eat in the big one, and the low passage between them is where Bronk
 // bangs his head every single morning.
 const DOMES = [
-  { x: 205, rx: 210, ry: 216 },      // the sleeping dome
-  { x: 600, rx: 232, ry: 240 },      // the eating dome
+  { x: 280, rx: 268, ry: 282 },      // the sleeping dome:  12 .. 548
+  { x: 866, rx: 322, ry: 338 },      // the eating dome:   544 .. 1188
 ];
 
 const HOME = {
-  bed: 120, rug: 205, perch: 262, shelf: 332,          // the sleeping dome
-  arch: 392,                                           // the passage
-  fossil: 448, plaque: 568, table: 612, stove: 700,    // the eating dome
-  clutter: 738, door: 772,
-  shower: 1000, nest: 1160, car: 1330, end: 1450,
+  bed: 152, drum: 268, rug: 330, perch: 402, shelf: 476,      // the sleeping dome
+  arch: 546,                                                  // the passage
+  fossil: 646, wallart: 762, table: 828, plaque: 920,         // the eating dome
+  stove: 1026, clutter: 1104, door: 1150,
+  shower: 1390, car: 1650, end: 1800,
 };
 
 // small deterministic wobble so scattered junk does not jitter between frames
@@ -42,20 +42,113 @@ const World = {
     World.yard(t, o, camX, L, R);
 
     // ---- the house itself, seen in cutaway
-    if (L < HOME.door + 220) {
+    if (L < HOME.door + 260) {
       World.houseShell(night, !!o.dusk);
       World.homeWall(t, o, camX);
       World.homeStuff(t, o, camX);
       World.homeLight(t, o);
     }
 
+    // ---- the ground you are standing on, cut open
+    World.soil(t, o, camX, L, R);
+
     // ---- outdoor fixtures
-    Gfx.sprite('shower_frame', HOME.shower, GY + 2, { anchor: 'bc' });
-    if (o.showerOn) for (let i = 0; i < 2; i++) Particles.splash(HOME.shower + rnd(-20, 20), GY - 120, 1);
-    World.nest(t, o);
+    Gfx.sprite('shower_frame', HOME.shower, GY + 2, { anchor: 'bc', scale: 1.2 });
+    if (o.showerOn) for (let i = 0; i < 2; i++) Particles.splash(HOME.shower + rnd(-20, 20), GY - 130, 1);
     if (!o.carGone) {
       Gfx.shadow(HOME.car, GY + 2, 120, 0.3);
       Gfx.sprite('car', HOME.car, GY + 2, { anchor: 'bc', frame: 0 });
+    }
+  },
+
+  // ------------------------------------------------- what is under the floor
+  // The house sits on the fossil record. Topsoil with roots in it, a clay
+  // band, then rock - and every few paces something long dead in the rock.
+  soil(t, o, camX, L, R) {
+    const TOP = GY + 4, CLAY = GY + 22, ROCK = GY + 48, BOT = GY + 200;
+    Gfx.rect(L, TOP, R - L, CLAY - TOP, '#3a2415');
+    Gfx.rect(L, CLAY, R - L, ROCK - CLAY, '#5c3a20');
+    Gfx.rect(L, ROCK, R - L, BOT - ROCK, '#4d4a5c');
+    // the boundaries are never straight
+    for (let x = Math.floor(L / 6) * 6; x < R; x += 6) {
+      const w1 = Math.sin(x * 0.031) * 3 + Math.sin(x * 0.011) * 2;
+      const w2 = Math.sin(x * 0.019 + 2) * 4 + Math.sin(x * 0.007) * 3;
+      Gfx.rect(x, CLAY + w1 - 2, 6, 3, '#4a2d18');
+      Gfx.rect(x, ROCK + w2 - 2, 6, 3, '#574a66');
+      Gfx.rect(x, ROCK + w2 - 2, 6, 1, '#7a6d8a');
+      Gfx.rect(x, TOP, 6, 2, '#241109');
+    }
+    // grit, pebbles and roots
+    for (let x = Math.floor(L / 11) * 11; x < R; x += 11) {
+      const k = Math.abs((x * 7) | 0) % 6;
+      Gfx.rectA(x + jitter(x, 8), TOP + 4 + jitter(x + 1, 14), 3, 2, '#241109', 0.7);
+      if (k < 2) Gfx.round(x + jitter(x + 2, 9), CLAY + 3 + jitter(x + 3, 18), 7, 4, 2, '#85562f');
+      if (k === 3) Gfx.rectA(x + jitter(x + 4, 9), ROCK + 6 + jitter(x + 5, 60), 9, 3, '#574a66', 0.8);
+      if (k === 4) Gfx.rectA(x + jitter(x + 6, 9), ROCK + 14 + jitter(x + 7, 70), 5, 2, '#7a6d8a', 0.6);
+    }
+    for (let x = Math.floor(L / 96) * 96; x < R; x += 96) {          // roots reaching down
+      if (x > -40 && x < HOME.door + 40) continue;
+      const rx = x + jitter(x, 50);
+      let px = rx, py = TOP;
+      for (let i = 0; i < 7; i++) {
+        const nx = px + Math.sin(i * 1.7 + x) * 5, ny = py + 6;
+        Gfx.line(px, py, nx, ny, '#241109', 3 - i * 0.3);
+        if (i === 3) Gfx.line(nx, ny, nx + 13, ny + 9, '#241109', 1.6);
+        if (i === 5) Gfx.line(nx, ny, nx - 11, ny + 7, '#241109', 1.4);
+        px = nx; py = ny;
+      }
+    }
+    // and the things in the rock
+    for (let k = 0; k < 4; k++) {                                   // strata lines in the rock
+      for (let x = Math.floor(L / 13) * 13; x < R; x += 13) {
+        const y = ROCK + 16 + k * 22 + Math.sin(x * 0.013 + k) * 5;
+        Gfx.rectA(x + jitter(x + k, 9), y, 10, 3, k % 2 ? '#3b3048' : '#7a6d8a', 0.30);
+      }
+    }
+    for (let x = Math.floor(L / 230) * 230; x < R; x += 230) {
+      World.buried(x + jitter(x, 90), ROCK + 12 + jitter(x + 9, 30), Math.abs((x / 230) | 0) % 6);
+    }
+  },
+  // one fossil, picked from six, drawn straight into the strata
+  buried(x, y, kind) {
+    const A = '#c4b89a', B = '#8a7f68', C = '#e8dfc6';
+    if (kind === 0) {                                     // a skull in profile
+      Gfx.round(x - 15, y - 9, 30, 18, 6, B);
+      Gfx.round(x - 13, y - 8, 26, 14, 5, A);
+      Gfx.round(x + 8, y - 4, 12, 8, 3, A);               // the snout
+      Gfx.circle(x - 4, y - 3, 3.2, '#241c2e');           // the eye socket
+      for (let i = 0; i < 5; i++) Gfx.rect(x + 8 + i * 2.4, y + 3, 2, 3, C);
+    } else if (kind === 1) {                              // a ribcage
+      Gfx.line(x - 22, y - 6, x + 22, y - 2, B, 4);
+      for (let i = 0; i < 8; i++) {
+        const rx = x - 19 + i * 5.4;
+        Gfx.line(rx, y - 5, rx - 3, y + 9 + (i % 2) * 3, A, 2.6);
+      }
+    } else if (kind === 2) {                              // a small ammonite
+      for (let i = 0; i < 90; i++) {
+        const a = i * 0.16, r = 1.6 * Math.exp(a * 0.12);
+        if (r > 13) break;
+        Gfx.circle(x + Math.cos(a) * r, y + Math.sin(a) * r, 1.4 + r * 0.16, i % 10 < 5 ? A : B);
+      }
+      Gfx.circle(x, y, 2, C);
+    } else if (kind === 3) {                              // a fish
+      Gfx.line(x - 16, y, x + 12, y, B, 3);
+      for (let i = 0; i < 11; i++) {
+        const fx = x - 14 + i * 2.6, h = 7 - Math.abs(i - 5) * 0.9;
+        Gfx.line(fx, y - h, fx, y + h, A, 1.4);
+      }
+      Gfx.line(x + 12, y, x + 20, y - 7, A, 2); Gfx.line(x + 12, y, x + 20, y + 7, A, 2);
+      Gfx.circle(x - 15, y - 1, 2, C);
+    } else if (kind === 4) {                              // a three-toed footprint
+      Gfx.round(x - 8, y - 2, 16, 11, 4, '#3b3048');
+      for (let i = 0; i < 3; i++) {
+        const a = -2.2 + i * 0.55;
+        Gfx.line(x, y, x + Math.cos(a) * 15, y + Math.sin(a) * 15, '#3b3048', 5);
+      }
+    } else {                                              // a tooth and some chips
+      Gfx.line(x - 3, y - 11, x + 1, y + 8, C, 5);
+      Gfx.line(x - 3, y - 11, x + 1, y + 8, A, 2);
+      for (let i = 0; i < 4; i++) Gfx.rectA(x + 8 + i * 5, y - 4 + (i % 3) * 5, 4, 3, B, 0.9);
     }
   },
 
@@ -71,16 +164,8 @@ const World = {
     const sx = 360 - camX * 0.04;
     Gfx.circle(sx, night ? -20 : -70, night ? 26 : 34, night ? '#ffe08a' : '#ffe98a');
     Gfx.glow(sx, night ? -20 : -70, 230, '#ffe98a', 0.3);
-    // fat cartoon clouds
-    for (let i = 0; i < 10; i++) {
-      const cx = ((i * 430 - camX * 0.06) % 3400 + 3400) % 3400 + L - 400;
-      const cy = -100 + (i % 4) * 46;
-      Gfx.ctx.globalAlpha = night ? 0.28 : 0.6;
-      Gfx.round(cx, cy, 128, 34, 17, '#ffffff');
-      Gfx.round(cx + 34, cy - 20, 92, 38, 19, '#ffffff');
-      Gfx.round(cx + 96, cy - 6, 62, 28, 14, '#ffffff');
-      Gfx.ctx.globalAlpha = 1;
-    }
+    World.clouds(t, camX, L, R, night);
+    World.flock(t, camX, L, R, night);
     const ridge = (depth, col, edge, base, amp, scrub) => {
       const ctx = Gfx.ctx, off = camX * depth;
       const hy = x => base + Math.sin((x + off) * 0.0035) * amp + Math.sin((x + off) * 0.011) * amp * 0.4;
@@ -108,7 +193,49 @@ const World = {
       hz.addColorStop(0.55, night ? 'rgba(224,106,27,0.30)' : 'rgba(168,216,255,0.32)');
       hz.addColorStop(1, 'rgba(168,216,255,0)');
       Gfx.ctx.fillStyle = hz; Gfx.ctx.fillRect(L, 232, R - L, 130); }
-    ridge(0.16, night ? '#27632f' : '#3f9a45', night ? '#3f9a45' : '#6cc95c', 352, 16, true);
+    ridge(0.16, night ? '#27632f' : '#3f9a45', night ? '#3f9a45' : '#6cc95c', 372, 14, true);
+    for (let x = Math.floor(L / 140) * 140; x < R; x += 140) {        // trees on the near hill
+      const hx = x - camX * 0.16 * 0 + jitter(x, 60);
+      Gfx.sprite(((x / 140) | 0) % 3 ? 'prop_tree' : 'prop_palm', hx, 386 + jitter(x + 4, 8),
+        { anchor: 'bc', scale: 0.5, alpha: night ? 0.6 : 0.85 });
+    }
+  },
+
+  // Fat cartoon clouds, built from lobes with a lit crown and a flat shaded
+  // underside, drifting at three depths.
+  clouds(t, camX, L, R, night) {
+    const LOBES = [[0, 0, 62, 20], [40, -14, 48, 22], [-38, -6, 40, 17], [84, -2, 34, 15], [-72, 4, 26, 11]];
+    for (let d = 0; d < 3; d++) {
+      const depth = 0.03 + d * 0.035, span = 1100 + d * 260, n = 4;
+      for (let i = 0; i < n; i++) {
+        const cx = ((i * span / n + d * 190 - camX * depth + t * (2 + d)) % span + span) % span + L - 220;
+        const cy = -190 + d * 64 + (i % 3) * 26;
+        const s2 = 0.6 + d * 0.22;
+        Gfx.ctx.globalAlpha = night ? 0.24 + d * 0.05 : 0.55 + d * 0.14;
+        for (const [ox, oy, rx, ry] of LOBES)                     // the shaded belly
+          Gfx.round(cx + ox * s2 - rx * s2, cy + oy * s2 - ry * s2 + 5, rx * 2 * s2, ry * 2 * s2, ry * s2, night ? '#7c3eb2' : '#a8d8ff');
+        for (const [ox, oy, rx, ry] of LOBES)
+          Gfx.round(cx + ox * s2 - rx * s2, cy + oy * s2 - ry * s2, rx * 2 * s2, ry * 2 * s2, ry * s2, '#ffffff');
+        for (const [ox, oy, rx, ry] of LOBES)                     // the lit crown
+          Gfx.round(cx + ox * s2 - rx * s2 * 0.8, cy + oy * s2 - ry * s2, rx * 1.6 * s2, ry * 0.7 * s2, ry * 0.4 * s2, night ? '#ffe08a' : '#ffffff');
+        Gfx.ctx.globalAlpha = 1;
+      }
+    }
+  },
+  // pterodactyls, always. three depths, wings on their own clock.
+  flock(t, camX, L, R, night) {
+    for (let d = 0; d < 3; d++) {
+      const depth = 0.05 + d * 0.06, span = 1500 + d * 420, n = d === 0 ? 2 : 3;
+      for (let i = 0; i < n; i++) {
+        const px = ((i * span / n + d * 330 - camX * depth + t * (26 + d * 22)) % span + span) % span + L - 260;
+        const py = -170 + d * 74 + (i % 3) * 34 + Math.sin(t * (0.7 + d * 0.2) + i * 2) * 16;
+        const sc = 0.34 + d * 0.22;
+        Gfx.sprite('ptero_fly', px, py, {
+          anchor: 'c', scale: sc, frame: Math.floor(t * (5 + d) + i * 2) % 4,
+          alpha: night ? 0.62 : 0.9,
+        });
+      }
+    }
   },
 
   // Hard colour bands with a two-row checker where they meet: a pixel-art sky
@@ -118,11 +245,15 @@ const World = {
     for (let i = 0; i < n; i++) {
       Gfx.rect(L, top + i * bh, R - L, Math.ceil(bh) + 1, cols[i]);
       if (!i) continue;
-      for (let k = 0; k < 3; k++)                      // 75/50/25% checker
+      // three rows of ordered dither, 50 / 25 / 12 per cent of the band above
+      for (let k = 0; k < 3; k++) {
+        const y = top + i * bh + k * 2;
+        const w = [4, 2, 1][k], off = [0, 2, 5][k];
         for (let x = Math.floor(L / 8) * 8; x < R; x += 8) {
-          const y = top + i * bh + k * 3;
-          Gfx.rect(x, y, k === 0 ? 6 : k === 1 ? 4 : 2, 3, cols[i - 1]);
+          Gfx.rect(x + off, y, w, 2, cols[i - 1]);
+          if (k === 0) Gfx.rect(x + 4, y + 1, 4, 1, cols[i]);
         }
+      }
     }
   },
 
@@ -202,20 +333,6 @@ const World = {
       Gfx.rect(fx, y - h - 2, 2, 2, c[1]);
     }
   },
-  // the dodo's nest, up on its own rock
-  nest(t, o) {
-    Gfx.round(HOME.nest - 48, GY - 42, 96, 48, 14, '#574a66');
-    Gfx.round(HOME.nest - 44, GY - 46, 88, 42, 12, '#7a6d8a');
-    Gfx.round(HOME.nest - 40, GY - 46, 40, 16, 8, '#9391a6');
-    for (let i = 0; i < 20; i++) {
-      const a = Math.PI + (i / 19) * Math.PI;
-      const bx = HOME.nest + Math.cos(a) * 46, by = GY - 44 + Math.sin(a) * 6;
-      Gfx.line(bx, by, bx - Math.cos(a) * 9, by - 22 - jitter(i, 8), '#3a2415', 4);
-      Gfx.line(bx, by, bx - Math.cos(a) * 9, by - 22 - jitter(i, 8), '#85562f', 2);
-    }
-    if (!o.eggGone) Gfx.sprite('prop_egg', HOME.nest, GY - 58, { anchor: 'bc', scale: 0.95 });
-  },
-
   // ------------------------------------------------------------- the domes
   // The height of the dome's inner face at world x, or null outside it.
   domeY(d, x) {
@@ -237,7 +354,7 @@ const World = {
   // NB: the extents are constants on purpose. They key the cache, so anything
   // derived from the camera would rebuild this canvas every single frame.
   houseShell(night, dusk) {
-    const x0 = -80, x1 = 900, top = -240, bot = GY + 240;
+    const x0 = -110, x1 = 1250, top = -300, bot = GY + 240;
     const key = (night ? 'n' : dusk ? 'd' : 'day');
     let c = World._shell.get(key);
     if (!c) {
@@ -403,64 +520,71 @@ const World = {
   // ------------------------------------------------------ the wall dressing
   homeWall(t, o, camX) {
     const ctx = Gfx.ctx;
-    // --- sleeping dome: a round window over the bed
-    const wx = HOME.bed + 30, wy = 252;
-    World.archDots(wx, wy + 40, 42, 44, '#3a2415', 5, 0.02);
-    for (let x = wx - 36; x < wx + 36; x += 4) {
-      const k = (x + 2 - wx) / 36;
+    // ---------------- sleeping dome: a round window over the bed
+    const wx = HOME.bed + 44, wy = 236;
+    World.archDots(wx, wy + 46, 48, 50, '#3a2415', 5, 0.02);
+    for (let x = wx - 42; x < wx + 42; x += 4) {
+      const k = (x + 2 - wx) / 42;
       if (k <= -1 || k >= 1) continue;
-      const h = 38 * Math.sqrt(1 - k * k);
-      Gfx.rect(x, wy + 40 - h, 4, h * 2, o.night ? '#7c3eb2' : '#6aa9ee');
-      Gfx.rect(x, wy + 40 - h, 4, h * 0.7, o.night ? '#a03a68' : '#a8d8ff');
+      const h = 44 * Math.sqrt(1 - k * k);
+      Gfx.rect(x, wy + 46 - h, 4, h * 2, o.night ? '#7c3eb2' : '#6aa9ee');
+      Gfx.rect(x, wy + 46 - h, 4, h * 0.66, o.night ? '#a03a68' : '#a8d8ff');
     }
-    Gfx.rect(wx - 3, wy - 2, 6, 84, '#3a2415'); Gfx.rect(wx - 40, wy + 37, 80, 6, '#3a2415');
-    // --- cave paintings above the bed, hung in a tidy row
-    const cx = HOME.rug + 4;
-    const paint = (x, y, s, col) => { ctx.globalAlpha = 0.55; Gfx.circle(x, y, 4 * s, col); Gfx.rect(x - 1.5 * s, y, 3 * s, 12 * s, col); Gfx.line(x - 6 * s, y + 14 * s, x + 6 * s, y + 14 * s, col, 2); Gfx.line(x - 5 * s, y + 3 * s, x + 5 * s, y + 3 * s, col, 2); ctx.globalAlpha = 1; };
-    paint(cx, 268, 1, '#a03a68'); paint(cx + 28, 274, 0.8, '#a03a68');
-    paint(cx + 50, 278, 0.6, '#a03a68'); paint(cx + 68, 278, 0.6, '#a03a68');
-    ctx.globalAlpha = 0.45;
-    Gfx.round(cx + 96, 260, 54, 26, 10, '#5c1607');
-    Gfx.rect(cx + 100, 284, 5, 12, '#5c1607'); Gfx.rect(cx + 140, 284, 5, 12, '#5c1607');
+    for (let i = 0; i < 3; i++)                                   // hills through the glass
+      Gfx.round(wx - 30 + i * 24, wy + 60 + (i % 2) * 6, 34, 24, 12, o.night ? '#4b2070' : '#3f9a45');
+    Gfx.rect(wx - 3, wy - 4, 6, 96, '#3a2415'); Gfx.rect(wx - 46, wy + 43, 92, 6, '#3a2415');
+    Gfx.round(wx - 50, wy + 88, 100, 9, 3, '#5c3a20');            // the sill
+    Gfx.round(wx - 50, wy + 88, 100, 3, 2, '#b07a45');
+    Gfx.sprite('prop_mushroom', wx - 26, wy + 88, { anchor: 'bc', scale: 0.6 });
+    World.flowerPatch(wx + 20, wy + 89, 3);
+    // ---------------- cave paintings between the window and the shelf
+    const cx = HOME.drum + 4;
+    const paint = (x, y, s, col) => {
+      ctx.globalAlpha = 0.6;
+      Gfx.circle(x, y, 4 * s, col); Gfx.rect(x - 1.5 * s, y, 3 * s, 12 * s, col);
+      Gfx.line(x - 6 * s, y + 14 * s, x + 6 * s, y + 14 * s, col, 2);
+      Gfx.line(x - 5 * s, y + 3 * s, x + 5 * s, y + 3 * s, col, 2);
+      ctx.globalAlpha = 1;
+    };
+    paint(cx, 258, 1, '#a03a68'); paint(cx + 30, 264, 0.8, '#a03a68');
+    paint(cx + 54, 268, 0.6, '#a03a68'); paint(cx + 74, 268, 0.6, '#a03a68');
+    ctx.globalAlpha = 0.5;
+    Gfx.round(cx + 104, 248, 62, 30, 12, '#5c1607');
+    Gfx.rect(cx + 109, 276, 6, 14, '#5c1607'); Gfx.rect(cx + 154, 276, 6, 14, '#5c1607');
+    Gfx.line(cx + 104, 252, cx + 92, 244, '#5c1607', 4);
     ctx.globalAlpha = 1;
-    // --- eating dome: the ammonite, the ribs, the plaque
-    const fx = HOME.fossil, fy = 288;
-    Gfx.round(fx - 50, fy - 50, 100, 100, 14, '#3b3048');
-    Gfx.round(fx - 46, fy - 46, 92, 92, 12, '#574a66');
-    for (let i = 0; i < 150; i++) {
-      const a = i * 0.16, r = 5 + i * 0.25;
-      if (r > 38) break;
-      Gfx.circle(fx + Math.cos(a) * r, fy + Math.sin(a) * r, 3.2, i % 12 < 6 ? '#c4b89a' : '#8a7f68');
-    }
-    for (let i = 0; i < 22; i++) {                         // the shell's ribs
-      const a = i * 0.29;
-      const r0 = 6 + i * 1.5, r1 = Math.min(38, r0 + 9);
-      Gfx.line(fx + Math.cos(a) * r0, fy + Math.sin(a) * r0,
-               fx + Math.cos(a) * r1, fy + Math.sin(a) * r1, '#8a7f68', 2);
-    }
-    Gfx.circle(fx, fy, 5, '#e8dfc6');
-    Gfx.ring(fx, fy, 42, '#241c2e', 3);
-    for (let i = 0; i < 4; i++) {
-      const rx = fx + 68 + i * 17;
+    Gfx.sprite('house_shelf', HOME.shelf, GY - 148, { anchor: 'bc', scale: 1.15 });
+    // ---------------- eating dome: the fossil, the painting and the plaque
+    Gfx.sprite('house_fossil', HOME.fossil, 300, { anchor: 'c', scale: 1.05 });
+    Gfx.sprite('house_wallart', HOME.wallart, 282, { anchor: 'c', scale: 1.25 });
+    for (let i = 0; i < 4; i++) {                                 // a rib fossil in the wall
+      const rx = HOME.fossil + 76 + i * 20;
       ctx.strokeStyle = '#c4b89a'; ctx.lineWidth = 5; ctx.beginPath();
-      ctx.arc(rx, 322, 32, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+      ctx.arc(rx, 352, 34, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
       ctx.strokeStyle = '#e8dfc6'; ctx.lineWidth = 2; ctx.stroke();
     }
     const px = HOME.plaque;
-    Gfx.round(px - 60, 244, 120, 94, 6, '#241c2e');
-    Gfx.round(px - 56, 248, 112, 86, 5, '#7a6d8a');
-    Gfx.round(px - 51, 253, 102, 76, 4, '#bdbccd');
-    Gfx.text('EMPLOYEE', px, 260, { color: '#241c2e', align: 'center', scale: 1, font: 'small' });
-    Gfx.text('OF THE WEEK', px, 270, { color: '#241c2e', align: 'center', scale: 1, font: 'small' });
-    Gfx.sprite('bronk_idle', px, 322, { anchor: 'bc', scale: 0.62 });
+    Gfx.round(px - 66, 236, 132, 104, 6, '#241c2e');
+    Gfx.round(px - 62, 240, 124, 96, 5, '#7a6d8a');
+    Gfx.round(px - 57, 245, 114, 86, 4, '#bdbccd');
+    Gfx.text('EMPLOYEE', px, 252, { color: '#241c2e', align: 'center', scale: 1, font: 'small' });
+    Gfx.text('OF THE WEEK', px, 262, { color: '#241c2e', align: 'center', scale: 1, font: 'small' });
+    Gfx.sprite('bronk_idle', px, 322, { anchor: 'bc', scale: 0.7 });
     Gfx.text('BRONK', px, 324, { color: '#241c2e', align: 'center', scale: 1, font: 'small' });
-    Gfx.rectA(px - 51, 253, 102, 18, '#ffffff', 0.12);
-    // --- a torch on each side of the passage
-    for (const tx of [HOME.arch - 70, HOME.arch + 70]) {
-      Gfx.rect(tx - 3, 322, 6, 40, '#5c3a20');
-      Gfx.round(tx - 7, 314, 14, 12, 5, '#3a2415');
-      if (chance(0.5)) Particles.fire(tx, 312, 1);
-      Gfx.glow(tx, 308, 120, '#ff9a20', 0.2 + Math.sin(t * 7 + tx) * 0.03);
+    Gfx.rectA(px - 57, 245, 114, 20, '#ffffff', 0.12);
+    // ---------------- the lamps, hung off the ribs, and the torches by the arch
+    for (const lx of [HOME.rug - 30, HOME.table - 60, HOME.stove - 80]) {
+      const sw = Math.sin(t * 1.2 + lx * 0.01) * 2;
+      Gfx.line(lx, 196, lx + sw, 252, '#3a2415', 2);
+      Gfx.sprite('house_lamp', lx + sw, 254, { anchor: 'tc', scale: 1.15 });
+      Gfx.glow(lx + sw, 280, 130, '#ff9a20', 0.22 + Math.sin(t * 7 + lx) * 0.04);
+      if (chance(0.25)) Particles.fire(lx + sw, 272, 1);
+    }
+    for (const tx of [HOME.arch - 96, HOME.arch + 96]) {
+      Gfx.rect(tx - 4, 318, 8, 46, '#5c3a20');
+      Gfx.round(tx - 9, 308, 18, 14, 6, '#3a2415');
+      if (chance(0.5)) Particles.fire(tx, 306, 1);
+      Gfx.glow(tx, 302, 130, '#ff9a20', 0.22 + Math.sin(t * 7 + tx) * 0.04);
     }
   },
 
@@ -469,73 +593,75 @@ const World = {
   // house that is Vela's doing rather than Bronk's.
   drop(x, w, y = GY + 3, a = 0.34) { Gfx.shadow(x, y, w, a); },
   homeStuff(t, o, camX) {
-    for (const [x, w] of [[HOME.bed, 92], [HOME.perch, 58], [HOME.shelf, 74],
-                          [HOME.table, 96], [HOME.stove, 98], [HOME.clutter, 40]])
+    for (const [x, w] of [[HOME.bed, 130], [HOME.drum, 60], [HOME.perch, 64], [HOME.shelf - 60, 46],
+                          [HOME.arch - 130, 40], [HOME.fossil - 40, 40],
+                          [HOME.table, 140], [HOME.table - 90, 40], [HOME.table + 90, 40],
+                          [HOME.stove, 140], [HOME.clutter, 60], [HOME.door - 70, 46]])
       World.drop(x, w);
 
-    // ---------------- sleeping dome
-    Gfx.sprite('house_bed', HOME.bed, GY + 4, { anchor: 'bc', scale: 1.35 });
-    // folded furs at the foot, stacked square
-    for (let k = 0; k < 3; k++) Gfx.round(HOME.bed + 34, GY - 12 - k * 7, 44, 8, 3, k % 2 ? '#85562f' : '#b07a45');
-    // a neat woven rug
-    Gfx.round(HOME.rug - 58, GY - 12, 126, 20, 9, '#5c3a20');
-    Gfx.round(HOME.rug - 53, GY - 10, 116, 15, 7, '#b07a45');
-    for (let i = 0; i < 9; i++) Gfx.rect(HOME.rug - 46 + i * 13, GY - 8, 6, 11, i % 2 ? '#d8a86b' : '#85562f');
-    for (let i = 0; i < 18; i++) {
-      Gfx.rect(HOME.rug - 58 + i * 7, GY + 8, 3, 4, '#5c3a20');
-      Gfx.rect(HOME.rug - 56 + i * 7, GY - 15, 3, 3, '#85562f');
+    // ============ the sleeping dome
+    Gfx.sprite('house_bed', HOME.bed, GY + 4, { anchor: 'bc', scale: 1.1 });
+    Gfx.sprite('house_hiderack', HOME.bed - 120, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('house_drum', HOME.drum, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('art_club', HOME.drum + 30, GY - 16, { anchor: 'bc', scale: 1.3, rot: -0.42 });
+    // a woven rug, laid square to the wall
+    Gfx.round(HOME.rug - 74, GY - 14, 154, 22, 9, '#5c3a20');
+    Gfx.round(HOME.rug - 68, GY - 12, 142, 17, 7, '#b07a45');
+    for (let i = 0; i < 11; i++) Gfx.rect(HOME.rug - 60 + i * 13, GY - 9, 6, 12, i % 2 ? '#d8a86b' : '#85562f');
+    for (let i = 0; i < 22; i++) {
+      Gfx.rect(HOME.rug - 74 + i * 7, GY + 8, 3, 4, '#5c3a20');
+      Gfx.rect(HOME.rug - 72 + i * 7, GY - 17, 3, 3, '#85562f');
     }
-    // the dodo's perch: a squared-off stump with a worn top
-    Gfx.round(HOME.perch - 24, GY - 46, 48, 50, 6, '#574a66');
-    Gfx.round(HOME.perch - 21, GY - 44, 40, 46, 5, '#7a6d8a');
-    Gfx.round(HOME.perch - 21, GY - 44, 15, 44, 5, '#9391a6');
-    Gfx.round(HOME.perch - 29, GY - 56, 58, 16, 5, '#574a66');
-    Gfx.round(HOME.perch - 26, GY - 54, 52, 11, 4, '#bdbccd');
-    Gfx.round(HOME.perch - 26, GY - 54, 22, 9, 4, '#ffffff');
-    // a tidy row of pots under the shelf
-    Gfx.sprite('house_shelf', HOME.shelf, GY - 118, { anchor: 'bc', scale: 1.2 });
-    for (let i = 0; i < 3; i++) Gfx.sprite('prop_pot', HOME.shelf - 26 + i * 26, GY + 3, { anchor: 'bc', scale: 0.6 + i * 0.05 });
-    Gfx.sprite('prop_skull', HOME.shelf + 4, GY - 122, { anchor: 'bc', scale: 0.7 });
-    // the club, hung on two pegs rather than dropped on the floor
-    Gfx.rect(HOME.bed - 46, GY - 176, 5, 8, '#3a2415');
-    Gfx.rect(HOME.bed - 2, GY - 176, 5, 8, '#3a2415');
-    Gfx.sprite('art_club', HOME.bed - 22, GY - 164, { anchor: 'c', scale: 1.5, rot: 1.57 });
+    // the dodo's perch: a squared stump with a worn top
+    Gfx.round(HOME.perch - 26, GY - 52, 52, 56, 6, '#574a66');
+    Gfx.round(HOME.perch - 23, GY - 50, 44, 52, 5, '#7a6d8a');
+    Gfx.round(HOME.perch - 23, GY - 50, 16, 50, 5, '#9391a6');
+    Gfx.round(HOME.perch - 32, GY - 64, 64, 18, 5, '#574a66');
+    Gfx.round(HOME.perch - 29, GY - 62, 58, 12, 4, '#bdbccd');
+    Gfx.round(HOME.perch - 29, GY - 62, 24, 10, 4, '#ffffff');
+    for (let i = 0; i < 4; i++) Gfx.rectA(HOME.perch - 16 + i * 10, GY - 40 + (i % 2) * 12, 3, 9, '#3b3048', 0.5);
+    Gfx.sprite('house_stool', HOME.perch + 52, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('house_basket', HOME.shelf - 60, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('house_waterjar', HOME.shelf + 40, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('house_broom', HOME.arch - 130, GY + 4, { anchor: 'bc', rot: 0.16 });
 
-    // ---------------- eating dome
-    Gfx.sprite('house_table', HOME.table, GY + 6, { anchor: 'bc', scale: 1.3 });
-    // four places laid, because someone in this house has standards
-    for (let i = 0; i < 4; i++) {
-      const px = HOME.table - 33 + i * 22;
-      Gfx.round(px - 8, GY - 42, 16, 5, 2, '#c4b89a');
-      Gfx.round(px - 6, GY - 43, 12, 3, 1, '#e8dfc6');
+    // ============ the eating dome
+    Gfx.sprite('house_waterjar', HOME.fossil - 40, GY + 4, { anchor: 'bc', scale: 1.1 });
+    Gfx.sprite('house_table', HOME.table, GY + 6, { anchor: 'bc', scale: 1.1 });
+    Gfx.sprite('house_stool', HOME.table - 90, GY + 5, { anchor: 'bc' });
+    Gfx.sprite('house_stool', HOME.table + 90, GY + 5, { anchor: 'bc' });
+    for (let i = 0; i < 4; i++) {                                 // four places laid
+      const sx = HOME.table - 48 + i * 32;
+      Gfx.round(sx - 11, GY - 56, 22, 7, 3, '#c4b89a');
+      Gfx.round(sx - 8, GY - 57, 16, 4, 2, '#e8dfc6');
+      Gfx.rect(sx + 12, GY - 58, 2, 8, '#fffaea');
     }
-    Gfx.sprite('prop_pot', HOME.table, GY - 44, { anchor: 'bc', scale: 0.5 });
-    // stone stools, evenly spaced
-    for (const sx of [HOME.table - 66, HOME.table + 66]) {
-      Gfx.round(sx - 14, GY - 24, 28, 26, 5, '#574a66');
-      Gfx.round(sx - 16, GY - 30, 32, 10, 4, '#7a6d8a');
-      Gfx.round(sx - 16, GY - 30, 13, 8, 4, '#9391a6');
-    }
-    // the stove pit, swept, with the wood stacked beside it
-    Gfx.sprite('stove_pit', HOME.stove, GY - 12, { anchor: 'bc', scale: 1.25 });
-    for (let k = 0; k < 6; k++) Gfx.round(HOME.clutter - 14 + (k % 2) * 4, GY - 6 - ((k / 2) | 0) * 9, 30, 8, 3, k % 2 ? '#5c3a20' : '#85562f');
-    Gfx.sprite('prop_barrel', HOME.stove - 62, GY + 4, { anchor: 'bc', scale: 0.85 });
+    Gfx.sprite('prop_pot', HOME.table + 6, GY - 56, { anchor: 'bc', scale: 0.6 });
+    // the pot rack over the hearth
+    { const sw = Math.sin(t * 0.9) * 1.5;
+      Gfx.line(HOME.stove - 66, 200, HOME.stove - 66 + sw, 252, '#3a2415', 2);
+      Gfx.line(HOME.stove + 20, 200, HOME.stove + 20 + sw, 252, '#3a2415', 2);
+      Gfx.sprite('house_potrack', HOME.stove - 23 + sw, 252, { anchor: 'tc', scale: 1.1 }); }
+    Gfx.sprite('house_hearth', HOME.stove, GY + 6, { anchor: 'bc', scale: 1.1 });
     if (o.fire > 0) {
-      for (let i = 0; i < 3; i++) if (chance(o.fire)) Particles.fire(HOME.stove + rnd(-26, 26), GY - 34, 1);
-      Gfx.glow(HOME.stove, GY - 60, 240, '#ff9a20', 0.24 * o.fire * (0.85 + Math.sin(t * 9) * 0.15));
+      for (let i = 0; i < 4; i++) if (chance(o.fire)) Particles.fire(HOME.stove + rnd(-40, 40), GY - 20, 1);
+      Gfx.glow(HOME.stove, GY - 40, 260, '#ff9a20', 0.26 * o.fire * (0.85 + Math.sin(t * 9) * 0.15));
     }
+    Gfx.sprite('house_basket', HOME.clutter, GY + 4, { anchor: 'bc' });
+    for (let k = 0; k < 6; k++)                                   // firewood, stacked square
+      Gfx.round(HOME.clutter + 34 + (k % 2) * 5, GY - 4 - ((k / 2) | 0) * 10, 34, 9, 4, k % 2 ? '#5c3a20' : '#85562f');
     // the doorway: a bright arch punched through the shell on the right
     const dx = HOME.door;
-    for (let x = dx - 44; x < dx + 44; x += 4) {
-      const k = (x + 2 - dx) / 44;
+    for (let x = dx - 52; x < dx + 52; x += 4) {
+      const k = (x + 2 - dx) / 52;
       if (k <= -1 || k >= 1) continue;
-      const h = 150 * Math.sqrt(1 - k * k);
+      const h = 176 * Math.sqrt(1 - k * k);
       Gfx.rect(x, GY - h, 4, h + 6, o.night ? '#7c3eb2' : '#a8d8ff');
-      Gfx.rect(x, GY - 40, 4, 46, '#85562f');
+      Gfx.rect(x, GY - 46, 4, 52, '#85562f');
     }
-    World.archDots(dx, GY, 46, 152, '#3a2415', 5, 0.02);
-    World.archDots(dx, GY - 5, 44, 147, '#85562f', 3, 0.02);
-    for (let i = 0; i < 3; i++) Gfx.sprite('prop_fern', dx - 16 + i * 16, GY + 4, { anchor: 'bc', scale: 0.7 });
+    World.archDots(dx, GY, 54, 178, '#3a2415', 5, 0.02);
+    World.archDots(dx, GY - 6, 52, 172, '#85562f', 3, 0.02);
+    for (let i = 0; i < 3; i++) Gfx.sprite('prop_fern', dx - 20 + i * 20, GY + 4, { anchor: 'bc', scale: 0.8 });
   },
 
   // ----------------------------------------------------------- the lighting
@@ -564,28 +690,37 @@ const World = {
   },
 
   // ---------------------------------------------------------------- CONCERT
-  // Bronk's dream: a stone amphitheatre at night, every torch in the valley
-  // lit, and a tyrannosaur for a stage. Painted bright - the crowd's fire is
-  // the whole point, so nothing here is allowed to sink into the dark.
+  // Bronk's dream, and it does not care what is possible. An amphitheatre cut
+  // into the flank of a live volcano, meteors coming down on the beat, and a
+  // megalodon doing laps over the crowd. Painted bright: the fire is the point.
   concert(t, o = {}, camX = 0) {
     const L = camX - 160, R = camX + VW + 160;
     const beat = o.beat || 0;                       // 0..1, pulses on the downbeat
-    World.skyRamp(L, R, -460, GY - 120, ['#0b0a18', '#161233', '#281040', '#4b2070', '#7c3eb2', '#a03a68']);
+    const SX = 580;                                 // the stage, in world x
+    const wob = Math.sin(t * 0.7) * 3;              // everything breathes, gently
+    Gfx.rect(L, -460, R - L, 580, '#0b0a18');
+    World.skyRamp(L, R, 128 + wob, GY - 120, ['#0b0a18', '#161233', '#281040', '#4b2070', '#7c3eb2', '#a03a68']);
     // stars
-    for (let i = 0; i < 80; i++) {
-      const sx2 = ((i * 137) % 2400) - 200 - camX * 0.04, sy = -400 + ((i * 73) % 420);
+    for (let i = 0; i < 90; i++) {
+      const sx2 = ((i * 137) % 2400) - 200 - camX * 0.04, sy = -180 + ((i * 73) % 330);
       if (sx2 < L || sx2 > R) continue;
-      Gfx.rect(sx2, sy, 2, 2, i % 5 ? '#d6cfe0' : '#ffe98a');
+      const tw = 0.5 + 0.5 * Math.sin(t * 3 + i);
+      Gfx.rectA(sx2, sy + wob, 2, 2, i % 5 ? '#d6cfe0' : '#ffe98a', 0.35 + tw * 0.65);
     }
-    const mx = 620 - camX * 0.03;
-    Gfx.circle(mx, -180, 52, '#ffe98a'); Gfx.glow(mx, -180, 320, '#ffe98a', 0.28);
-    // sweeping stage lights, drawn behind everything
+    const mx = 810 - camX * 0.03;
+    Gfx.circle(mx, 150, 40, '#ffe98a'); Gfx.glow(mx, 150, 280, '#ffe98a', 0.24);
+    Gfx.circle(mx - 13, 138, 8, '#e0b93a'); Gfx.circle(mx + 11, 166, 6, '#e0b93a');
+
+    World.meteors(t, camX, L, R);
+    World.volcano(t, SX - 40, camX, beat);
+
+    // sweeping stage lights, drawn behind the crowd
     for (let i = 0; i < 4; i++) {
       const a = -1.35 + Math.sin(t * 0.5 + i * 1.9) * 0.5;
-      const ox = 240 + i * 180;
+      const ox = 300 + i * 160;
       const ctx = Gfx.ctx;
       const g = ctx.createLinearGradient(ox, GY - 40, ox + Math.cos(a) * 600, GY - 40 + Math.sin(a) * 600);
-      g.addColorStop(0, ['rgba(255,233,138,0.30)', 'rgba(134,232,210,0.26)', 'rgba(177,119,230,0.28)', 'rgba(255,176,207,0.26)'][i]);
+      g.addColorStop(0, ['rgba(255,233,138,0.32)', 'rgba(134,232,210,0.28)', 'rgba(177,119,230,0.30)', 'rgba(255,176,207,0.28)'][i]);
       g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.moveTo(ox, GY - 40);
@@ -593,13 +728,14 @@ const World = {
       ctx.lineTo(ox + Math.cos(a + 0.12) * 900, GY - 40 + Math.sin(a + 0.12) * 900);
       ctx.fill();
     }
-    // the amphitheatre: terraces of stone stepping up behind the stage, packed
-    for (let s2 = 7; s2 >= 0; s2--) {
+
+    // the amphitheatre: three terraces of packed stone, low enough that the
+    // mountain behind them is the thing you look at
+    for (let s2 = 2; s2 >= 0; s2--) {
       const y = GY - 36 - s2 * 30;
-      Gfx.rect(L, y, R - L, 32, ['#9391a6', '#7a6d8a', '#574a66', '#4d4a5c', '#3b3048', '#2e2b38', '#281040', '#161233'][s2]);
-      Gfx.rectA(L, y, R - L, 3, '#9391a6', 0.45);
+      Gfx.rect(L, y, R - L, 32, ['#9391a6', '#7a6d8a', '#574a66'][s2]);
+      Gfx.rectA(L, y, R - L, 3, '#bdbccd', 0.45);
       Gfx.rectA(L, y + 29, R - L, 3, '#120c16', 0.5);
-      // the crowd on this terrace
       for (let x = Math.floor(L / 34) * 34; x < R; x += 34) {
         const j = jitter(x + s2 * 31, 12);
         const bob = Math.sin(t * 5.4 + x * 0.05 + s2) * 3 + beat * 4;
@@ -617,12 +753,14 @@ const World = {
         }
       }
     }
-    // banners hung off the top terrace
+    // banners, hung low off the front of the top terrace so they do not cover
+    // the mountain
     for (let x = Math.floor(L / 190) * 190; x < R; x += 190) {
+      if (Math.abs(x - 580) < 200) continue;                // nothing in front of the stage
       const sw = Math.sin(t * 1.2 + x) * 3;
-      Gfx.rect(x - 16, GY - 246, 32, 50, ['#a03a68', '#7c3eb2', '#18706a'][Math.abs((x / 190) | 0) % 3]);
-      Gfx.rect(x - 16 + sw, GY - 198, 32, 9, '#ffe98a');
-      Gfx.rect(x - 16, GY - 250, 32, 5, '#3a2415');
+      Gfx.rect(x - 14, GY - 132, 28, 38, ['#a03a68', '#7c3eb2', '#18706a'][Math.abs((x / 190) | 0) % 3]);
+      Gfx.rect(x - 14 + sw, GY - 96, 28, 8, '#ffe98a');
+      Gfx.rect(x - 14, GY - 136, 28, 5, '#3a2415');
     }
     // the floor of the pit
     Gfx.rect(L, GY - 6, R - L, 300, '#241c2e');
@@ -630,7 +768,6 @@ const World = {
     for (let x = Math.floor(L / 24) * 24; x < R; x += 24)
       Gfx.rectA(x + jitter(x, 18), GY + 6 + jitter(x + 2, 60), 7, 2, '#574a66', 0.5);
     // the stage: stacked slabs, with a bone rig over it
-    const SX = 580;
     Gfx.round(SX - 194, GY - 46, 388, 54, 6, '#120c16');
     Gfx.round(SX - 188, GY - 42, 376, 48, 5, '#3b3048');
     Gfx.round(SX - 188, GY - 46, 376, 9, 4, '#9391a6');
@@ -643,16 +780,18 @@ const World = {
       Gfx.glow(fx2, GY - 44, 40 + beat * 26, i % 2 ? '#ffe98a' : '#86e8d2', 0.34);
     }
     for (const rx of [SX - 210, SX + 210]) {
-      Gfx.rect(rx - 6, GY - 196, 12, 196, '#3a2415');
-      Gfx.rect(rx - 9, GY - 200, 18, 10, '#5c3a20');
+      Gfx.rect(rx - 6, GY - 152, 12, 152, '#3a2415');
+      Gfx.rect(rx - 9, GY - 156, 18, 10, '#5c3a20');
       for (let i = 0; i < 3; i++) {
-        Gfx.round(rx - 12, GY - 178 + i * 32, 24, 18, 6, '#241c2e');
-        Gfx.circle(rx, GY - 168 + i * 32, 6, i === 1 ? '#86e8d2' : '#ffe98a');
-        Gfx.glow(rx, GY - 168 + i * 32, 60 + beat * 40, i === 1 ? '#86e8d2' : '#ffe98a', 0.35);
+        Gfx.round(rx - 12, GY - 136 + i * 30, 24, 18, 6, '#241c2e');
+        Gfx.circle(rx, GY - 126 + i * 30, 6, i === 1 ? '#86e8d2' : '#ffe98a');
+        Gfx.glow(rx, GY - 126 + i * 30, 60 + beat * 40, i === 1 ? '#86e8d2' : '#ffe98a', 0.35);
       }
     }
-    Gfx.rect(SX - 216, GY - 206, 432, 12, '#3a2415');
-    Gfx.rect(SX - 216, GY - 206, 432, 4, '#5c3a20');
+    Gfx.rect(SX - 216, GY - 162, 432, 12, '#3a2415');
+    Gfx.rect(SX - 216, GY - 162, 432, 4, '#5c3a20');
+    // the pyro: a wall of cartoon flame across the front of the stage
+    World.pyro(t, SX, beat);
     // smoke rolling across the stage
     for (let i = 0; i < 6; i++) {
       const fx = SX - 200 + ((i * 74 + t * 20) % 400);
@@ -677,10 +816,128 @@ const World = {
         Gfx.glow(hx + 14, hy - 69, 40, '#ffa832', 0.5);
       }
     }
-    // a warm lift over the whole house, so the crowd never sinks into the dark
-    Gfx.rectA(L, GY - 300, R - L, 400, '#e06a1b', 0.10);
-    Gfx.glow(SX, GY - 90, 520, '#ffa832', 0.16 + beat * 0.10);
+    // embers drifting up through the whole shot, and a warm dream haze over it
+    for (let i = 0; i < 46; i++) {
+      const ex = ((i * 211 - camX * 0.4) % 1600 + 1600) % 1600 + L - 200;
+      const ey = GY + 60 - ((t * (22 + (i % 5) * 9) + i * 97) % 640);
+      Gfx.rectA(ex + Math.sin(t * 2 + i) * 5, ey, 3, 3, i % 3 ? '#ffa832' : '#ffe98a', 0.75);
+    }
+    Gfx.rectA(L, GY - 300, R - L, 400, '#e06a1b', 0.05);
+    Gfx.glow(SX, GY - 90, 420, '#ffa832', 0.10 + beat * 0.08);
     if (beat > 0.4) Gfx.rectA(L, -420, R - L, GY + 420, '#ffe98a', (beat - 0.4) * 0.10);
+  },
+
+  // a live volcano behind the stage: lava in the crater, three flows down the
+  // flank, an ash column, and a bomb thrown every few seconds
+  volcano(t, vx, camX, beat) {
+    const ctx = Gfx.ctx;
+    const BASE = GY - 124, APEX = GY - 286, HW = 186;
+    const px = vx - camX * 0.06;
+    // the ash column first, so the cone sits in front of it
+    for (let i = 0; i < 12; i++) {
+      const k = i / 11;
+      const py = APEX - 14 - k * 190 + Math.sin(t * 0.5 + i) * 6;
+      const r = 20 + k * 62;
+      Gfx.ctx.globalAlpha = 0.30 * (1 - k * 0.7);
+      Gfx.round(px - r + Math.sin(t * 0.4 + i * 1.3) * 22, py - r * 0.5, r * 2, r, r * 0.5, '#3b3048');
+      Gfx.ctx.globalAlpha = 1;
+    }
+    // the cone
+    ctx.fillStyle = '#120c16'; ctx.beginPath();
+    ctx.moveTo(px - HW, BASE + 40);
+    for (let x = -HW; x <= HW; x += 8) {
+      const k = Math.abs(x) / HW;
+      ctx.lineTo(px + x, APEX + (BASE - APEX) * (k ** 0.8) + Math.sin(x * 0.06) * 4);
+    }
+    ctx.lineTo(px + HW, BASE + 40); ctx.fill();
+    // the lit left flank
+    ctx.fillStyle = '#281040'; ctx.beginPath();
+    ctx.moveTo(px - HW, BASE + 40);
+    for (let x = -HW; x <= 0; x += 8) {
+      const k = Math.abs(x) / HW;
+      ctx.lineTo(px + x, APEX + (BASE - APEX) * (k ** 0.8) + Math.sin(x * 0.06) * 4);
+    }
+    ctx.lineTo(px, BASE + 40); ctx.fill();
+    for (let x = -HW; x <= HW; x += 7) {                       // the crest, catching the fire
+      const k = Math.abs(x) / HW;
+      const y = APEX + (BASE - APEX) * (k ** 0.8) + Math.sin(x * 0.06) * 4;
+      Gfx.rect(px + x, y, 7, 5, k < 0.34 ? '#ef6a5e' : k < 0.7 ? '#a03a68' : '#7c3eb2');
+      Gfx.rect(px + x, y + 5, 7, 3, k < 0.34 ? '#a03a68' : '#4b2070');
+    }
+    // three lava flows down the flank
+    for (let f = 0; f < 3; f++) {
+      let lx = px + (f - 1) * 30, ly = APEX + 10;
+      for (let i = 0; i < 22; i++) {
+        const nx = lx + (f - 1) * 6 + Math.sin(i * 0.9 + f) * 4;
+        const ny = ly + 9;
+        Gfx.line(lx, ly, nx, ny, i % 3 ? '#e06a1b' : '#ffa832', 5 - i * 0.12);
+        Gfx.line(lx, ly, nx, ny, '#ffe98a', 2);
+        lx = nx; ly = ny;
+        if (ly > BASE + 14) break;
+      }
+    }
+    Gfx.glow(px, APEX + 8, 200 + beat * 50, '#e06a1b', 0.4);
+    // the crater, and what comes out of it
+    Gfx.round(px - 34, APEX - 4, 68, 14, 6, '#5c1607');
+    Gfx.round(px - 28, APEX - 2, 56, 10, 5, '#e06a1b');
+    Gfx.round(px - 22, APEX, 44, 6, 3, '#ffe98a');
+    for (let i = 0; i < 7; i++) {                              // fountaining lava
+      const k = ((t * 1.3 + i * 0.31) % 1);
+      const bx = px + (i - 3) * 12 + Math.sin(i * 2.1) * 6;
+      const by = APEX - k * 120 + k * k * 105;
+      Gfx.circle(bx, by, 5 - k * 2.4, k < 0.5 ? '#ffe98a' : '#e06a1b');
+      Gfx.glow(bx, by, 34, '#ffa832', 0.5 * (1 - k));
+    }
+  },
+
+  // meteors, coming down behind the volcano on their own schedule
+  meteors(t, camX, L, R) {
+    for (let i = 0; i < 4; i++) {
+      const period = 5.5 + i * 2.1;
+      const k = ((t + i * 3.7) % period) / period;
+      if (k > 0.55) continue;
+      const u = k / 0.55;
+      const sx = L - 200 + u * (R - L + 700) * (i % 2 ? 1 : 0.7);
+      const sy = 100 + u * (170 + i * 22);
+      const s2 = i === 0 ? 1.6 : 0.7 + (i % 3) * 0.2;
+      for (let t2 = 0; t2 < 16; t2++) {                        // the tail
+        const tx = sx - t2 * 11 * s2, ty = sy - t2 * 6 * s2;
+        Gfx.rectA(tx, ty, 8 * s2, 5 * s2, t2 < 4 ? '#ffe98a' : t2 < 9 ? '#ffa832' : '#e06a1b', (1 - t2 / 16) * 0.85);
+      }
+      Gfx.circle(sx, sy, 7 * s2, '#ffe98a');
+      Gfx.circle(sx + 2, sy + 1, 4 * s2, '#ffffff');
+      Gfx.glow(sx, sy, 90 * s2, '#ffa832', 0.5);
+    }
+  },
+
+  // a wall of cartoon flame across the front of the stage. A flame is a
+  // teardrop with a hooked tip and a lick or two coming off it - never a cone.
+  flame(cx, by, h, w, sway, cols) {
+    const ctx = Gfx.ctx;
+    for (let k = 0; k < cols.length; k++) {
+      const kk = k / (cols.length - 1 || 1);
+      const ww = w * (1 - kk * 0.42), hh = h * (1 - kk * 0.30);
+      const tip = cx + sway * (1 + kk);
+      ctx.beginPath();
+      ctx.moveTo(cx - ww, by);
+      ctx.bezierCurveTo(cx - ww * 1.15, by - hh * 0.42, cx - ww * 0.45, by - hh * 0.62, tip - ww * 0.22, by - hh * 0.86);
+      ctx.quadraticCurveTo(tip + ww * 0.30, by - hh * 0.96, tip + ww * 0.05, by - hh);
+      ctx.quadraticCurveTo(tip + ww * 0.62, by - hh * 0.70, cx + ww * 0.55, by - hh * 0.40);
+      ctx.bezierCurveTo(cx + ww * 1.1, by - hh * 0.26, cx + ww, by - hh * 0.1, cx + ww, by);
+      ctx.closePath();
+      ctx.fillStyle = cols[k]; ctx.fill();
+    }
+  },
+  pyro(t, SX, beat) {
+    for (let i = 0; i < 19; i++) {
+      const fx = SX - 186 + i * 21;
+      const h = 15 + Math.abs(Math.sin(t * 5 + i * 1.7)) * 9 + beat * 16 + (i % 3) * 3;
+      const sway = Math.sin(t * 4.4 + i) * 3.5;
+      World.flame(fx, GY - 33, h, 7.5, sway, ['#e06a1b', '#ffa832', '#ffe98a']);
+      if ((i + ((t * 3) | 0)) % 4 === 0)                        // a lick breaking free
+        World.flame(fx + sway * 2, GY - 33 - h - 5, 7, 3.4, sway, ['#ffa832', '#ffe98a']);
+      if (i % 3 === 0) Gfx.glow(fx, GY - 42, 50, '#ffa832', 0.18);
+    }
   },
 
   // ------------------------------------------------------------------- ROAD

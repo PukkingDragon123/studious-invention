@@ -607,7 +607,7 @@ class Combat {
     const spacing = Math.min(CARD_W + 8, 620 / Math.max(1, n));
     const total = spacing * (n - 1) + CARD_W;
     const x0 = W / 2 - total / 2;
-    const baseY = H - CARD_H - 12 + this.handSlide * 230;
+    const baseY = H - CARD_H - 20 + this.handSlide * 240;
     let hov = -1;
     if (Input.touch) hov = this.preview ? this.hand.indexOf(this.preview) : -1;
     else if (!this.busy) for (let i = n - 1; i >= 0; i--) { if (inRect(Input.mx, Input.my, x0 + i * spacing, baseY - 24, i === n - 1 ? CARD_W : spacing, CARD_H)) { hov = i; break; } }

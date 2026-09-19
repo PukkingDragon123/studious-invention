@@ -20,7 +20,7 @@ const { chromium } = require('/opt/node22/lib/node_modules/playwright');
       Gfx.ctx.beginPath(); Gfx.ctx.rect(0, 0, 960, 540); Gfx.ctx.clip();
       Gfx.ctx.fillStyle = '#120c16'; Gfx.ctx.fillRect(0, 0, 960, 540);
       Gfx.ctx.scale(VIEW, VIEW);
-      Gfx.ctx.translate(-cx, -(GY - (H / VIEW) * 0.74));
+      Gfx.ctx.translate(-cx, -(GY - (H / VIEW) * (stage === 'concert' ? 0.95 : 0.74)));
       World[stage](2.0, { fire: 1, beat: 0.5 }, cx);
       Gfx.ctx.restore();
       // landmark rulers so it is obvious what sits where
