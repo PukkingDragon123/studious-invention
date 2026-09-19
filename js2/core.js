@@ -175,11 +175,19 @@ class Camera {
 const Juice = {
   shakeX: 0, shakeY: 0, _mag: 0, _t: 0, _dur: 0,
   flashes: [], hitstop: 0, vignette: 0, chroma: 0, zoomPunch: 0, bars: 0, barsTarget: 0,
+  speed: 0, pows: [],
   shake(mag, t = 0.25) { this._mag = Math.max(this._mag, mag); this._t = Math.max(this._t, t); this._dur = Math.max(this._dur, t); },
   flash(color = '#fff', a = 0.5, decay = 3) { this.flashes.push({ color, a, decay }); },
   stop(t = 0.06) { this.hitstop = Math.max(this.hitstop, t); },
   punch(amount = 0.06) { this.zoomPunch = Math.max(this.zoomPunch, amount); },
   letterbox(on) { this.barsTarget = on ? 56 : 0; },
+  // streaks raked in from the edges of the frame. k is 0..1 of "fast".
+  lines(k) { this.speed = Math.max(this.speed, clamp(k, 0, 1)); },
+  // the cartoon impact: a spiked star with a white core, in screen space
+  pow(x, y, o = {}) {
+    this.pows.push({ x, y, t: 0, life: o.life || 0.34, spikes: o.spikes || 11,
+      r: o.r || 54, col: o.col || '#ffe98a', word: o.word || null });
+  },
   update(dt) {
     if (this._t > 0) {
       this._t -= dt; const k = clamp(this._t / (this._dur || 0.25), 0, 1); const m = this._mag * k * k;
@@ -190,17 +198,50 @@ const Juice = {
     this.flashes = this.flashes.filter(f => f.a > 0);
     this.zoomPunch = damp(this.zoomPunch, 0, 9, dt);
     this.chroma = damp(this.chroma, 0, 7, dt);
+    this.speed = damp(this.speed, 0, 6, dt);
+    for (const p of this.pows) p.t += dt;
+    this.pows = this.pows.filter(p => p.t < p.life);
     this.bars = damp(this.bars, this.barsTarget, 7, dt);
   },
   drawOverlay(ctx) {
     for (const f of this.flashes) { ctx.globalAlpha = clamp(f.a, 0, 1); ctx.fillStyle = f.color; ctx.fillRect(0, 0, W, H); }
     ctx.globalAlpha = 1;
+    if (this.speed > 0.02) {                       // speed lines raked in from the sides
+      const n = 16;
+      for (let i = 0; i < n; i++) {
+        const t = (i / n + (Time.t * 1.7) % 1) % 1;
+        const y = t * H;
+        const len = (40 + Math.sin(i * 31.7) * 30) * this.speed * (0.4 + Math.abs(y - H / 2) / H);
+        const a = this.speed * (0.10 + (i % 3) * 0.05);
+        ctx.globalAlpha = a; ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, y, len, 2 + (i % 2));
+        ctx.fillRect(W - len, y + 7, len, 2 + (i % 2));
+      }
+      ctx.globalAlpha = 1;
+    }
+    for (const p of this.pows) {                   // cartoon impact stars
+      const k = p.t / p.life;
+      const r = p.r * (0.35 + Ease.outCubic(k) * 0.9);
+      ctx.globalAlpha = clamp(1 - k, 0, 1);
+      for (const [rr, col] of [[r, '#120c16'], [r - 4, p.col], [r * 0.46, '#ffffff']]) {
+        ctx.beginPath();
+        for (let i = 0; i <= p.spikes * 2; i++) {
+          const a = (i / (p.spikes * 2)) * Math.PI * 2 + k * 0.6;
+          const rad = rr * (i % 2 ? 0.52 : 1) * (1 + Math.sin(i * 12.9) * 0.08);
+          const px = p.x + Math.cos(a) * rad, py = p.y + Math.sin(a) * rad;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+      }
+      if (p.word) Gfx.text(p.word, p.x, p.y - 10, { color: '#120c16', align: 'center', scale: 2.2, outline: true, outlineWidth: 2 });
+      ctx.globalAlpha = 1;
+    }
     if (this.bars > 0.5) {
       ctx.fillStyle = '#080510';
       ctx.fillRect(0, 0, W, this.bars); ctx.fillRect(0, H - this.bars, W, this.bars);
     }
   },
-  reset() { this.flashes.length = 0; this.hitstop = 0; this.bars = 0; this.barsTarget = 0; this._t = 0; this._mag = 0; this.shakeX = this.shakeY = 0; }
+  reset() { this.flashes.length = 0; this.pows.length = 0; this.speed = 0; this.hitstop = 0; this.bars = 0; this.barsTarget = 0; this._t = 0; this._mag = 0; this.shakeX = this.shakeY = 0; }
 };
 
 // ------------------------------------------------------------------ particles

@@ -203,13 +203,13 @@ const World = {
 
   // Fat cartoon clouds, built from lobes with a lit crown and a flat shaded
   // underside, drifting at three depths.
-  clouds(t, camX, L, R, night) {
+  clouds(t, camX, L, R, night, top = -190) {
     const LOBES = [[0, 0, 62, 20], [40, -14, 48, 22], [-38, -6, 40, 17], [84, -2, 34, 15], [-72, 4, 26, 11]];
     for (let d = 0; d < 3; d++) {
       const depth = 0.03 + d * 0.035, span = 1100 + d * 260, n = 4;
       for (let i = 0; i < n; i++) {
         const cx = ((i * span / n + d * 190 - camX * depth + t * (2 + d)) % span + span) % span + L - 220;
-        const cy = -190 + d * 64 + (i % 3) * 26;
+        const cy = top + d * 52 + (i % 3) * 22;
         const s2 = 0.6 + d * 0.22;
         Gfx.ctx.globalAlpha = night ? 0.24 + d * 0.05 : 0.55 + d * 0.14;
         for (const [ox, oy, rx, ry] of LOBES)                     // the shaded belly
@@ -223,12 +223,12 @@ const World = {
     }
   },
   // pterodactyls, always. three depths, wings on their own clock.
-  flock(t, camX, L, R, night) {
+  flock(t, camX, L, R, night, top = -170) {
     for (let d = 0; d < 3; d++) {
       const depth = 0.05 + d * 0.06, span = 1500 + d * 420, n = d === 0 ? 2 : 3;
       for (let i = 0; i < n; i++) {
         const px = ((i * span / n + d * 330 - camX * depth + t * (26 + d * 22)) % span + span) % span + L - 260;
-        const py = -170 + d * 74 + (i % 3) * 34 + Math.sin(t * (0.7 + d * 0.2) + i * 2) * 16;
+        const py = top + d * 58 + (i % 3) * 28 + Math.sin(t * (0.7 + d * 0.2) + i * 2) * 14;
         const sc = 0.34 + d * 0.22;
         Gfx.sprite('ptero_fly', px, py, {
           anchor: 'c', scale: sc, frame: Math.floor(t * (5 + d) + i * 2) % 4,
@@ -377,8 +377,8 @@ const World = {
   // stone footing and a smoke hole at the crown
   dome(d, night) {
     const S = 4;
-    const wall = night ? '#7a6d8a' : '#9391a6';
-    const wallDark = night ? '#574a66' : '#7a6d8a';
+    const wall = night ? '#6e6b80' : '#9391a6';
+    const wallDark = night ? '#4d4a5c' : '#7a6d8a';
     // --- the inner face, stepped in 4px columns so the curve stays pixelly
     for (let x = d.x - d.rx; x < d.x + d.rx; x += S) {
       const y = World.domeY(d, x + S / 2);
@@ -389,9 +389,9 @@ const World = {
     }
     // --- a soft vertical wash: brighter under the smoke hole
     const g = Gfx.ctx.createLinearGradient(0, GY - d.ry, 0, GY);
-    g.addColorStop(0, 'rgba(255,233,138,0.22)');
-    g.addColorStop(0.45, 'rgba(255,233,138,0.05)');
-    g.addColorStop(1, 'rgba(59,48,72,0.22)');
+    g.addColorStop(0, 'rgba(255,233,138,0.10)');
+    g.addColorStop(0.45, 'rgba(255,233,138,0.02)');
+    g.addColorStop(1, 'rgba(59,48,72,0.26)');
     Gfx.ctx.save();
     Gfx.ctx.beginPath();
     Gfx.ctx.ellipse(d.x, GY, d.rx, d.ry, 0, Math.PI, 0);
@@ -406,8 +406,8 @@ const World = {
     }
     for (let i = 1; i < 6; i++) {
       const s = i / 6;
-      World.archDots(d.x, GY, d.rx * s, d.ry, '#5c3a20', 4, 0.02);
-      World.archDots(d.x - 1, GY, d.rx * s, d.ry - 2, '#b07a45', 2, 0.02);
+      World.archDots(d.x, GY, d.rx * s, d.ry, '#3a2415', 5, 0.02);
+      World.archDots(d.x - 1, GY, d.rx * s, d.ry - 2, '#b07a45', 3, 0.02);
     }
     // --- hide panels stitched between the ribs, low down where you see them
     for (let i = 0; i < 6; i++) {
@@ -467,7 +467,7 @@ const World = {
     const a = DOMES[0], b = DOMES[1];
     const x0 = b.x - b.rx, x1 = a.x + a.rx;
     const cx = (x0 + x1) / 2, rx = Math.max(52, (x1 - x0) / 2 + 40), ry = 152;
-    const inner = night ? '#574a66' : '#7a6d8a';
+    const inner = night ? '#4d4a5c' : '#7a6d8a';
     for (let x = cx - rx; x < cx + rx; x += 4) {
       const k = (x + 2 - cx) / rx;
       if (k <= -1 || k >= 1) continue;
@@ -593,8 +593,8 @@ const World = {
   // house that is Vela's doing rather than Bronk's.
   drop(x, w, y = GY + 3, a = 0.34) { Gfx.shadow(x, y, w, a); },
   homeStuff(t, o, camX) {
-    for (const [x, w] of [[HOME.bed, 130], [HOME.drum, 60], [HOME.perch, 64], [HOME.shelf - 60, 46],
-                          [HOME.arch - 130, 40], [HOME.fossil - 40, 40],
+    for (const [x, w] of [[HOME.bed, 130], [HOME.drum, 60], [HOME.perch, 64], [HOME.perch + 98, 52],
+                          [HOME.perch + 48, 34], [HOME.fossil - 40, 40],
                           [HOME.table, 140], [HOME.table - 90, 40], [HOME.table + 90, 40],
                           [HOME.stove, 140], [HOME.clutter, 60], [HOME.door - 70, 46]])
       World.drop(x, w);
@@ -620,10 +620,10 @@ const World = {
     Gfx.round(HOME.perch - 29, GY - 62, 58, 12, 4, '#bdbccd');
     Gfx.round(HOME.perch - 29, GY - 62, 24, 10, 4, '#ffffff');
     for (let i = 0; i < 4; i++) Gfx.rectA(HOME.perch - 16 + i * 10, GY - 40 + (i % 2) * 12, 3, 9, '#3b3048', 0.5);
-    Gfx.sprite('house_stool', HOME.perch + 52, GY + 4, { anchor: 'bc' });
-    Gfx.sprite('house_basket', HOME.shelf - 60, GY + 4, { anchor: 'bc' });
-    Gfx.sprite('house_waterjar', HOME.shelf + 40, GY + 4, { anchor: 'bc' });
-    Gfx.sprite('house_broom', HOME.arch - 130, GY + 4, { anchor: 'bc', rot: 0.16 });
+    Gfx.sprite('house_stool', HOME.perch + 48, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('house_basket', HOME.perch + 98, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('house_waterjar', HOME.perch + 140, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('house_broom', HOME.bed + 76, GY + 4, { anchor: 'bc', rot: 0.16 });
 
     // ============ the eating dome
     Gfx.sprite('house_waterjar', HOME.fossil - 40, GY + 4, { anchor: 'bc', scale: 1.1 });
@@ -672,14 +672,14 @@ const World = {
     for (const d of DOMES) {
       const hy = GY - d.ry;
       const g = Gfx.ctx.createLinearGradient(0, hy, 0, GY);
-      g.addColorStop(0, 'rgba(255,233,138,0.34)');
+      g.addColorStop(0, 'rgba(255,233,138,0.16)');
       g.addColorStop(1, 'rgba(255,233,138,0.0)');
       Gfx.ctx.fillStyle = g;
       Gfx.ctx.beginPath();
       Gfx.ctx.moveTo(d.x - 22, hy); Gfx.ctx.lineTo(d.x + 22, hy);
       Gfx.ctx.lineTo(d.x + 74, GY + 4); Gfx.ctx.lineTo(d.x - 74, GY + 4);
       Gfx.ctx.fill();
-      Gfx.rectA(d.x - 70, GY - 8, 140, 12, '#ffe98a', 0.10);
+      Gfx.rectA(d.x - 70, GY - 8, 140, 12, '#ffe98a', 0.06);
     }
     if (o.fire > 0) {
       Gfx.glow(HOME.stove, GY - 46, 220, '#ff9a20', 0.26 * o.fire * flick);
@@ -944,15 +944,11 @@ const World = {
   // The chill commute. Nothing to dodge, just a long warm morning.
   road(t, o = {}, camX = 0) {
     const L = camX - 160, R = camX + VW + 160;
-    Gfx.bands(L, -400, R - L, 760, ['#1d3d72', '#3570c0', '#6aa9ee', '#a8d8ff', '#ffe08a', '#ffb0cf']);
-    const sx = camX * 0.02 + 760; Gfx.circle(sx, 70, 34, '#ffe98a'); Gfx.glow(sx, 70, 230, '#ffe98a', 0.26);
-    for (let i = 0; i < 14; i++) {
-      const cx = ((i * 380 - camX * 0.08) % 2600 + 2600) % 2600 + L - 200;
-      Gfx.ctx.globalAlpha = 0.5;
-      Gfx.round(cx, 70 + (i % 3) * 34, 120, 30, 15, '#ffffff');
-      Gfx.round(cx + 40, 56 + (i % 3) * 34, 90, 34, 17, '#ffffff');
-      Gfx.ctx.globalAlpha = 1;
-    }
+    Gfx.rect(L, -400, R - L, 560, '#1d3d72');
+    World.skyRamp(L, R, 120, GY - 56, ['#1d3d72', '#3570c0', '#3570c0', '#6aa9ee', '#a8d8ff', '#ffe08a']);
+    const sx = camX * 0.02 + 760; Gfx.circle(sx, 196, 30, '#ffe98a'); Gfx.glow(sx, 196, 220, '#ffe98a', 0.26);
+    World.clouds(t, camX, L, R, false, 180);
+    World.flock(t, camX, L, R, false, 196);
     const ridge = (depth, col, edge, base, amp, scrub) => {
       const ctx = Gfx.ctx, off = camX * depth;
       const hy = x => base + Math.sin((x + off) * 0.0031) * amp + Math.sin((x + off) * 0.009) * amp * 0.35;
@@ -962,27 +958,82 @@ const World = {
       for (let x = Math.floor(L / 6) * 6; x < R; x += 6) Gfx.rect(x, hy(x), 6, 4, edge);
       for (let x = Math.floor(L / 36) * 36; x < R; x += 36) {
         const y = hy(x) + 12 + jitter(x + depth * 90, 36);
-        Gfx.rectA(x + jitter(x, 26), y, 9, 4, edge, 0.3);
-        if (scrub && ((x / 36) | 0) % 3 === 0) Gfx.round(x + jitter(x + 2, 26), y + 9, 14, 8, 3, edge);
+        Gfx.rectA(x + jitter(x, 26), y, 11, 5, edge, 0.5);
+        if (scrub && ((x / 36) | 0) % 3 === 0) Gfx.round(x + jitter(x + 2, 26), y + 9, 16, 9, 4, edge);
+        if (((x / 36) | 0) % 4 === 0) Gfx.rectA(x + jitter(x + 5, 26), y + 22, 7, 3, '#120c16', 0.18);
       }
     };
-    ridge(0.6, '#7c3eb2', '#b177e6', 236, 52);
-    ridge(0.42, '#4b2070', '#7c3eb2', 282, 34);
-    ridge(0.22, '#27632f', '#3f9a45', 340, 20, true);
+    ridge(0.6, '#7c3eb2', '#b177e6', 288, 34);
+    for (let x = Math.floor(L / 420) * 420; x < R; x += 420) {    // rock spires on the far ridge
+      const px = x - camX * 0.42, hgt = 60 + jitter(x, 40);
+      Gfx.ctx.fillStyle = '#4b2070'; Gfx.ctx.beginPath();
+      Gfx.ctx.moveTo(px - 18, 330); Gfx.ctx.lineTo(px - 5, 330 - hgt);
+      Gfx.ctx.lineTo(px + 4, 330 - hgt * 0.8); Gfx.ctx.lineTo(px + 20, 330); Gfx.ctx.fill();
+      Gfx.rectA(px - 8, 330 - hgt, 7, hgt, '#7c3eb2', 0.6);
+    }
+    ridge(0.42, '#4b2070', '#7c3eb2', 326, 24);
+    ridge(0.22, '#27632f', '#3f9a45', 368, 14, true);
+    for (let x = Math.floor(L / 150) * 150; x < R; x += 150)     // a treeline on the near ridge
+      Gfx.sprite(((x / 150) | 0) % 3 ? 'prop_tree' : 'prop_palm', x + jitter(x, 64), 384 + jitter(x + 3, 8),
+        { anchor: 'bc', scale: 0.5, alpha: 0.9 });
     // distant herd, plodding the other way
     for (let i = 0; i < 4; i++) {
       const hx = ((i * 700 - camX * 0.3 + t * 12) % 2800 + 2800) % 2800 + L - 300;
-      Gfx.sprite('mammoth_walk', hx, 356, { anchor: 'bc', scale: 0.5, alpha: 0.55, frame: Math.floor(t * 4 + i) % 4 });
+      Gfx.sprite('mammoth_walk', hx, 390, { anchor: 'bc', scale: 0.5, alpha: 0.6, frame: Math.floor(t * 4 + i) % 4 });
     }
     Gfx.rect(L, GY - 6, R - L, 300, '#85562f');
     Gfx.rect(L, GY - 6, R - L, 6, '#b07a45');
-    Gfx.rectA(L, GY + 26, R - L, 10, '#5c3a20', 0.6);
-    for (let x = Math.floor(L / 120) * 120; x < R; x += 120) Gfx.rectA(x, GY + 54, 64, 5, '#d8a86b', 0.5);
+    Gfx.rectA(L, GY + 24, R - L, 8, '#5c3a20', 0.5);
+    for (let x = Math.floor(L / 120) * 120; x < R; x += 120) {   // wheel ruts and loose stones
+      Gfx.rectA(x, GY + 8, 72, 4, '#d8a86b', 0.45);
+      Gfx.rectA(x + 30, GY + 20, 58, 4, '#d8a86b', 0.35);
+      Gfx.round(x + 86, GY + 14, 13, 7, 3, '#7a6d8a');
+      Gfx.round(x + 20, GY + 28, 9, 5, 2, '#574a66');
+    }
     for (let x = Math.floor(L / 260) * 260; x < R; x += 260) {
       Gfx.sprite(((x / 260) | 0) % 2 ? 'prop_palm' : 'prop_deadtree', x + jitter(x, 40), GY - 2, { anchor: 'bc', alpha: 0.92 });
       Gfx.sprite('prop_bush', x + 140, GY + 4, { anchor: 'bc', alpha: 0.9 });
     }
     for (let x = Math.floor(L / 640) * 640; x < R; x += 640) Gfx.sprite('prop_bones', x + 300, GY + 6, { anchor: 'bc', scale: 0.8, alpha: 0.9 });
+    // things worth passing: a tar pit, a standing stone, a herd crossing
+    for (let x = Math.floor(L / 900) * 900; x < R; x += 900) {
+      Gfx.sprite('prop_tar', x + 120, GY + 6, { anchor: 'bc', scale: 1.1 });
+      Gfx.sprite('prop_totem', x + 520, GY + 4, { anchor: 'bc', scale: 0.9 });
+      Gfx.sprite('prop_signpost', x + 700, GY + 4, { anchor: 'bc' });
+    }
+    for (let i = 0; i < 3; i++) {                              // compies running the verge
+      const cx2 = ((i * 620 - camX * 0.9 + t * 60) % 1860 + 1860) % 1860 + L - 200;
+      Gfx.sprite('compy_walk', cx2, GY + 2, { anchor: 'bc', scale: 0.8, frame: Math.floor(t * 12 + i) % 4 });
+    }
+    World.verge(t, camX, L, R, ['#27632f', '#3f9a45', '#6cc95c'], '#85562f');
+  },
+
+  // The strip that runs in FRONT of the action, scrolling faster than the
+  // ground it sits on. Without it a side-scroller is a painting; with it the
+  // camera is in the world.
+  verge(t, camX, L, R, green, dirt, prop = 'prop_fern', pscale = 1.6) {
+    const off = camX * 0.48;                       // it moves faster than the ground
+    const FL = camX - 260, FR = camX + VW + 260;
+    const TOP = GY + 34;
+    Gfx.rect(FL, TOP, FR - FL, 240, dirt);
+    Gfx.rect(FL, TOP, FR - FL, 5, green[2]);
+    Gfx.rectA(FL, TOP + 5, FR - FL, 14, '#120c16', 0.28);
+    for (let x = Math.floor((FL + off) / 18) * 18 - off; x < FR; x += 18)   // the cut face of the bank
+      Gfx.rectA(x + jitter(x + off, 14), TOP + 10 + jitter(x + 2, 40), 9, 3, '#120c16', 0.3);
+    // clumps of tapering blades, not a picket fence
+    for (let x = Math.floor((FL + off) / 30) * 30 - off; x < FR; x += 30) {
+      const gx = x + jitter(x + off, 22), n = 5 + (Math.abs((x / 30) | 0) % 3);
+      for (let k = 0; k < n; k++) {
+        const bx = gx + k * 5 - n * 2, h = 10 + Math.abs(Math.sin(k * 2.1 + x)) * 22;
+        const lean = (k - n / 2) * 1.6;
+        for (let y2 = 0; y2 < h; y2 += 3) {
+          const w2 = Math.max(1, 4 - (y2 / h) * 3);
+          Gfx.rect(bx + lean * (y2 / h), TOP - y2 - 3, w2, 4, y2 > h * 0.6 ? green[2] : y2 > h * 0.25 ? green[1] : green[0]);
+        }
+      }
+      if (((x / 30) | 0) % 4 === 0) { Gfx.round(gx + 8, TOP - 9, 24, 15, 6, '#574a66'); Gfx.round(gx + 10, TOP - 10, 16, 6, 3, '#9391a6'); }
+      if (((x / 30) | 0) % 7 === 0) Gfx.sprite(prop, gx, TOP + 8, { anchor: 'bc', scale: pscale });
+    }
   },
 
   // ----------------------------------------------------------------- QUARRY
@@ -1069,8 +1120,8 @@ const World = {
           Gfx.rectA(x + jitter(x + k * 3, 10), hy(x) + 14 + k * 17, 10, 3, k % 2 ? edge : '#120c16', 0.22);
     };
     wall(0.62, '#3f0e18', '#7d1d2b', 170, 70, 0);
-    wall(0.44, '#281040', '#4b2070', 250, 50, 900);
-    wall(0.24, '#120c16', '#3b3048', 320, 30, 1700);
+    wall(0.44, '#281040', '#7c3eb2', 250, 50, 900);
+    wall(0.24, '#241c2e', '#574a66', 320, 30, 1700);
     for (let x = Math.floor(L / 320) * 320; x < R; x += 320) Gfx.sprite('prop_deadtree', x + jitter(x, 60), GY + 2, { anchor: 'bc', alpha: 0.75 });
     Gfx.rect(L, GY - 6, R - L, 300, '#5c3a20');
     Gfx.rect(L, GY - 6, R - L, 5, '#b07a45');
@@ -1083,6 +1134,12 @@ const World = {
     }
     for (let x = Math.floor(L / 190) * 190; x < R; x += 190) Gfx.sprite('prop_rock', x + jitter(x, 60), GY + 4, { anchor: 'bc', scale: 0.8, alpha: 0.95 });
     for (let x = Math.floor(L / 560) * 560; x < R; x += 560) Gfx.sprite('prop_bones', x + 120, GY + 6, { anchor: 'bc', alpha: 0.95 });
+    for (let i = 0; i < 4; i++) {                              // pteranodons riding the updraft
+      const px = ((i * 520 - camX * 0.12 + t * 34) % 2080 + 2080) % 2080 + L - 300;
+      Gfx.sprite('ptero_fly', px, 150 + (i % 3) * 40 + Math.sin(t + i) * 14,
+        { anchor: 'c', scale: 0.45 + (i % 2) * 0.2, frame: Math.floor(t * 6 + i) % 4, alpha: 0.85 });
+    }
+    World.verge(t, camX, L, R, ['#241109', '#3a2415', '#5c3a20'], '#120c16', 'prop_bones', 0.8);
     if (o.embers) for (let i = 0; i < 2; i++) if (chance(0.5))
       Particles.spawn(camX + rnd(0, VW), GY - rnd(0, 200), { n: 1, color: ['#ffa832', '#e06a1b'], speed: 12, gravity: -20, life: 3, size: 3, sizeEnd: 0 });
   },

@@ -94,6 +94,7 @@ SONGS.map = {
 SONGS.battle1 = {
   name: 'Bedrock Brawl', bpm: 126, bars: 8,
   tracks: {
+    crash: { pat: B('X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . X'), vol: 0.5 },
     kick: { pat: B(REP('x . . . x . . . x . . . x . x .', 3), 'x . . x . . x . x . . . x . . .', REP('x . . . x . . . x . . . x . x .', 3), 'x . . x . . x . x . x . x . . .') },
     snare: { pat: B(REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . . . . . x . . x', REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . . . x . x . x x') },
     hat: { pat: REP('x . o . x . o . x . o . x . X .', 8), vol: 0.8 },
@@ -134,6 +135,7 @@ SONGS.battle1 = {
 SONGS.battle2 = {
   name: 'Tar Pit Boogie', bpm: 132, bars: 8, swing: 0.55, swingMode: 'shuffle',
   tracks: {
+    crash: { pat: B('X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . X'), vol: 0.5 },
     kick: { pat: B(REP('x . . . . . x . x . . . . . . .', 3), 'x . . . . . x . x . . . x . x .', REP('x . . . . . x . x . . . . . . .', 3), 'x . . . . . x . x . x . x . . .') },
     snare: { pat: B(REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . . . . . x . x .', REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . . . x . x . x .') },
     hat: { pat: REP('x . x . x . x . x . x . x . X .', 8), vol: 0.75 },
@@ -174,6 +176,7 @@ SONGS.battle2 = {
 SONGS.battle3 = {
   name: 'Magma Mosh', bpm: 144, bars: 8,
   tracks: {
+    crash: { pat: B('X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . X'), vol: 0.5 },
     kick: { pat: B(REP('x . . . x . x x x . . . x . x x', 3), 'x . x . x . x x x . x . x . x x', REP('x . . . x . x x x . . . x . x x', 3), 'x x . x x x . x x x . x x x x x') },
     snare: { pat: B(REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . . . . . x . x x', REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . x . x . x x x x') },
     hat: { pat: B(REP('x . x . x . x . x . x . x . x .', 3), 'x . x . x . x . x . x . X . X .', REP('x . x . x . x . x . x . x . x .', 3), 'X . X . X . X . X . X . X . X .'), vol: 0.75 },
@@ -213,6 +216,7 @@ SONGS.battle3 = {
 SONGS.boss1 = {
   name: 'Horns of Thunder', bpm: 132, bars: 8,
   tracks: {
+    crash: { pat: B('X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . X'), vol: 0.5 },
     kick: { pat: B(REP('x . . . . . x . x . . . . . . .', 3), 'x . . . . . x . x . . . x . x .', REP('x . . . . . x . x . . . . . . .', 3), 'x . x . x . x . x x x x x x x x') },
     snare: { pat: B(REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . . . . . x x . x', REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . x . x . x x x x') },
     hat: { pat: REP('x . o . x . o . x . o . x . X .', 8), vol: 0.7 },
@@ -257,6 +261,7 @@ SONGS.boss1 = {
 SONGS.boss2 = {
   name: 'Queen of the Swamp', bpm: 138, bars: 8, swing: 0.3, swingMode: 'shuffle',
   tracks: {
+    crash: { pat: B('X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . X'), vol: 0.5 },
     kick: { pat: B(REP('x . . . . . x . . . x . . . . .', 3), 'x . . . . . x . . . x . x . x .', REP('x . . . . . x . . . x . . . . .', 3), 'x . x . x . x . x . x . x x x x') },
     snare: { pat: B(REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . . . . . x . x x', REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . x . x . x x x x') },
     hat: { pat: REP('x . x . x . x . x . x . x . X .', 8), vol: 0.7 },
@@ -302,6 +307,17 @@ SONGS.boss2 = {
 SONGS.boss3 = {
   name: 'King Rex', bpm: 150, bars: 8,
   tracks: {
+    shred: { inst: 'lead', vol: 0.26, minIntensity: 2, pat: B(
+      'e5 . e5 . g5 . e5 . b5 . a5 . g5 . e5 .',
+      'e5 . e5 . g5 . a5 . b5 . d6 . b5 . a5 .',
+      'c6 . c6 . b5 . c6 . e6 - - . d6 . c6 .',
+      'd6 . c6 . b5 . a5 . g5 . a5 . f#5 - - .',
+      'e5 . e5 . g5 . e5 . b5 . a5 . g5 . e5 .',
+      'f5 . f5 . a5 . f5 . c6 . a5 . f5 . e5 .',
+      'c6 . d6 . e6 . g6 . e6 . d6 . c6 . b5 .',
+      'b5 . d#6 . f#6 . b6 . f#6 . d#6 . b5 - - .') },
+    rattle: { pat: B('. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'x . x . x . x . x . x . x x x x', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'x . x . x . x . x . x . x x x x'), vol: 0.5 },
+    crash: { pat: B('X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . X'), vol: 0.5 },
     kick: { pat: B(REP('x . . . x . x . x . . . x . x x', 3), 'x . x . x . x . x . x . x x x x', REP('x . . . x . x . x . . . x . x x', 3), 'x . . . . . . . x . . . . . . .') },
     snare: { pat: B(REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . x . . . x . x x', REP('. . . . x . . . . . . . x . . .', 3), '. . . . x . . . . . . . x x x x') },
     hat: { pat: B(REP('x . x . x . x . x . x . x . x .', 7), 'X . . . X . . . X . . . X . . .'), vol: 0.7 },
@@ -422,6 +438,7 @@ SONGS.event = {
 SONGS.victory = {
   name: 'Victory', bpm: 120, bars: 4,
   tracks: {
+    crash: { pat: B('X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . X'), vol: 0.5 },
     kick: { pat: B('x . . . x . . . x . . . x . . .', 'x . . . x . . . x . . . x . . .', 'x . . . x . . . x . . . x . x .', 'x . . . . . . . . . . . . . . .') },
     snare: { pat: B('. . . . x . . . . . . . x . . .', '. . . . x . . . . . . . x . . .', '. . . . x . . . . . x . x . x x', 'x . . . . . . . . . . . . . . .') },
     clap: { pat: REP('. . . . x . . . . . . . x . . .', 4), vol: 0.5 },
@@ -437,6 +454,7 @@ SONGS.victory = {
 SONGS.ending = {
   name: "Petra's Song", bpm: 108, bars: 8,
   tracks: {
+    crash: { pat: B('X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . X'), vol: 0.45 },
     kick: { pat: REP('x . . . x . . . x . . . x . . .', 8), vol: 0.8 },
     snare: { pat: B(REP('. . . . x . . . . . . . x . . .', 7), '. . . . x . . . . . x . x . x x') },
     hat: { pat: REP('x . o . x . o . x . o . x . X .', 8), vol: 0.7 },
@@ -512,6 +530,7 @@ SONGS.home = {
 SONGS.drive = {
   name: 'Foot Power', bpm: 150, bars: 4,
   tracks: {
+    rattle: { pat: B('. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .'), vol: 0.5 },
     kick: { pat: REP('x . . x . . x . x . . x . . x .', 4) },
     snare: { pat: REP('. . . . x . . . . . . . x . . x', 4) },
     hat: { pat: REP('x . x . x . x . x . x . x . X .', 4), vol: 0.7 },
@@ -529,6 +548,7 @@ SONGS.drive = {
 SONGS.village = {
   name: 'Ash and Ash', bpm: 84, bars: 8,
   tracks: {
+    rattle: { pat: B('. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .', '. . x . . . x . . . x . . . x .'), vol: 0.4 },
     shaker: { pat: REP('. . x . . . . . . . x . . . . .', 8), vol: 0.35 },
     tom: { pat: REP('x . . . . . . . . . . . . . . .', 8), freq: 74, vol: 0.5 },
     pad: { pat: B(
@@ -553,6 +573,8 @@ SONGS.village = {
 SONGS.chase = {
   name: 'Run, Bronk, Run', bpm: 168, bars: 4,
   tracks: {
+    rattle: { pat: B('x . . x . . x . x . . x . . x .', 'x . . x . . x . x . . x . . x .', 'x . . x . . x . x . . x . . x .', 'x . . x . . x . x . . x . . x .'), vol: 0.55 },
+    crash: { pat: B('X . . . . . . . . . . . . . . .', '. . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . .', 'X . . . . . . . . . . . . . . X'), vol: 0.5 },
     kick: { pat: REP('x . x . x . x . x . x . x . x .', 4) },
     snare: { pat: REP('. . . . x . . . . . . . x . . x', 4) },
     hat: { pat: REP('x x x x x x x x x x x x x x X x', 4), vol: 0.6 },

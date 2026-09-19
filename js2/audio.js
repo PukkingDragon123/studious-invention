@@ -180,6 +180,44 @@ const AudioSys = {
   },
 
   // --- melodic instruments -------------------------------------------------
+  // A crash: a bright noise swell with four inharmonic metal partials ringing
+  // through it. Long tail, heavy on the reverb send - this is what a bar of
+  // eight starts with.
+  crash(t, vel = 1, dest, big = false) {
+    const c = this.ctx; dest = dest || this.musicBus;
+    const len = big ? 2.4 : 1.6;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.34 * vel, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2600;
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(12000, t); lp.frequency.exponentialRampToValueAtTime(3200, t + len);
+    this.noise(t, len, hp); hp.connect(lp).connect(g).connect(dest);
+    for (let i = 0; i < 4; i++) {                       // the metal itself
+      const f = 520 * [1, 1.51, 2.13, 2.78][i];
+      const o = this.osc('square', f, t, t + len * 0.7);
+      const og = c.createGain();
+      og.gain.setValueAtTime(0.03 * vel / (i + 1), t);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + len * 0.7);
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 12;
+      o.connect(bp).connect(og).connect(dest);
+    }
+    this.send(g, big ? 0.5 : 0.34);
+  },
+  // A bone rattle: six dry ticks inside a tenth of a second.
+  rattle(t, vel = 1, dest) {
+    const c = this.ctx; dest = dest || this.musicBus;
+    for (let i = 0; i < 6; i++) {
+      const tt = t + i * 0.013;
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.10 * vel * (1 - i * 0.12), tt);
+      g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.035);
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass';
+      bp.frequency.value = 3800 + i * 260; bp.Q.value = 6;
+      this.noise(tt, 0.04, bp); bp.connect(g).connect(dest);
+    }
+  },
   bass(t, midi, dur, vel = 1, dest) {
     const c = this.ctx; dest = dest || this.musicBus; const f = midiToFreq(midi);
     const end = t + dur + 0.15;
@@ -362,6 +400,8 @@ const AudioSys = {
       case 'shaker': this.shaker(t, vel, dest); break;
       case 'clap': this.clap(t, vel, dest); break;
       case 'stomp': this.stomp(t, vel, dest); break;
+      case 'crash': this.crash(t, vel, dest, st.drum === 2); break;
+      case 'rattle': this.rattle(t, vel, dest); break;
       case 'tom': if (st.notes.length) for (const n of st.notes) this.tom(t, midiToFreq(n), vel, dest); else this.tom(t, opts.freq || 120, vel, dest); break;
       case 'bass': for (const n of st.notes) this.bass(t, n, dur, vel, dest); break;
       case 'lead': for (const n of st.notes) this.lead(t, n, dur, vel, dest, opts); break;

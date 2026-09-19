@@ -93,6 +93,7 @@ class SideScroll extends MiniGame {
     else if (moving && this.o.vehicle) { this.puff -= dt; if (this.puff <= 0) { this.puff = 0.22; AudioSys.sfx('car_roll', { vol: 0.5, len: 0.3 }); } }
     this.hero.update(dt);
     // --- the camera leads a little in the direction of travel
+    Juice.lines((Math.abs(this.vx) - 90) / 240);
     this.camX = damp(this.camX, this.x - VW * 0.34 + clamp(this.vx, -140, 140) * 0.45, 5, dt);
     this.camY = damp(this.camY, this.ground - VH * 0.74 - Math.abs(this.vx) * 0.02, 4, dt);
     // --- someone chasing, someone running away
@@ -214,7 +215,8 @@ class SmackGame extends MiniGame {
       speed: 300, spread: 6.28, life: 1.6, size: 5, sizeEnd: 0, gravity: 90,
     });
     FX.burst(px, py, { world: false, scale: 2.2 });
-    Popups.add(px, py - 60, 'BONK!!', '#ffe98a', { world: false, scale: 3.4, life: 1.2, vy: -40 });
+    Juice.pow(px, py, { r: 86, spikes: 13, word: 'BONK!' });
+    Popups.add(px, py - 80, '', '#ffe98a', { world: false, scale: 3.4, life: 1.2, vy: -40 });
   }
   sx(wx) { return (wx - this.cx) * VIEW; }
   sy(wy) { return (wy - this.cy) * VIEW; }
@@ -388,6 +390,7 @@ class KickGame extends MiniGame {
     this.kickT = 0.28; this.angry = 1;
     AudioSys.sfx(good ? 'fire_whoosh' : 'thud');
     Juice.shake(good ? 6 : 3, 0.14);
+    if (good) Juice.pow(W * 0.56, H * 0.62, { r: 48, spikes: 9, col: '#ffa832' });
     Particles.fire(W * 0.62, H * 0.56, good ? 14 : 6);
     if (good) Popups.add(W * 0.62, H * 0.40, 'FWOOMPH!', '#ffa832', { world: false, scale: 1.4 });
   }

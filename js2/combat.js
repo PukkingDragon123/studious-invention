@@ -356,6 +356,10 @@ class Combat {
       if (b > 0) { AudioSys.sfx('block'); Popups.add(e.actor.x + 18, e.actor.cy, `-${b}`, '#6aa9ee'); }
     }
     e.hp -= dmg; e.hitT = 0.16; e.actor.flash('#ffffff', 0.12); e.actor.squash(0.2); e.shake = 6;
+    if (dmg >= 12) {                                      // a big one gets a cartoon star
+      const p2 = this.cam.toScreen(e.actor.x, e.actor.cy);
+      Juice.pow(p2.x, p2.y, { r: 40 + Math.min(40, dmg), spikes: 11, col: '#ffe98a' });
+    }
     Popups.add(e.actor.x + rnd(-10, 10), e.actor.cy - 10, String(dmg), dmg === 0 ? '#7a6d8a' : o.fire ? '#ffa832' : '#ffffff', { scale: dmg >= 18 ? 2.6 : 1.8, shake: dmg >= 18 ? 1.5 : 0 });
     Particles.spawn(e.actor.x, e.actor.cy, { n: Math.min(22, 6 + dmg), color: o.fire ? ['#ffa832', '#e06a1b', '#ffe08a'] : ['#c2333c', '#ef6a5e', '#ffffff'], speed: 260, life: 0.45, size: 4, sizeEnd: 0 });
     if (e.def.onHurt && e.alive) e.def.onHurt(e, this);
