@@ -634,22 +634,31 @@ def drive_frames(name):
     return [[(r + '.' * w)[:w] for r in (['.' * w] * (h - len(f)) + f)] for f in out]
 
 def sleep_frames(name):
-    """flat on his back: head left, belly up, feet right - built from the same
-    primitives as the standing figure so the style matches"""
+    """Flat on his back and properly asleep. Four frames of one slow breath:
+    the belly rises and falls, the jaw drops further on the out-breath, the
+    hand riding on the belly goes with it, and a foot twitches at the top of
+    the cycle. Built from the same primitives as the standing figure."""
     spec = CAST[name]
     out = []
-    for lift in (0, 1):
+    BREATH = (0.0, 1.3, 2.2, 1.0)
+    for f, lift in enumerate(BREATH):
+        twitch = 1 if f == 2 else 0
         W, H = 72, 34
         g = Grid(W, H)
         GY2 = H - 3
         hr = spec['headR']
         hx, hy = 13, GY2 - hr - 1
+        # --- the far arm, flung out flat on the floor behind him
+        capsule(g, 25, GY2 - 3, 40, GY2 - 1, 2.6, SKIN['dark'])
+        g.disc(42, GY2 - 1, 3.0, SKIN['dark'])
         # --- body: chest, belly, thighs, feet, laid along the ground
         g.ellipse(34, GY2 - 8 - lift, 15, 9 + lift, SKIN['base'])          # the belly
-        g.ellipse(22, GY2 - 6, 8, 6, SKIN['base'])                          # chest
+        g.ellipse(22, GY2 - 6 - lift * 0.4, 8, 6 + lift * 0.3, SKIN['base'])   # chest
         g.ellipse(50, GY2 - 5, 9, 5, SKIN['base'])                          # thighs
-        g.ellipse(60, GY2 - 4, 6, 4, SKIN['base'])                          # shins
-        g.ellipse(66, GY2 - 5, 3.4, 4.6, SKIN['base'])                      # feet, toes up
+        g.ellipse(59, GY2 - 5 - twitch, 6, 4, SKIN['base'])                 # shins
+        g.ellipse(65, GY2 - 6 - twitch * 2, 3.4, 4.6, SKIN['base'])         # feet, toes up
+        if twitch:                                                          # a toe, curling
+            g.px(67, GY2 - 11, SKIN['hi']); g.px(68, GY2 - 10, SKIN['hi'])
         capsule(g, 24, GY2 - 12, 34, GY2 - 14 - lift, 3.0, SKIN['base'])    # arm across
         g.disc(36, GY2 - 14 - lift, 3.4, SKIN['base'])                      # hand on the belly
         # --- head
@@ -658,7 +667,7 @@ def sleep_frames(name):
         capsule(g, hx + hr * 0.7, hy + hr * 0.5, 18, GY2 - 9, hr * 0.42, SKIN['base'])
         sil_shade(g, SKIN, 999, edge_dark=True)          # shade by row, light from above-left
         rim(g, SKIN, 999)
-        # --- fur pulled over the middle
+        # --- fur pulled over the middle, rising and falling with him
         gf = Grid(W, H)
         for x in range(24, 50):
             t = (x - 24) / 26
@@ -673,23 +682,33 @@ def sleep_frames(name):
             for x in range(W):
                 if gf.get(x, y) != '.': g.px(x, y, gf.get(x, y))
         # --- face: one heavy shut eye, a dash brow, and a snoring cavern
-        for i in range(5):
-            g.px(hx - 8 + i, hy - 4 + (i > 2), '0'); g.px(hx - 8 + i, hy - 3 + (i > 2), '0')  # brow
-        for i in range(7):                                                    # shut eye, curved
-            d = 1 if 1 < i < 5 else 0
-            g.px(hx - 8 + i, hy + d, '0'); g.px(hx - 8 + i, hy + 1 + d, '0')
-        g.px(hx - 2, hy - 1, '0'); g.px(hx - 1, hy - 2, '0')                  # lash tick
-        g.ellipse(hx - 8.5, hy + 4, 2.6, 2.2, SKIN['base'])                   # the nose bulb
-        g.px(hx - 9.5, hy + 3, SKIN['hi'])
-        mw = 4.4 + lift
-        g.ellipse(hx - 4, hy + 8, mw + 1, 3.0 + lift * 0.7, SKIN['line'])
-        g.ellipse(hx - 4, hy + 8, mw, 2.4 + lift * 0.7, '0')
-        for i in range(int(mw * 1.4)): g.px(hx - 4 - mw * 0.7 + i, hy + 8 - 1.6, '$')
-        g.ellipse(hx - 4, hy + 9.2, mw * 0.55, 1.1, 'E')
-        # --- hair, shoved back by the pillow
-        hair(g, dict(cx=hx + 2, headY=hy - 1, headR=hr, shoY=0, waistY=0, hipY=0, footY=0, shoW=0, hipW=0),
-             dict(spec, hairStyle=spec.get('hairStyle', 'mop')), {})
+        hcol = spec.get('hair', 'f'); hlit = spec.get('hair2', 'g'); hdark = spec.get('hair3', '0')
+        for i in range(4):                                                    # brow
+            g.px(hx - 10 + i, hy - 5 + (i > 1), '0'); g.px(hx - 10 + i, hy - 4 + (i > 1), '0')
+        for i, dy in enumerate((0, -1, -1, 0, 1)):                            # the shut eye, curved
+            g.px(hx - 10 + i, hy + dy, '0'); g.px(hx - 10 + i, hy + dy + 1, '0')
+        g.px(hx - 5, hy + 2, '0')
+        g.ellipse(hx - 11, hy + 3.4, 2.8, 2.3, SKIN['base'])                  # the nose, pointing up
+        g.ellipse(hx - 11.4, hy + 2.8, 1.6, 1.2, SKIN['hi'])
+        g.px(hx - 9, hy + 4, SKIN['line'])
+        mw = 4.0 + lift * 0.9
+        g.ellipse(hx - 5, hy + 8, mw + 1, 2.6 + lift * 0.6, SKIN['line'])     # the snoring cavern
+        g.ellipse(hx - 5, hy + 8, mw, 2.0 + lift * 0.6, '0')
+        for i in range(int(mw * 1.4)): g.px(hx - 5 - mw * 0.7 + i, hy + 8 - 1.6, '$')
+        g.ellipse(hx - 5, hy + 9.2, mw * 0.55, 1.0 + lift * 0.2, 'E')
+        if lift > 1.6:                                                        # a bubble, at the top of the breath
+            g.ellipse(hx - 13, hy + 5.5, 2.6, 2.4, SKIN['line'])
+            g.ellipse(hx - 13, hy + 5.5, 1.7, 1.5, '6')
+            g.px(hx - 14, hy + 4.5, '7')
+        # --- hair, shoved back over the crown by the pillow
+        for (ox, oy, r2) in ((-0.34, -0.94, 0.40), (0.10, -1.00, 0.44),
+                             (0.56, -0.92, 0.42), (0.94, -0.66, 0.38), (1.14, -0.26, 0.30)):
+            g.disc(hx + ox * hr, hy + oy * hr, r2 * hr, hcol)
+        for (ox, oy, r2) in ((-0.26, -1.06, 0.22), (0.24, -1.14, 0.22), (0.72, -1.02, 0.18)):
+            g.disc(hx + ox * hr, hy + oy * hr, r2 * hr, hlit)
+        for (ox, oy, r2) in ((0.44, -0.62, 0.18), (1.02, -0.44, 0.16)):
+            g.disc(hx + ox * hr, hy + oy * hr, r2 * hr, hdark)
         # --- necklace
-        for i in range(5): g.px(20 + i, GY2 - 12 + abs(i - 2), BONE['hi'] if i % 2 else BONE['base'])
+        for i in range(5): g.px(20 + i, GY2 - 12 - int(lift * 0.5) + abs(i - 2), BONE['hi'] if i % 2 else BONE['base'])
         out.append([''.join(r) for r in g.g])
     return out

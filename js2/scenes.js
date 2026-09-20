@@ -69,20 +69,92 @@ function drawTitleWorld(t) {
   Gfx.vignette(0.42);
 }
 
+// A standing stone with the name of the game cut into it and the menu set into
+// the face, planted in the clearing with a torch either side. Everything the
+// player touches before the game starts is the same slab of rock.
+const STELE = { x: 44, y: 28, w: 400, h: 474 };
+
+function titleStone(t) {
+  const { x, y, w, h } = STELE;
+  const ctx = Gfx.ctx;
+  // ---- torches, behind the stone, so their light spills round it
+  for (const tx of [x - 26, x + w + 26]) {
+    const sw = Math.sin(t * 2.1 + tx) * 1.5;
+    Gfx.rect(tx - 6, y + 168, 12, 330, '#3a2415');
+    Gfx.rect(tx - 4, y + 168, 4, 330, '#5c3a20');
+    for (let i = 0; i < 4; i++) Gfx.rect(tx - 8, y + 200 + i * 78, 16, 6, '#241109');
+    Gfx.round(tx - 15, y + 150, 30, 24, 8, '#241c2e');
+    Gfx.round(tx - 12, y + 152, 24, 8, 4, '#574a66');
+    for (let i = 0; i < 3; i++)
+      World.flame(tx + sw + (i - 1) * 7, y + 156, 34 + Math.abs(Math.sin(t * 6 + i)) * 26, 9,
+        Math.sin(t * 4.3 + i * 2) * 4, ['#9c3510', '#e06a1b', '#ffa832', '#ffe08a']);
+    Gfx.glow(tx, y + 130, 190, '#ffa832', 0.26 + Math.sin(t * 8 + tx) * 0.05);
+    if (chance(0.4)) Particles.fire(tx + rnd(-8, 8), y + 140, 1);
+  }
+  // ---- the stone: a slab with a broken crown and a heap of rubble at its foot
+  UI.slab(x, y + 26, w, h - 26, { r: 6 });
+  for (let i = 0; i < 6; i++) {                           // broad weathering on the face
+    const px = x + 16 + ((i * 97) % (w - 110)), py = y + 46 + ((i * 131) % (h - 150));
+    ctx.globalAlpha = 0.14;
+    Gfx.round(px, py, 64 + (i % 3) * 44, 30 + (i % 2) * 28, 13, i % 2 ? SKIN.faceLit : SKIN.faceMid);
+    ctx.globalAlpha = 1;
+  }
+  { let px = x + 2;                                       // the crown, broken off
+    for (let i = 0; px < x + w - 14; i++) {
+      const k = (px - x) / w;
+      const bw = 16 + ((i * 53) % 26);
+      const hgt = Math.round(9 + ((i * 37) % 19) - Math.abs(k - 0.5) * 20);
+      if (hgt > 3) {
+        Gfx.round(px - 2, y + 26 - hgt, bw + 4, hgt + 10, 3, SKIN.ink);
+        Gfx.round(px, y + 28 - hgt, bw, hgt + 8, 2, SKIN.faceMid);
+        Gfx.round(px + 1, y + 28 - hgt, bw - 2, 4, 2, SKIN.faceLit);
+        Gfx.rectA(px + 3, y + 34 - hgt, bw - 6, 2, SKIN.faceDark, 0.4);
+      }
+      px += bw + (i % 3 ? 0 : 7);
+    }
+  }
+  for (let i = 0; i < 10; i++) {                          // rubble round the base
+    const rx = x + 10 + ((i * 71) % (w - 30));
+    Gfx.round(rx, y + h - 12 + (i % 3) * 4, 16 + (i % 4) * 7, 11, 4, i % 2 ? '#574a66' : '#3b3048');
+    Gfx.round(rx + 2, y + h - 12 + (i % 3) * 4, 10 + (i % 4) * 4, 3, 2, '#7a6d8a');
+  }
+  // ---- the name, cut in and then painted with ochre
+  const cx = x + w / 2;
+  const carve = (txt, ty, sc, col) => {
+    Gfx.text(txt, cx, ty + 3, { color: SKIN.faceHi, align: 'center', scale: sc });
+    Gfx.text(txt, cx + 1, ty + 1, { color: '#3a2415', align: 'center', scale: sc });
+    Gfx.text(txt, cx, ty, { color: col, align: 'center', scale: sc });
+  };
+  carve('ONGA', y + 62, 6.2, '#9c3510');
+  carve('BONGA', y + 140, 6.2, '#5c1607');
+  Gfx.rect(x + 40, y + 220, w - 80, 3, '#3a2415');
+  Gfx.rect(x + 40, y + 223, w - 80, 2, SKIN.faceHi);
+  carve('A STONE AGE ROCK SAGA', y + 232, 1.3, '#3a2415');
+  // ---- hand prints, the way you sign a wall
+  for (const [hx, hy, fl] of [[x + 34, y + 96, false], [x + w - 46, y + 128, true]]) {
+    ctx.globalAlpha = 0.5;
+    Gfx.round(hx, hy, 14, 17, 5, '#5c1607');
+    for (let i = 0; i < 4; i++) Gfx.round(hx + 1 + i * 4, hy - 7 + (i === 0 || i === 3 ? 2 : 0), 3, 9, 1, '#5c1607');
+    Gfx.round(hx + (fl ? 13 : -4), hy + 3, 6, 4, 2, '#5c1607');
+    ctx.globalAlpha = 1;
+  }
+  return { x, y, w, h, cx };
+}
+
 class BootScene {
   constructor() { this.t = 0; }
   enter() { } exit() { }
   update(dt) { this.t += dt; if (Input.anyPress) { AudioSys.init(); Game.go(new TitleScene()); } }
   draw() {
     drawTitleWorld(this.t);
-    Gfx.rectA(0, 0, W, H, '#120c16', 0.32);
-    Gfx.text('ONGA', 300, 74, { color: '#ffe98a', align: 'center', scale: 6.4, outline: true, outlineWidth: 3 });
-    Gfx.text('BONGA', 300, 154, { color: '#e06a1b', align: 'center', scale: 6.4, outline: true, outlineWidth: 3 });
-    Gfx.text('a stone age rock saga', 300, 226, { color: '#ffffff', align: 'center', scale: 1.4, outline: true });
-    Gfx.ctx.globalAlpha = 0.55 + 0.45 * Math.sin(this.t * 4);
-    Gfx.text(Input.touch ? 'TAP TO BEGIN' : 'PRESS ANY KEY', 300, 300, { color: '#ffffff', align: 'center', scale: 1.8, outline: true, outlineWidth: 2 });
+    const st = titleStone(this.t);
+    Gfx.ctx.globalAlpha = 0.6 + 0.4 * Math.sin(this.t * 4);
+    Gfx.text(Input.touch ? 'TAP TO BEGIN' : 'PRESS ANY KEY', st.cx, st.y + 300,
+      { color: SKIN.ink, align: 'center', scale: 1.9 });
+    Gfx.text(Input.touch ? 'TAP TO BEGIN' : 'PRESS ANY KEY', st.cx, st.y + 299,
+      { color: '#9c3510', align: 'center', scale: 1.9 });
     Gfx.ctx.globalAlpha = 1;
-    Gfx.text('headphones recommended ♪', 300, 340, { color: '#d6cfe0', align: 'center', outline: true });
+    Gfx.text('headphones recommended', st.cx, st.y + 340, { color: SKIN.textDim, align: 'center', scale: 1.1 });
   }
   click() { }
 }
@@ -97,17 +169,15 @@ class TitleScene {
   }
   draw() {
     drawTitleWorld(this.t);
-    const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : this.t * 2;
-    const pulse = 1 + Math.abs(Math.sin(beat * Math.PI)) * 0.04;
-    Gfx.text('ONGA', 300, 70, { color: '#ffe98a', align: 'center', scale: 6.4 * pulse, outline: true, outlineWidth: 3 });
-    Gfx.text('BONGA', 300, 150, { color: '#e06a1b', align: 'center', scale: 6.4 * pulse, outline: true, outlineWidth: 3 });
-    Gfx.text('a stone age rock saga', 300, 222, { color: '#ffffff', align: 'center', scale: 1.4, outline: true });
-    let y = 280;
-    if (Game.hasSave()) { UI.button(190, y, 220, 44, 'CONTINUE', () => Game.continueRun(), { scale: 1.3, color: '#a8e878' }); y += 54; }
-    UI.button(190, y, 220, 44, Game.hasSave() ? 'NEW STORY' : 'START', () => Game.newRun(), { scale: 1.3 }); y += 54;
-    UI.button(190, y, 220, 44, 'HOW TO PLAY', () => Game.overlay = new HowToOverlay(), { scale: 1.3 }); y += 54;
-    UI.button(190, y, 220, 44, 'SETTINGS', () => Game.overlay = new PauseOverlay(true), { scale: 1.3 });
-    Gfx.text(Input.touch ? 'tap the frets, save the family' : 'arrows or D F J K  -  save the family', W / 2, H - 24, { color: '#7a6d8a', align: 'center' });
+    const st = titleStone(this.t);
+    const bw = 260, bx = st.cx - bw / 2;
+    let y = st.y + 270;
+    if (Game.hasSave()) { UI.wbutton(bx, y, bw, 46, 'CONTINUE', () => Game.continueRun(), { scale: 1.4 }); y += 56; }
+    UI.wbutton(bx, y, bw, 46, Game.hasSave() ? 'NEW STORY' : 'START', () => Game.newRun(), { scale: 1.4 }); y += 56;
+    UI.wbutton(bx, y, bw, 46, 'HOW TO PLAY', () => Game.overlay = new HowToOverlay(), { scale: 1.4 }); y += 56;
+    UI.wbutton(bx, y, bw, 46, 'SETTINGS', () => Game.overlay = new PauseOverlay(true), { scale: 1.4 });
+    Gfx.text(Input.touch ? 'tap the frets, save the family' : 'arrows or D F J K  -  save the family',
+      W / 2, H - 22, { color: '#c4b89a', align: 'center', outline: true });
   }
   click() { }
 }

@@ -783,31 +783,32 @@ class VillageScene {
     const run = Game.run;
     // ---- vitals, framed, bottom left
     const x = 14, y = H - 82;
-    Gfx.round(x - 6, y - 6, 268, 72, 4, SKIN.ink);
-    Gfx.round(x - 4, y - 4, 264, 68, 3, '#3b3048');
+    UI.slab(x - 8, y - 8, 272, 76, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
     Gfx.sprite('icon_heart', x, y + 2, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2, scale: 1.2 });
-    Gfx.bar(x + 32, y + 4, 216, 18, run.hp / run.maxHp, '#c2333c', { bg: '#3f0e18' });
+    Gfx.round(x + 30, y + 2, 220, 22, 2, SKIN.ink);
+    Gfx.bar(x + 32, y + 4, 216, 18, run.hp / run.maxHp, '#c2333c', { bg: '#241109' });
     Gfx.text(`${run.hp}/${run.maxHp}`, x + 140, y + 6, { color: '#fffaea', align: 'center', scale: 1.3, outline: true });
     Gfx.sprite('icon_stamina', x + 2, y + 32, { anchor: 'tl', scale: 1.2 });
     const st = run.stamina / run.maxStamina;
+    Gfx.round(x + 30, y + 32, 220, 20, 2, SKIN.ink);
     Gfx.bar(x + 32, y + 34, 216, 16, st, st > 0.3 ? '#6cc95c' : '#ffa832', { bg: '#14331e' });
     if (st <= 0.02) Gfx.text('WINDED!', x + 140, y + 35, { color: '#ef6a5e', align: 'center', scale: 1.3, outline: true });
     // ---- shells
-    Gfx.round(W - 156, 10, 108, 32, 4, SKIN.ink);
-    Gfx.round(W - 154, 12, 104, 28, 3, '#3b3048');
-    Gfx.sprite('icon_coin', W - 146, 16, { anchor: 'tl', scale: 1.2 });
-    Gfx.text(String(run.gold), W - 116, 18, { color: SKIN.goldLit, scale: 1.4 });
+    UI.slab(W - 158, 8, 112, 36, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
+    Gfx.sprite('icon_coin', W - 148, 16, { anchor: 'tl', scale: 1.2 });
+    Gfx.text(String(run.gold), W - 118, 18, { color: SKIN.ink, scale: 1.4 });
     // ---- relics, in gold slots
     let rx = 14;
-    for (const id of run.relics) { UI.slot(rx, 10, 32, { fill: '#241c2e' }); Relics.drawIcon(id, rx + 6, 16); rx += 36; }
+    for (const id of run.relics) { UI.slot(rx, 10, 32, {}); Relics.drawIcon(id, rx + 6, 16); rx += 36; }
     // objective compass
     const goal = this.zone.entities.find(e => e instanceof ZoneGoal);
     if (goal) {
       const dx = goal.x - this.player.x, dy = goal.y - this.player.y;
       const a = Math.atan2(dy, dx), d = Math.hypot(dx, dy);
       const cx = W - 60, cy = H - 60;
-      Gfx.circle(cx, cy, 34, '#120c16'); Gfx.circle(cx, cy, 30, '#241c2e');
-      Gfx.ring(cx, cy, 30, SKIN.gold, 2);
+      Gfx.circle(cx, cy, 35, SKIN.ink); Gfx.circle(cx, cy, 33, SKIN.goldDark);
+      Gfx.circle(cx, cy, 30, SKIN.gold); Gfx.circle(cx, cy, 27, '#241c2e');
+      Gfx.ring(cx, cy, 29, SKIN.goldLit, 1);
       const ctx = Gfx.ctx;
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
       ctx.fillStyle = '#ffa832';
@@ -820,18 +821,19 @@ class VillageScene {
     // the objective: three kills makes a trail the raptor will follow
     {
       const r = Game.run, ready = r.bait >= r.baitNeed, bx = 24, by = 58;
-      Gfx.round(bx - 12, by - 10, 268, 58, 4, SKIN.ink);
-      Gfx.round(bx - 10, by - 8, 264, 54, 3, '#3b3048');
-      Gfx.rect(bx - 10, by - 8, 5, 54, ready ? '#6cc95c' : '#ffa832');
+      UI.slab(bx - 14, by - 12, 272, 62, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
+      Gfx.rect(bx - 10, by - 8, 5, 54, ready ? '#6cc95c' : '#c2333c');
+      Gfx.text(ready ? 'BAIT LAID' : 'MAKE RAPTOR BAIT', bx + 2, by - 1,
+        { color: SKIN.faceHi, scale: 1.4 });
       Gfx.text(ready ? 'BAIT LAID' : 'MAKE RAPTOR BAIT', bx + 2, by - 2,
-        { color: ready ? '#a8e878' : '#ffe98a', scale: 1.4 });
+        { color: ready ? '#14331e' : SKIN.ink, scale: 1.4 });
       for (let i = 0; i < r.baitNeed; i++) {
         const gx = bx + 2 + i * 32, got = i < r.bait;
         Gfx.sprite('icon_skull', gx + 11, by + 30, { anchor: 'c', scale: 1.4, alpha: got ? 1 : 0.22 });
         if (got) Gfx.sprite('icon_check', gx + 19, by + 34, { anchor: 'c', scale: 1 });
       }
       Gfx.text(ready ? 'head for the gate' : `${r.bait} / ${r.baitNeed} beasts down`,
-        bx + 108, by + 24, { color: '#d6cfe0', scale: 1.2 });
+        bx + 108, by + 24, { color: SKIN.text, scale: 1.2 });
     }
     if (this.hidden) Gfx.text('HIDDEN', W / 2, 62, { color: '#86e8d2', align: 'center', scale: 1.6, outline: true, outlineWidth: 2 });
     // zone banner on arrival

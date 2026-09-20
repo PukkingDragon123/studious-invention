@@ -1248,8 +1248,8 @@
  "bronk_sleep": {
   "w": 72,
   "h": 34,
-  "frames": 2,
-  "note": "flat on his back, fur over the belly, mouth open, snoring.",
+  "frames": 4,
+  "note": "flat on his back and properly asleep: four frames of one slow breath, the belly and the fur rising, the jaw dropping wider on the out-breath, a foot twitching at the top of it.",
   "file": "art_chars"
  },
  "bronk_sing": {
@@ -1342,19 +1342,5 @@
   "frames": 1,
   "note": "hide door curtain hung on a rail",
   "file": "art_house"
- },
- "megalodon_fly": {
-  "w": 148,
-  "h": 70,
-  "frames": 4,
-  "note": "a megalodon flying: torpedo body, swept wing-fins, crescent tail, jaws open on rows of teeth. Dream only.",
-  "file": "art_dream"
- },
- "spino_gun": {
-  "w": 156,
-  "h": 122,
-  "frames": 4,
-  "note": "a spinosaurus standing on two legs with a gun in each hand, sail lit like an ember. Frames 1-2 fire.",
-  "file": "art_dream"
  }
 }

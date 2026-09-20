@@ -329,10 +329,9 @@ class SideScroll extends MiniGame {
 }
 
 // ---------------------------------------------------------------- DRIVECARD -
-// The commute, as a loading screen. Nobody wanted to play the drive to work,
-// so it is a little card instead: the car trundles along a looping road while
-// the dots fill, and then you are there. It has two moods. On the way out the
-// sky is blue and he is whistling. On the way home it is not.
+// The commute, as a loading screen, and nothing more than that: black, one
+// small car going past, and a line telling you where he is going. It has two
+// moods. On the way out he is whistling. On the way home he is not.
 class DriveCard extends MiniGame {
   constructor(o = {}) {
     super(o);
@@ -345,104 +344,54 @@ class DriveCard extends MiniGame {
   }
   step(dt) {
     this.hop += dt * (this.scared ? 15 : 9);
-    if (this.scared) {
-      Juice.shake(2.2, 0.1);
-      if (chance(dt * 9)) Juice.lines(0.5);
-    }
+    if (this.scared && chance(dt * 6)) Juice.shake(2, 0.08);
     if (this.t > this.dur) this.finish({ win: true });
   }
   draw() {
     const t = this.t, sc = this.scared;
-    const ctx = Gfx.ctx;
-    const speed = sc ? 460 : 190;
-    const road = H * 0.72;
-    // ---------------------------------------------------------------- sky
-    Gfx.bands(0, 0, W, road + 4, sc
-      ? ['#3f0e18', '#7d1d2b', '#a03a68', '#e06a1b', '#ffa832']
-      : ['#1d3d72', '#3570c0', '#6aa9ee', '#a8d8ff', '#ffe08a']);
-    // sun, or whatever that is today
-    const sunX = W * 0.76, sunY = H * 0.20;
-    Gfx.glow(sunX, sunY, 260, sc ? '#e06a1b' : '#ffe98a', sc ? 0.4 : 0.3);
-    Gfx.circle(sunX, sunY, 28, sc ? '#ffa832' : '#ffe98a');
-    // clouds, drifting the other way
-    for (let i = 0; i < 5; i++) {
-      const cx = ((i * 260 - t * (sc ? 150 : 42)) % (W + 320) + W + 320) % (W + 320) - 160;
-      const cy = 46 + (i % 3) * 44;
-      const s2 = 0.7 + (i % 2) * 0.4;
-      Gfx.ctx.globalAlpha = sc ? 0.35 : 0.8;
-      for (const [ox, oy, rx, ry] of [[0, 0, 54, 18], [36, -12, 42, 19], [-34, -5, 35, 15]])
-        Gfx.round(cx + ox * s2 - rx * s2, cy + oy * s2 - ry * s2, rx * 2 * s2, ry * 2 * s2, ry * s2, sc ? '#a03a68' : '#ffffff');
-      Gfx.ctx.globalAlpha = 1;
-    }
-    // ------------------------------------------------------------- the hills
-    const ridge = (depth, base, amp, col, edge) => {
-      const off = t * speed * depth;
-      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, road + 6);
-      for (let x = 0; x <= W; x += 10) {
-        const k = (x + off) * 0.0042;
-        ctx.lineTo(x, base + Math.sin(k) * amp + Math.sin(k * 2.7 + 1) * amp * 0.45);
-      }
-      ctx.lineTo(W, road + 6); ctx.fill();
-      for (let x = 0; x < W; x += 6) {
-        const k = (x + off) * 0.0042;
-        Gfx.rect(x, base + Math.sin(k) * amp + Math.sin(k * 2.7 + 1) * amp * 0.45, 6, 5, edge);
-      }
-    };
-    ridge(0.18, road - 132, 34, sc ? '#5c1f3d' : '#7a6d8a', sc ? '#a03a68' : '#9391a6');
-    ridge(0.42, road - 74, 22, sc ? '#3f0e18' : '#27632f', sc ? '#7d1d2b' : '#3f9a45');
-    // trees whipping past
-    for (let i = 0; i < 9; i++) {
-      const span = W + 300;
-      const x = ((i * span / 9 - t * speed * 0.72) % span + span) % span - 150;
-      Gfx.sprite(i % 3 ? 'prop_tree' : 'prop_palm', x, road - 4,
-        { anchor: 'bc', scale: 0.8, tint: sc ? '#3f0e18' : null, tintAmount: sc ? 0.45 : 0 });
-    }
-    // ------------------------------------------------------------- the road
-    Gfx.rect(0, road, W, H - road, sc ? '#241109' : '#5c3a20');
-    Gfx.rect(0, road, W, 5, sc ? '#5c1f3d' : '#85562f');
-    for (let i = 0; i < 26; i++) {                       // ruts, rolling past
+    Gfx.clear('#000000');
+    const road = H * 0.56, speed = sc ? 460 : 190;
+    // the one line of ground he is driving on
+    Gfx.rect(0, road, W, 2, sc ? '#7d1d2b' : '#3a2415');
+    for (let i = 0; i < 16; i++) {
       const span = W + 120;
-      const x = ((i * span / 26 - t * speed) % span + span) % span - 60;
-      const y = road + 18 + (i % 5) * 22;
-      Gfx.rectA(x, y, 40 + (i % 3) * 22, 4, sc ? '#3f0e18' : '#3a2415', 0.6);
-      if (i % 4 === 0) Gfx.rectA(x + 10, y + 7, 10, 3, sc ? '#7d1d2b' : '#b07a45', 0.5);
+      const x = ((i * span / 16 - t * speed) % span + span) % span - 60;
+      Gfx.rect(x, road + 6, 26 + (i % 3) * 14, 2, sc ? '#3f0e18' : '#241109');
     }
-    // ---------------------------------------------------------- what is behind
+    // something following, a long way back and not getting further away
     if (sc) {
-      // it is not chasing. it is just there, every time he looks back.
-      const bx = W * 0.14 + Math.sin(t * 1.6) * 16;
-      Gfx.sprite('trex_walk', bx, road + 10, { anchor: 'bc', scale: 1.5, frame: Math.floor(t * 9),
-        tint: '#3f0e18', tintAmount: 0.82, alpha: 0.75 });
-      for (let i = 0; i < 3; i++) Particles.dust(bx + rnd(-30, 30), road + 8, 1);
+      const bx = W * 0.13 + Math.sin(t * 1.6) * 14;
+      Gfx.sprite('trex_walk', bx, road + 2, { anchor: 'bc', scale: 1.1, frame: Math.floor(t * 9),
+        tint: '#3f0e18', tintAmount: 1, alpha: 0.85 });
     }
-    // ------------------------------------------------------------- the car
-    const carX = W * 0.52, bounce = Math.abs(Math.sin(this.hop)) * (sc ? 9 : 5);
-    Gfx.shadow(carX, road + 12, 130, 0.3);
-    for (let i = 0; i < (sc ? 4 : 1); i++)
-      if (chance(0.7)) Particles.dust(carX - 74 + rnd(-14, 14), road + 8, 1);
-    Gfx.sprite('car', carX, road + 10 - bounce * 0.4, { anchor: 'bc', frame: Math.floor(t * 18), rot: sc ? -0.05 : 0 });
-    Gfx.sprite(sc ? 'bronk_shock' : 'bronk_drive', carX - 8, road - 12 - bounce,
+    // the car
+    const cx = W * 0.5, bounce = Math.abs(Math.sin(this.hop)) * (sc ? 7 : 4);
+    for (let i = 0; i < (sc ? 3 : 1); i++) if (chance(0.6))
+      Particles.spawn(cx - 60 + rnd(-10, 10), road, { n: 1, color: sc ? ['#7d1d2b', '#3a2415'] : ['#5c3a20', '#3a2415'],
+        speed: 60, angle: Math.PI, spread: 1.2, gravity: -20, life: 0.8, size: 3, sizeEnd: 0, world: false });
+    Gfx.sprite('car', cx, road + 2 - bounce * 0.4, { anchor: 'bc', frame: Math.floor(t * 18), rot: sc ? -0.05 : 0 });
+    Gfx.sprite(sc ? 'bronk_shock' : 'bronk_drive', cx - 8, road - 20 - bounce,
       { anchor: 'bc', scale: 0.85, frame: Math.floor(t * (sc ? 12 : 6)) });
-    if (!sc && chance(0.06))                              // a whistled note, now and then
-      Popups.add(carX + 26, road - 76, '~', '#ffe98a', { world: false, scale: 1.8, life: 1.4, vy: -34, vx: 26 });
+    if (!sc && chance(0.05))
+      Popups.add(cx + 26, road - 76, '~', '#ffe98a', { world: false, scale: 1.8, life: 1.4, vy: -34, vx: 26 });
     if (sc) {
-      Gfx.ctx.globalAlpha = 0.5;
-      for (let i = 0; i < 7; i++) {                       // speed lines
-        const y = 80 + ((i * 97 + t * 900) % (H - 160));
-        Gfx.rect(((i * 211 - t * 1100) % (W + 260) + W + 260) % (W + 260) - 130, y, 120, 3, '#ffe98a');
+      Gfx.ctx.globalAlpha = 0.35;
+      for (let i = 0; i < 5; i++) {
+        const y = road - 90 + ((i * 61 + t * 700) % 180);
+        Gfx.rect(((i * 211 - t * 1100) % (W + 260) + W + 260) % (W + 260) - 130, y, 90, 2, '#7d1d2b');
       }
       Gfx.ctx.globalAlpha = 1;
     }
-    // ------------------------------------------------------------ the caption
+    Particles.draw(Gfx.ctx, false);
+    // the caption, and how far along he is
     const k = clamp(this.t / this.dur, 0, 1);
-    Gfx.rectA(0, H - 86, W, 86, '#120c16', 0.72);
-    Gfx.rect(0, H - 88, W, 3, sc ? '#ef6a5e' : '#ffe98a');
     const dots = '.'.repeat(1 + (Math.floor(t * 3) % 3));
-    Gfx.text(this.label + dots, W / 2, H - 72, {
-      color: sc ? '#ef6a5e' : '#ffe98a', align: 'center', scale: 2.2, outline: true, outlineWidth: 2,
+    Gfx.text(this.label + dots, W / 2, road + 70, {
+      color: sc ? '#c2333c' : '#c4b89a', align: 'center', scale: 2.0,
     });
-    Gfx.text(this.sub, W / 2, H - 42, { color: '#d6cfe0', align: 'center', scale: 1.1 });
-    Gfx.bar(W / 2 - 200, H - 22, 400, 8, k, sc ? '#ef6a5e' : '#6cc95c');
+    Gfx.text(this.sub, W / 2, road + 100, { color: sc ? '#5c1607' : '#5c3a20', align: 'center', scale: 1.1 });
+    Gfx.rect(W / 2 - 160, road + 126, 320, 3, '#241c2e');
+    Gfx.rect(W / 2 - 160, road + 126, 320 * k, 3, sc ? '#c2333c' : '#c4b89a');
   }
 }
 

@@ -67,7 +67,7 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
     for p in edge_of(jw, (0, 1)): cv.setif(p[0], p[1], 't', 'uvwx')
     # gums + teeth (visible even closed)
     for p in polyline(PL(HX, [(93, 31.6), (122, 30.6)]), 0.6 * s, 6): cv.setif(p[0], p[1], 'D', 'tuvwx')
-    UT = ((96, 1.8), (100.5, 2.4), (105, 2.8), (109.5, 2.6), (114, 2.8), (118.5, 2.2), (122, 1.6))
+    UT = ((96, 2.2), (100.5, 1.4), (105, 0.0), (109.5, 3.0), (114, 1.8), (118.5, 2.6), (122, 1.2))
     for tx, th in UT:
         t = poly(PL(HX, [(tx - 1.9, 30.6), (tx + 1.9, 30.6), (tx + 0.2, 30.6 + th)]))
         shade(cv, t, BONE, bias=1, grad=False)
@@ -75,7 +75,7 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
         mx = (UT[i][0] + UT[i + 1][0]) / 2
         for dy in (0.0, 1.0, 2.0, 3.0, 4.0): cv.setif(*HX(mx, 30.8 + dy), '!', '@#$')
         for dy in (0.0, 1.0, 2.0, 3.0): cv.setif(*HX(mx, 30.8 + dy), 'D', '!')
-    LT = ((97, 1.4), (102, 1.9), (107, 2.2), (112, 2.0), (117, 1.8), (121, 1.4))
+    LT = ((97, 1.8), (102, 0.0), (107, 2.4), (112, 1.4), (117, 2.0), (121, 1.1))
     for tx, th in LT:
         t = poly([JX(tx - 1.7, 33.6), JX(tx + 1.7, 33.6), JX(tx + 0.2, 33.6 - th)])
         if jaw > 0.03 or tx > 112: shade(cv, t, BONE, bias=1, grad=False)
@@ -83,6 +83,14 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
         for i in range(len(LT) - 1):
             mx = (LT[i][0] + LT[i + 1][0]) / 2
             for dy in (0.0, 1.0, 2.0, 3.0): cv.setif(*JX(mx, 33.4 - dy), 'D', '!@#$')
+    # two bars daubed across the snout, in the same ochre as the flank
+    for (bx0, bx1) in ((110.6, 113.2), (116.4, 118.6)):
+        bar = poly(PL(HX, [(bx0, 12.5), (bx1, 12.5), (bx1 - 0.8, 25.5), (bx0 - 0.8, 25.5)])) & sk
+        flat(cv, bar, 'z')
+        bar2 = poly(PL(HX, [(bx0 + 0.6, 13.4), (bx1 - 0.5, 13.4), (bx1 - 1.3, 24.6), (bx0 - 0.2, 24.6)])) & sk
+        flat(cv, bar2, 'A')
+    for (dx, dy) in ((99.0, 18.0), (96.5, 25.0)):                        # and a thumbprint or two
+        shade(cv, disc(*HX(dx, dy), 1.5 * s) & sk, ['!', '@', '#', '$'], grad=False)
     # nostril
     shade(cv, poly(PL(HX, [(121.4, 21.6), (124.4, 23.0), (123.4, 25.4), (120.6, 24.0)])),
           ['t', 't', '1', '0'], grad=False)
@@ -152,14 +160,26 @@ def draw_trex(cv, s, ox, oy, o):
     for i in range(9):
         t = i / 8.0
         bx = 28 + t * 50; by = 40 - math.sin(t * 3.14159) * 12 - 1
-        bp = ell(*B(bx, by), 2.6 * s, 2.0 * s)
+        r2 = (2.2 + math.sin(t * 3.14159) * 1.9)
+        bp = ell(*B(bx, by), r2 * s, r2 * 0.82 * s)
+        for p in dilate(bp, 1) - bp: cv.setif(p[0], p[1], 't', 'uvwx')
         shade(cv, bp, REX, bias=1, grad=False)
+        cv.setif(*B(bx - r2 * 0.3, by - r2 * 0.4), 'x', 'uvw')
     # flank stripes + speckle
     for i in range(7):
         sx = 32 + i * 7.5
         st = limb(LN(B, [(sx, 30 + abs(i - 3) * 1.4, 1.9), (sx - 5, 43 + abs(i - 3), 1.5)], s), 8) & body
         shade(cv, st, REX, bias=-3, grad=False)
     speck(cv, body | tail, 'u', 0.018, rng, want='w')
+    # --- daubed paint. Somebody in this valley gets close enough to do this,
+    # and whoever it is has not been eaten yet.
+    for i, (x0, y0, x1, y1) in enumerate(((40, 27, 36, 56), (49, 25, 44, 59), (58, 27, 53, 55))):
+        band = limb(LN(B, [(x0, y0, 2.4), (x1, y1, 1.8)], s), 8) & body
+        flat(cv, band, 'z')
+        core = limb(LN(B, [(x0, y0, 1.3), (x1, y1, 0.9)], s), 8) & body
+        flat(cv, core, 'B' if i == 1 else 'A')
+    for (dx, dy) in ((34, 34), (38, 44), (33, 52), (68, 36), (72, 46)):     # ash fingerprints
+        shade(cv, disc(*B(dx, dy), 1.4 * s) & body, ['!', '@', '#', '$'], grad=False)
 
     for q in polyline(PL(B, [(33, 34), (30, 46), (33, 58)]), 1.0 * s, 8):
         cv.setif(q[0], q[1], 't', 'uvwx')

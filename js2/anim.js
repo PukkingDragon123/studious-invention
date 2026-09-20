@@ -8,7 +8,7 @@
 // bob is pixels of vertical travel; squish is how much the bounce squashes.
 const BOB = {
   idle: 1.2, walk: 3.4, run: 5.2, dash: 6.0, eat: 2.0, play: 3.6, sing: 3.0,
-  cook: 1.6, cry: 2.4, shock: 2.6, hurt: 0, sleep: 0.9, drive: 1.4,
+  cook: 1.6, cry: 2.4, shock: 2.6, hurt: 0, sleep: 0.3, drive: 1.4,
   roar: 2.2, boss: 2.6, trader: 1.0, shower: 1.4, fly: 4.0, kick: 4.4,
 };
 const SQUISH = {
@@ -42,8 +42,6 @@ defClips('brute', { idle: { fps: 2 }, walk: { fps: 8 } });
 defClips('blaze', { idle: { fps: 7 }, walk: { fps: 10 }, roar: { fps: 7 }, boss: { fps: 6 } });
 defClips('trex', { idle: { fps: 1.8 }, walk: { fps: 7 }, roar: { fps: 5 } });
 // dream only
-defClips('mega', { idle: { spr: 'megalodon_fly', fps: 7 }, fly: { spr: 'megalodon_fly', fps: 9, bob: 0 }, walk: { spr: 'megalodon_fly', fps: 9 } });
-defClips('spino', { idle: { spr: 'spino_gun', fps: 3 }, fire: { spr: 'spino_gun', fps: 9 }, walk: { spr: 'spino_gun', fps: 7 } });
 defClips('mammoth', { idle: { fps: 1.6 }, walk: { fps: 6 }, trader: { fps: 1.6 }, shower: { fps: 5 } });
 for (const b of ['compy', 'dodo', 'boar', 'raptor', 'tricera', 'lizard', 'stego']) defClips(b, { idle: { fps: 2.4 }, walk: { fps: 9 } });
 defClips('ptero', { idle: { spr: 'ptero_fly', fps: 8 }, walk: { spr: 'ptero_fly', fps: 10 }, fly: { fps: 8 } });

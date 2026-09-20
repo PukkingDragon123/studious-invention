@@ -651,11 +651,12 @@ const World = {
       const hw = (4 + 12 * Math.sin(k * Math.PI)) * (0.72 + Math.abs(Math.sin(y * 0.17)) * 0.5);
       const lean = Math.sin(y * 0.031) * 9;
       Gfx.rect(wx + lean - hw - 4, y, hw * 2 + 8, 3, '#241c2e');
-      Gfx.rect(wx + lean - hw, y, hw * 2, 3, o.night ? '#4b2070' : '#a8d8ff');
-      Gfx.rect(wx + lean - hw, y, hw * 0.8, 3, o.night ? '#7c3eb2' : '#fffaea');
+      Gfx.rect(wx + lean - hw, y, hw * 2, 3, o.night ? '#1d3d72' : '#a8d8ff');
+      Gfx.rect(wx + lean - hw, y, hw * 0.8, 3, o.night ? '#3570c0' : '#fffaea');
+      if (o.night && ((y * 7) % 23) < 2) Gfx.rect(wx + lean - 1, y, 2, 2, '#fffaea');   // a star through it
     }
     { const g2 = ctx.createLinearGradient(wx, wy, wx + 150, wy + 200);   // the shaft it throws
-      g2.addColorStop(0, o.night ? 'rgba(124,62,178,0.20)' : 'rgba(168,216,255,0.24)');
+      g2.addColorStop(0, o.night ? 'rgba(53,112,192,0.16)' : 'rgba(168,216,255,0.24)');
       g2.addColorStop(1, 'rgba(168,216,255,0)');
       ctx.fillStyle = g2; ctx.beginPath();
       ctx.moveTo(wx - 18, fissTop); ctx.lineTo(wx + 18, fissTop);
@@ -794,272 +795,8 @@ const World = {
     Gfx.glow(HOME.bed + 30, 300, 170, '#a8d8ff', 0.18);
   },
 
-  // ---------------------------------------------------------------- CONCERT
-  // Bronk's dream, and it does not care what is possible. An amphitheatre cut
-  // into the flank of a live volcano, meteors coming down on the beat, and a
-  // megalodon doing laps over the crowd. Painted bright: the fire is the point.
-  concert(t, o = {}, camX = 0) {
-    const L = camX - 320, R = camX + VW + 320;
-    const beat = o.beat || 0;                       // 0..1, pulses on the downbeat
-    const SX = 580;                                 // the stage, in world x
-    const wob = Math.sin(t * 0.7) * 3;              // everything breathes, gently
-    Gfx.rect(L, -380, R - L, 520, '#0b0a18');
-    World.skyRamp(L, R, 128 + wob, GY - 120, ['#0b0a18', '#161233', '#281040', '#4b2070', '#7c3eb2', '#a03a68']);
-    // stars
-    for (let i = 0; i < 90; i++) {
-      const sx2 = ((i * 137) % 2400) - 200 - camX * 0.04, sy = -180 + ((i * 73) % 330);
-      if (sx2 < L || sx2 > R) continue;
-      const tw = 0.5 + 0.5 * Math.sin(t * 3 + i);
-      Gfx.rectA(sx2, sy + wob, 2, 2, i % 5 ? '#d6cfe0' : '#ffe98a', 0.35 + tw * 0.65);
-    }
-    const mx = 810 - camX * 0.03;
-    Gfx.circle(mx, 150, 40, '#ffe98a'); Gfx.glow(mx, 150, 280, '#ffe98a', 0.24);
-    Gfx.circle(mx - 13, 138, 8, '#e0b93a'); Gfx.circle(mx + 11, 166, 6, '#e0b93a');
-
-    World.meteors(t, camX, L, R);
-    World.volcano(t, SX - 40, camX, beat);
-
-    // sweeping stage lights, drawn behind the crowd
-    for (let i = 0; i < 4; i++) {
-      const a = -1.35 + Math.sin(t * 0.5 + i * 1.9) * 0.5;
-      const ox = 300 + i * 160;
-      const ctx = Gfx.ctx;
-      const g = ctx.createLinearGradient(ox, GY - 40, ox + Math.cos(a) * 600, GY - 40 + Math.sin(a) * 600);
-      g.addColorStop(0, ['rgba(255,233,138,0.20)', 'rgba(134,232,210,0.18)', 'rgba(177,119,230,0.20)', 'rgba(255,176,207,0.18)'][i]);
-      g.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.moveTo(ox, GY - 40);
-      ctx.lineTo(ox + Math.cos(a - 0.12) * 900, GY - 40 + Math.sin(a - 0.12) * 900);
-      ctx.lineTo(ox + Math.cos(a + 0.12) * 900, GY - 40 + Math.sin(a + 0.12) * 900);
-      ctx.fill();
-    }
-
-    // the amphitheatre: three terraces of packed stone, low enough that the
-    // mountain behind them is the thing you look at
-    for (let s2 = 2; s2 >= 0; s2--) {
-      const y = GY - 36 - s2 * 30;
-      Gfx.rect(L, y, R - L, 32, ['#9391a6', '#7a6d8a', '#574a66'][s2]);
-      Gfx.rectA(L, y, R - L, 3, '#bdbccd', 0.45);
-      Gfx.rectA(L, y + 29, R - L, 3, '#120c16', 0.5);
-      for (let x = Math.floor(L / 38) * 38; x < R; x += 38)
-        World.fan(x + jitter(x + s2 * 31, 14), y + 8, 0.36 + (2 - s2) * 0.03,
-          x * 0.05 + s2 * 1.7, t, beat, ['#ffe98a', '#b177e6', '#86e8d2'][s2]);
-    }
-    // banners, hung low off the front of the top terrace so they do not cover
-    // the mountain
-    for (let x = Math.floor(L / 190) * 190; x < R; x += 190) {
-      if (Math.abs(x - 580) < 200) continue;                // nothing in front of the stage
-      const sw = Math.sin(t * 1.2 + x) * 3;
-      Gfx.rect(x - 14, GY - 132, 28, 38, ['#a03a68', '#7c3eb2', '#18706a'][Math.abs((x / 190) | 0) % 3]);
-      Gfx.rect(x - 14 + sw, GY - 96, 28, 8, '#ffe98a');
-      Gfx.rect(x - 14, GY - 136, 28, 5, '#3a2415');
-    }
-    // the floor of the pit
-    Gfx.rect(L, GY - 6, R - L, 300, '#241c2e');
-    Gfx.rect(L, GY - 6, R - L, 5, '#4d4a5c');
-    for (let x = Math.floor(L / 24) * 24; x < R; x += 24)
-      Gfx.rectA(x + jitter(x, 18), GY + 6 + jitter(x + 2, 60), 7, 2, '#574a66', 0.5);
-    // the stage: stacked slabs, with a bone rig over it
-    Gfx.round(SX - 194, GY - 46, 388, 54, 6, '#120c16');
-    Gfx.round(SX - 188, GY - 42, 376, 48, 5, '#3b3048');
-    Gfx.round(SX - 188, GY - 46, 376, 9, 4, '#9391a6');
-    Gfx.rectA(SX - 188, GY - 46, 376, 3, '#ffe98a', 0.5);
-    for (let i = 0; i < 9; i++) Gfx.rect(SX - 176 + i * 42, GY - 36, 3, 38, '#241c2e');
-    for (let i = 0; i < 11; i++) {                                // footlights
-      const fx2 = SX - 170 + i * 34;
-      Gfx.rect(fx2 - 4, GY - 40, 9, 6, '#241c2e');
-      Gfx.rect(fx2 - 3, GY - 42, 7, 3, i % 2 ? '#ffe98a' : '#86e8d2');
-      if (i % 2) Gfx.glow(fx2, GY - 44, 44 + beat * 26, '#ffe98a', 0.4);
-    }
-    for (const rx of [SX - 210, SX + 210]) {
-      Gfx.rect(rx - 6, GY - 134, 12, 134, '#3a2415');
-      Gfx.rect(rx - 9, GY - 138, 18, 10, '#5c3a20');
-      for (let i = 0; i < 3; i++) {
-        Gfx.round(rx - 12, GY - 118 + i * 28, 24, 17, 6, '#241c2e');
-        Gfx.circle(rx, GY - 109 + i * 28, 6, i === 1 ? '#86e8d2' : '#ffe98a');
-        Gfx.glow(rx, GY - 109 + i * 28, 60 + beat * 40, i === 1 ? '#86e8d2' : '#ffe98a', 0.35);
-      }
-    }
-    Gfx.rect(SX - 216, GY - 128, 432, 11, '#3a2415');
-    Gfx.rect(SX - 216, GY - 128, 432, 4, '#5c3a20');
-    // the pyro: a wall of cartoon flame across the front of the stage
-    World.pyro(t, SX, beat);
-    // smoke rolling across the stage
-    for (let i = 0; i < 6; i++) {
-      const fx = SX - 200 + ((i * 74 + t * 20) % 400);
-      Gfx.ctx.globalAlpha = 0.10;
-      Gfx.round(fx, GY - 18 + Math.sin(t + i) * 4, 76, 18, 9, '#d6cfe0');
-      Gfx.ctx.globalAlpha = 1;
-    }
-    // the near crowd, right up against the camera: big, black and jumping
-    for (let x = Math.floor(L / 34) * 34; x < R; x += 34)
-      World.fan(x + jitter(x + 3, 13), GY + 24, 0.62, x * 0.041 + 0.6, t, beat, '#ffb0cf');
-    for (let x = Math.floor(L / 44) * 44; x < R; x += 44)
-      World.fan(x + jitter(x + 7, 17), GY + 72, 0.88, x * 0.037, t, beat, '#ffe98a');
-    // embers drifting up through the whole shot, and a warm dream haze over it
-    for (let i = 0; i < 46; i++) {
-      const ex = ((i * 211 - camX * 0.4) % 1600 + 1600) % 1600 + L - 200;
-      const ey = GY + 60 - ((t * (22 + (i % 5) * 9) + i * 97) % 640);
-      Gfx.rectA(ex + Math.sin(t * 2 + i) * 5, ey, 3, 3, i % 3 ? '#ffa832' : '#ffe98a', 0.75);
-    }
-    Gfx.rectA(L, GY - 290, R - L, 330, '#e06a1b', 0.05);
-    Gfx.glow(SX, GY - 90, 420, '#ffa832', 0.10 + beat * 0.08);
-    // the dream wash: slow coloured light sliding over everything, and soft edges
-    for (let i = 0; i < 3; i++) {
-      const wx = SX + Math.sin(t * (0.21 + i * 0.07) + i * 2.1) * 320;
-      Gfx.glow(wx, GY - 150 + Math.cos(t * 0.3 + i) * 50, 300,
-        ['#b177e6', '#86e8d2', '#ffb0cf'][i], 0.07);
-    }
-    // a bloom off everything bright, faked with big soft glows - this is a
-    // dream, so nothing in it is allowed a hard edge
-    Gfx.glow(SX, GY - 44, 330, '#ffe98a', 0.13 + beat * 0.07);
-    for (let i = 0; i < 4; i++) Gfx.glow(SX - 170 + i * 115, GY - 40, 120, i % 2 ? '#86e8d2' : '#ffe98a', 0.10);
-    Gfx.glow(SX - 40, GY - 210, 260, '#e06a1b', 0.13);
-    // haze: slow bands of light drifting across the whole frame
-    for (let i = 0; i < 5; i++) {
-      const hy2 = GY - 320 + ((t * (7 + i * 3) + i * 120) % 460);
-      Gfx.rectA(L, hy2, R - L, 40 + i * 9, ['#b177e6', '#ffb0cf', '#86e8d2', '#ffe98a', '#a8d8ff'][i], 0.032);
-    }
-    // the vignette only has to cover what the camera can see, not the whole
-    // sky above it - this fill is the widest thing in the scene
-    { const ctx = Gfx.ctx;
-      const g = ctx.createRadialGradient(SX, GY - 120, 150, SX, GY - 120, 520);
-      g.addColorStop(0, 'rgba(124,62,178,0)'); g.addColorStop(1, 'rgba(40,16,64,0.50)');
-      ctx.fillStyle = g; ctx.fillRect(L, GY - 430, R - L, 560); }
-    if (beat > 0.4) Gfx.rectA(L, GY - 430, R - L, 560, '#ffe98a', (beat - 0.4) * 0.10);
-  },
-
-  // ---- Somebody in a crowd, from behind, lit only by the stage. Every one is
-  // a different height, build and haircut, or it reads as a row of skittles.
-  fan(x, gy, s, ph, t, beat, rimCol) {
-    const i = Math.abs(Math.round(ph * 37));
-    const build = i % 4;                                   // thin / normal / wide / kid
-    const swing = Math.sin(t * 5.2 + ph);
-    const bob = Math.abs(swing) * 6 * s + beat * 5 * s;
-    const y = gy - bob;
-    const bw = [8, 10, 13, 7][build] * s, bh = [33, 36, 31, 23][build] * s;
-    const hr = [7, 8, 9, 6.6][build] * s;
-    const ink = '#120c16';
-    // arms: some up, some clapping, some holding something
-    const up = (i % 3) !== 1 ? swing > 0 : swing > 0.6;
-    const ay = y - bh - (up ? 26 * s : 8 * s);
-    Gfx.seg(x - bw * 0.75, y - bh * 0.72, x - bw - 7 * s, ay, 5 * s, ink);
-    Gfx.seg(x + bw * 0.75, y - bh * 0.72, x + bw + 7 * s, ay + (i % 2 ? 5 * s : 0), 5 * s, ink);
-    Gfx.rect(x - bw, y - bh, bw * 2, bh + 6 * s, ink);                  // body
-    Gfx.rect(x - bw * 0.7, y - bh - 3 * s, bw * 1.4, 4 * s, ink);       // shoulders
-    Gfx.circle(x, y - bh - hr * 0.7, hr, ink);                          // head
-    // hair, which is the only thing telling them apart at this size
-    const hair = i % 5;
-    const hy = y - bh - hr * 1.5;
-    if (hair === 0) { Gfx.rect(x - hr, hy - 2 * s, hr * 2, hr * 1.1, ink); }
-    else if (hair === 1) { Gfx.circle(x, hy - hr * 0.5, hr * 0.62, ink); }
-    else if (hair === 2) {
-      for (const d of [-1, 1]) Gfx.seg(x + d * hr * 0.5, hy, x + d * hr * 1.5, hy - hr * 1.4, 4 * s, ink);
-    } else if (hair === 3) {
-      Gfx.rect(x - hr * 1.3, hy, hr * 2.6, hr * 0.8, ink);
-      Gfx.seg(x, hy, x, hy - hr * 1.6, 3 * s, ink);
-    }
-    // the rim the stage puts on them
-    if (rimCol) {
-      Gfx.ctx.globalAlpha = 0.5;
-      Gfx.rect(x - hr * 0.8, y - bh - hr * 1.6, hr * 1.2, 2.5 * s, rimCol);
-      Gfx.rect(x - bw + 2 * s, y - bh - 1 * s, bw * 1.1, 2.5 * s, rimCol);
-      Gfx.ctx.globalAlpha = 1;
-    }
-    // and one in nine is holding a torch
-    if (i % 9 === 0) {
-      Gfx.rect(x + bw + 4 * s, ay - 2 * s, 2.5 * s, 16 * s, '#3a2415');
-      Gfx.circle(x + bw + 5 * s, ay - 5 * s, 4.5 * s, '#ffa832');
-      Gfx.circle(x + bw + 5 * s, ay - 7 * s, 2.6 * s, '#ffe98a');
-      Gfx.glow(x + bw + 5 * s, ay - 5 * s, 26 * s, '#ffa832', 0.5);
-    }
-  },
-
-  // a live volcano behind the stage: lava in the crater, three flows down the
-  // flank, an ash column, and a bomb thrown every few seconds
-  volcano(t, vx, camX, beat) {
-    const ctx = Gfx.ctx;
-    const BASE = GY - 124, APEX = GY - 286, HW = 186;
-    const px = vx - camX * 0.06;
-    // the ash column first, so the cone sits in front of it
-    for (let i = 0; i < 12; i++) {
-      const k = i / 11;
-      const py = APEX - 14 - k * 190 + Math.sin(t * 0.5 + i) * 6;
-      const r = 20 + k * 62;
-      Gfx.ctx.globalAlpha = 0.30 * (1 - k * 0.7);
-      Gfx.circle(px + Math.sin(t * 0.4 + i * 1.3) * 22, py, r * 0.62, '#3b3048');
-      Gfx.ctx.globalAlpha = 1;
-    }
-    // the cone
-    ctx.fillStyle = '#120c16'; ctx.beginPath();
-    ctx.moveTo(px - HW, BASE + 40);
-    for (let x = -HW; x <= HW; x += 8) {
-      const k = Math.abs(x) / HW;
-      ctx.lineTo(px + x, APEX + (BASE - APEX) * (k ** 0.8) + Math.sin(x * 0.06) * 4);
-    }
-    ctx.lineTo(px + HW, BASE + 40); ctx.fill();
-    // the lit left flank
-    ctx.fillStyle = '#281040'; ctx.beginPath();
-    ctx.moveTo(px - HW, BASE + 40);
-    for (let x = -HW; x <= 0; x += 8) {
-      const k = Math.abs(x) / HW;
-      ctx.lineTo(px + x, APEX + (BASE - APEX) * (k ** 0.8) + Math.sin(x * 0.06) * 4);
-    }
-    ctx.lineTo(px, BASE + 40); ctx.fill();
-    for (let x = -HW; x <= HW; x += 7) {                       // the crest, catching the fire
-      const k = Math.abs(x) / HW;
-      const y = APEX + (BASE - APEX) * (k ** 0.8) + Math.sin(x * 0.06) * 4;
-      Gfx.rect(px + x, y, 7, 5, k < 0.34 ? '#ef6a5e' : k < 0.7 ? '#a03a68' : '#7c3eb2');
-      Gfx.rect(px + x, y + 5, 7, 3, k < 0.34 ? '#a03a68' : '#4b2070');
-    }
-    // three lava flows down the flank
-    for (let f = 0; f < 3; f++) {
-      let lx = px + (f - 1) * 30, ly = APEX + 10;
-      for (let i = 0; i < 22; i++) {
-        const nx = lx + (f - 1) * 6 + Math.sin(i * 0.9 + f) * 4;
-        const ny = ly + 9;
-        Gfx.line(lx, ly, nx, ny, i % 3 ? '#e06a1b' : '#ffa832', 5 - i * 0.12);
-        Gfx.line(lx, ly, nx, ny, '#ffe98a', 2);
-        lx = nx; ly = ny;
-        if (ly > BASE + 14) break;
-      }
-    }
-    Gfx.glow(px, APEX + 8, 200 + beat * 50, '#e06a1b', 0.4);
-    // the crater, and what comes out of it
-    Gfx.round(px - 34, APEX - 4, 68, 14, 6, '#5c1607');
-    Gfx.round(px - 28, APEX - 2, 56, 10, 5, '#e06a1b');
-    Gfx.round(px - 22, APEX, 44, 6, 3, '#ffe98a');
-    for (let i = 0; i < 7; i++) {                              // fountaining lava
-      const k = ((t * 1.3 + i * 0.31) % 1);
-      const bx = px + (i - 3) * 12 + Math.sin(i * 2.1) * 6;
-      const by = APEX - k * 120 + k * k * 105;
-      Gfx.circle(bx, by, 5 - k * 2.4, k < 0.5 ? '#ffe98a' : '#e06a1b');
-      Gfx.glow(bx, by, 34, '#ffa832', 0.5 * (1 - k));
-    }
-  },
-
-  // meteors, coming down behind the volcano on their own schedule
-  meteors(t, camX, L, R) {
-    for (let i = 0; i < 4; i++) {
-      const period = 5.5 + i * 2.1;
-      const k = ((t + i * 3.7) % period) / period;
-      if (k > 0.55) continue;
-      const u = k / 0.55;
-      const sx = L - 200 + u * (R - L + 700) * (i % 2 ? 1 : 0.7);
-      const sy = 100 + u * (170 + i * 22);
-      const s2 = i === 0 ? 1.6 : 0.7 + (i % 3) * 0.2;
-      for (let t2 = 0; t2 < 16; t2++) {                        // the tail
-        const tx = sx - t2 * 11 * s2, ty = sy - t2 * 6 * s2;
-        Gfx.rectA(tx, ty, 8 * s2, 5 * s2, t2 < 4 ? '#ffe98a' : t2 < 9 ? '#ffa832' : '#e06a1b', (1 - t2 / 16) * 0.85);
-      }
-      Gfx.circle(sx, sy, 7 * s2, '#ffe98a');
-      Gfx.circle(sx + 2, sy + 1, 4 * s2, '#ffffff');
-      Gfx.glow(sx, sy, 90 * s2, '#ffa832', 0.5);
-    }
-  },
-
-  // a wall of cartoon flame across the front of the stage. A flame is a
-  // teardrop with a hooked tip and a lick or two coming off it - never a cone.
+  // A tongue of flame: a teardrop with a hooked tip and a lick or two coming
+  // off it, never a cone. Every fire in the game is a row of these.
   flame(cx, by, h, w, sway, cols) {
     const ctx = Gfx.ctx;
     for (let k = 0; k < cols.length; k++) {
@@ -1076,18 +813,6 @@ const World = {
       ctx.fillStyle = cols[k]; ctx.fill();
     }
   },
-  pyro(t, SX, beat) {
-    for (let i = 0; i < 13; i++) {
-      const fx = SX - 186 + i * 31;
-      const h = 15 + Math.abs(Math.sin(t * 5 + i * 1.7)) * 9 + beat * 16 + (i % 3) * 3;
-      const sway = Math.sin(t * 4.4 + i) * 3.5;
-      World.flame(fx, GY - 33, h, 7.5, sway, ['#e06a1b', '#ffa832', '#ffe98a']);
-      if ((i + ((t * 3) | 0)) % 4 === 0)                        // a lick breaking free
-        World.flame(fx + sway * 2, GY - 33 - h - 5, 7, 3.4, sway, ['#ffa832', '#ffe98a']);
-      if (i % 3 === 0) Gfx.glow(fx, GY - 42, 50, '#ffa832', 0.18);
-    }
-  },
-
   // ------------------------------------------------------------------- ROAD
   // The chill commute. Nothing to dodge, just a long warm morning.
   road(t, o = {}, camX = 0) {
@@ -1721,22 +1446,14 @@ const World = {
     ctx.restore();
   },
 
-  // ---- a stone tablet with something chiselled on it. This is paperwork.
+  // ---- a stone tablet with something chiselled on it. This is paperwork, and
+  // it is cut from exactly the same rock as the rest of the interface.
   tablet(x, y, w, h, lines, o = {}) {
-    Gfx.round(x - 7, y - 7, w + 14, h + 14, 9, '#120c16');
-    Gfx.round(x - 3, y - 3, w + 6, h + 6, 7, '#3b3048');
-    Gfx.round(x, y, w, h, 6, '#574a66');
-    Gfx.round(x + 5, y + 5, w - 10, h - 10, 5, '#7a6d8a');
-    Gfx.round(x + 5, y + 5, w - 10, 8, 3, '#9391a6');             // the lit top face
-    Gfx.round(x + 5, y + h - 14, w - 10, 9, 3, '#4d4a5c');
-    for (let i = 0; i < 9; i++)                                   // chips out of the edge
-      Gfx.round(x + 6 + i * (w - 12) / 8, y + (i % 2 ? h - 8 : 1), 11, 8, 3, '#3b3048');
-    for (let i = 0; i < 22; i++)                                  // pits in the face
-      Gfx.rectA(x + 14 + ((i * 53) % (w - 30)), y + 14 + ((i * 37) % (h - 28)), 4 + (i % 3) * 3, 3, '#574a66', 0.5);
+    UI.slab(x, y, w, h, { r: 5, shadow: o.shadow !== false });
     lines.forEach((ln, i) => {
       const ty = y + (o.pad ?? 22) + i * (o.gap ?? 26);
-      Gfx.text(ln.t, x + w / 2, ty + 2, { color: '#3b3048', align: 'center', scale: ln.s || 1.4 });
-      Gfx.text(ln.t, x + w / 2, ty, { color: ln.c || '#120c16', align: 'center', scale: ln.s || 1.4 });
+      Gfx.text(ln.t, x + w / 2, ty + 2, { color: SKIN.faceHi, align: 'center', scale: ln.s || 1.4 });
+      Gfx.text(ln.t, x + w / 2, ty, { color: ln.c || SKIN.text, align: 'center', scale: ln.s || 1.4 });
     });
   },
 

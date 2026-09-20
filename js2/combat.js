@@ -96,9 +96,9 @@ class Combat {
     const alive = this.enemies.filter(e => e.alive);
     const widths = alive.map(e => Gfx.spr(e.actor.sprite).w * e.actor.scale);
     const sum = widths.reduce((a, b) => a + b, 0);
-    const room = W - 470;                       // right-hand half of the stage
+    const room = W - 530;                       // right-hand half of the stage
     const gap = alive.length > 1 ? clamp((room - sum) / (alive.length - 1), -34, 30) : 0;
-    let x = W - 40;
+    let x = W - 66;
     for (let i = alive.length - 1; i >= 0; i--) {
       const e = alive[i];
       e.tx = x - widths[i] / 2;
@@ -567,44 +567,43 @@ class Combat {
     }
   }
   drawHud() {
-    // ---- the top bar: a proper sunken strip with framed readouts
-    Gfx.rect(0, 0, W, 44, SKIN.inkSoft);
-    Gfx.rect(0, 0, W, 2, SKIN.faceDark);
-    Gfx.rect(0, 42, W, 3, SKIN.ink);
-    // health
-    Gfx.round(8, 7, 250, 30, 4, SKIN.ink);
-    Gfx.round(10, 9, 246, 26, 3, '#3b3048');
-    Gfx.sprite('icon_heart', 16, 12, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2, scale: 1.2 });
-    Gfx.bar(46, 14, 190, 16, this.hp / this.maxHp, '#c2333c', { bg: '#3f0e18' });
+    // ---- the top bar: one long slab laid across the top of the screen
+    UI.slab(-8, -10, W + 16, 54, { r: 3, shadow: true, gold: false });
+    UI.filigree(-8, -10, W + 16, 54, { len: 8 });
+    Gfx.rect(0, 44, W, 3, SKIN.ink);
+    // health, cut into it
+    UI.slab(8, 6, 250, 32, { face: '#3f0e18', lit: '#7d1d2b', mid: '#241109', dark: SKIN.ink, r: 3, shadow: false, rough: false, len: 7 });
+    Gfx.sprite('icon_heart', 16, 11, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2, scale: 1.2 });
+    Gfx.bar(46, 14, 190, 16, this.hp / this.maxHp, '#c2333c', { bg: '#241109' });
     Gfx.text(`${this.hp}/${this.maxHp}`, 141, 15, { color: '#fffaea', align: 'center', scale: 1.3, outline: true });
     // shells
-    Gfx.round(268, 7, 110, 30, 4, SKIN.ink);
-    Gfx.round(270, 9, 106, 26, 3, '#3b3048');
-    Gfx.sprite('icon_coin', 276, 12, { anchor: 'tl', scale: 1.2 });
-    Gfx.text(String(this.run.gold), 306, 14, { color: SKIN.goldLit, scale: 1.4 });
+    UI.slab(268, 6, 110, 32, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: false, rough: false, len: 7 });
+    Gfx.sprite('icon_coin', 276, 11, { anchor: 'tl', scale: 1.2 });
+    Gfx.text(String(this.run.gold), 306, 14, { color: SKIN.ink, scale: 1.4 });
     // relics, each in its own little gold slot
     let rx = 392;
     for (const id of this.run.relics) {
       if (this.relicFlash[RELICS[id].name] > 0) Gfx.circle(rx + 15, 22, 20, '#ffe98a');
-      UI.slot(rx, 6, 32, { fill: '#241c2e' });
+      UI.slot(rx, 6, 32, {});
       Relics.drawIcon(id, rx + 6, 12); rx += 36;
     }
-    Gfx.text(`TURN ${this.turn}`, W - 74, 14, { color: '#d6cfe0', align: 'right', scale: 1.4 });
-    if (!this.riff) UI.iconButton(W - 50, 6, 36, 32, 'icon_menu', () => Game.pause(), { scale: 1.2 });
+    Gfx.text(`TURN ${this.turn}`, W - 76, 15, { color: SKIN.faceHi, align: 'right', scale: 1.4, outline: true });
+    if (!this.riff) UI.iconButton(W - 52, 6, 38, 32, 'icon_menu', () => Game.pause(), { scale: 1.2 });
     if (this.riff) return;
-    // ---- energy: a big carved stone bead
+    // ---- energy: a big carved stone bead with gold round the rim
     const ex = 70, ey = H - 118;
-    Gfx.circle(ex, ey, 38, SKIN.ink);
-    Gfx.circle(ex, ey, 34, this.energy > 0 ? '#1d3d72' : '#3b3048');
-    Gfx.circle(ex - 9, ey - 12, 12, this.energy > 0 ? '#6aa9ee' : '#574a66');
-    Gfx.ring(ex, ey, 36, SKIN.gold, 2);
+    Gfx.circle(ex, ey, 39, SKIN.ink);
+    Gfx.circle(ex, ey, 37, SKIN.goldDark);
+    Gfx.circle(ex, ey, 34, SKIN.gold);
+    Gfx.circle(ex, ey, 31, this.energy > 0 ? '#1d3d72' : '#3b3048');
+    Gfx.circle(ex - 8, ey - 11, 11, this.energy > 0 ? '#6aa9ee' : '#574a66');
+    Gfx.ring(ex, ey, 33, SKIN.goldLit, 1);
     Gfx.text(`${this.energy}`, ex, ey - 17, { color: '#ffffff', align: 'center', scale: 2.8, outline: true, outlineWidth: 2 });
     Gfx.text(`/${this.maxEnergy + Relics.mod('energy') + (this.powers.groove || 0)}`, ex, ey + 12, { color: '#86e8d2', align: 'center', scale: 1.2 });
     // ---- hype: a tall framed column
     const hx = 18, hy = 118, hh = 240, hw = 24;
     Gfx.text('HYPE', hx - 2, hy - 22, { color: '#e06a9b', scale: 1.3 });
-    Gfx.round(hx - 4, hy - 4, hw + 8, hh + 8, 4, SKIN.ink);
-    Gfx.round(hx - 2, hy - 2, hw + 4, hh + 4, 3, '#3b3048');
+    UI.slab(hx - 6, hy - 6, hw + 12, hh + 12, { face: '#241c2e', lit: '#3b3048', mid: '#120c16', dark: SKIN.ink, r: 3, shadow: false, rough: false, len: 8 });
     const fh = Math.round(hh * this.hype / 100);
     Gfx.rect(hx, hy + hh - fh, hw, fh, this.encoreReady ? (Math.floor(this.t * 6) % 2 ? '#ffffff' : '#e06a9b') : '#a03a68');
     Gfx.rect(hx, hy + hh - fh, hw, 3, '#ffb0cf');
@@ -613,13 +612,15 @@ class Combat {
     if (this.encoreReady && this.phase === 'player' && !this.busy)
       UI.wbutton(8, hy + hh + 28, 132, 40, 'ENCORE!', () => this.playEncore(), { scale: 1.3, danger: true, key: 'encore' });
     // ---- the piles, in gold slots
-    UI.slot(12, H - 78, 56, { fill: '#3b3048', count: this.drawPile.length });
+    // both piles live on the left, so the right-hand corner is free for the
+    // one button you press every single turn
+    UI.slot(12, H - 78, 56, { count: this.drawPile.length });
     Cards.back(20, H - 70, 0.36);
     UI.hit(12, H - 78, 56, 56, () => Game.overlay = new DeckOverlay(this.drawPile, 'DRAW PILE'));
-    UI.slot(W - 68, H - 78, 56, { fill: '#3b3048', count: this.discard.length });
-    Cards.back(W - 60, H - 70, 0.36);
-    UI.hit(W - 68, H - 78, 56, 56, () => Game.overlay = new DeckOverlay(this.discard, 'DISCARD'));
-    UI.wbutton(W - 172, H - 146, 158, 46, Input.touch ? 'END TURN' : 'END TURN (E)', () => this.endTurn(),
+    UI.slot(76, H - 78, 56, { count: this.discard.length });
+    Cards.back(84, H - 70, 0.36);
+    UI.hit(76, H - 78, 56, 56, () => Game.overlay = new DeckOverlay(this.discard, 'DISCARD'));
+    UI.wbutton(W - 186, H - 76, 172, 50, Input.touch ? 'END TURN' : 'END TURN (E)', () => this.endTurn(),
       { disabled: this.busy || this.phase !== 'player', scale: 1.2, key: 'endturn' });
   }
   drawHand() {

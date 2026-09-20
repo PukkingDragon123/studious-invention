@@ -33,45 +33,6 @@ class CutsceneScene {
     const at = o.at === undefined ? this.actors[who.toLowerCase()] : o.at;
     yield* Dialogue.say(who, text, Object.assign({ at }, o));
   }
-  // Clouds. The game opens inside them: two banks of soft weather that come
-  // apart to let the dream through, because waking up inside a guitar solo
-  // needs a door to walk out of.
-  *cloudWipe(dur = 2.8) {
-    let t = 0;
-    const prev = this.overlay;
-    const lobes = [];
-    for (let i = 0; i < 22; i++) lobes.push({
-      side: i % 2 ? 1 : -1, y: -70 + (i * 97) % (H + 140),
-      x: ((i * 53) % 260) - 40, r: 46 + ((i * 37) % 90), ph: (i * 1.7) % 6.3,
-    });
-    this.overlay = world => {
-      if (prev) prev(world);
-      if (world) return;
-      const k = clamp(t / dur, 0, 1);
-      const part = Ease.inOutCubic(k);
-      const ctx = Gfx.ctx;
-      Gfx.rectA(0, 0, W, H, '#fffaea', (1 - part) * 0.55);
-      Gfx.rectA(0, 0, W, H, '#b177e6', (1 - part) * 0.16);
-      for (const lo of lobes) {
-        const drift = Math.sin(Time.t * 0.5 + lo.ph) * 9;
-        const cx = lo.side < 0
-          ? lo.x + drift - part * (W * 0.72)
-          : W - lo.x - drift + part * (W * 0.72);
-        const r = lo.r * (1 + Math.sin(Time.t * 0.7 + lo.ph) * 0.04);
-        ctx.globalAlpha = 0.9;
-        Gfx.round(cx - r, lo.y - r * 0.62, r * 2, r * 1.24, r * 0.6, '#c4b89a');
-        Gfx.round(cx - r, lo.y - r * 0.72, r * 2, r * 1.24, r * 0.6, '#fffaea');
-        Gfx.round(cx - r * 0.8, lo.y - r * 0.78, r * 1.5, r * 0.5, r * 0.25, '#ffffff');
-        ctx.globalAlpha = 1;
-      }
-      // a glint of what is coming, through the gap
-      ctx.globalAlpha = (1 - Math.abs(part - 0.5) * 2) * 0.5;
-      Gfx.glow(W / 2, H * 0.52, 420, '#ffe98a', 0.6);
-      ctx.globalAlpha = 1;
-    };
-    while (t < dur) { t += Time.dt; yield 0; }
-    this.overlay = prev;
-  }
   // A stone tablet, held up to the camera. Paperwork, in this valley, is
   // eleven kilos of slate and somebody has to carry it.
   *tabletCard(lines, dur = 3.0) {
@@ -204,123 +165,77 @@ class CutsceneScene {
 function* introScript(S) {
   const run = Game.run;
   const setOpt = o => { S.setOpt = Object.assign({}, S.setOpt, o); };
-  const SX = 580;                               // the dream stage, in world x
 
-  // ================================================== 0. THE DREAM
-  // You are already playing. No logo, no black, no waiting. A live volcano, a
-  // shark in the air and a spinosaurus with two guns, because this is not a
-  // place with rules.
-  S.set = 'concert'; S.setOpt = { beat: 0 };
-  S.zoomMul = 0.62;                                  // stand well back: it is a dream, not a room
-  S.cam.lookAt(SX + 10, 302, true);
-  AudioSys.play('boss3', { fade: 0.8, intensity: 2 });
-  const rex = S.add('rex', { base: 'trex', x: SX + 34, y: GY - 46, scale: 1, facing: -1 });
-  rex.play('roar');
-  const star = S.add('star', { base: 'bronk', x: SX + 12, y: GY - 108, scale: 1, facing: 1 });
-  star.play('play'); star.sortY = GY + 40; star.shadow = false;
-  const spino = S.add('spino', { base: 'spino', x: SX + 148, y: GY - 44, scale: 0.9, facing: -1 });
-  spino.play('fire');
-  // fire off the tyrannosaur, muzzle flashes off the spinosaurus, rocks in the air
-  // fire pours off the tyrannosaur - drawn BEHIND the performers, or it burns
-  // the man standing on it
-  S.backdrop = () => {
-    const T = Time.t;
-    for (let i = 0; i < 8; i++) {
-      const t2 = i / 7;
-      const fx = rex.x - 76 + t2 * 150, fy = GY - 92 - Math.sin(t2 * Math.PI) * 54;
-      World.flame(fx, fy, 22 + Math.abs(Math.sin(T * 6 + i)) * 16, 8, Math.sin(T * 5 + i) * 4,
-        ['#e06a1b', '#ffa832', '#ffe98a']);
-    }
-    Gfx.glow(rex.x - 10, GY - 120, 220, '#e06a1b', 0.24 + Math.sin(T * 5) * 0.05);
-    // floating rocks, because gravity is also asleep
-    for (let i = 0; i < 6; i++) {
-      const rx2 = SX - 250 + i * 100, ry2 = GY - 86 - ((i % 3) * 30) + Math.sin(T * 0.9 + i * 1.7) * 9;
-      Gfx.round(rx2 - 9, ry2, 19, 11, 4, '#3b3048');
-      Gfx.round(rx2 - 7, ry2 - 1, 14, 5, 2, '#7a6d8a');
-      Gfx.rectA(rx2 - 7, ry2 + 8, 14, 3, '#e06a1b', 0.5);
-    }
-  };
-  S.overlay = world => {
-    if (!world) return;
-    const T = Time.t;
-    Gfx.glow(star.x + 14, star.y + star.bob - 42, 90, '#ffe98a', 0.45 + Math.sin(T * 8) * 0.1);
-    Gfx.sprite('art_bass', star.x + 16, star.y + star.bob - 42, { anchor: 'c', scale: 1.1, rot: -0.45 + Math.sin(T * 7) * 0.08 });
-  };
-  // the crowd keeps time with the song
-  Co.run(function* () {
-    for (let i = 0; i < 6000; i++) {
-      const b = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : Time.t * 2;
-      setOpt({ beat: Math.max(0, 1 - (b - Math.floor(b)) * 3) });
-      if (S.set !== 'concert') return;
-      yield 0;
-    }
-  }());
-  // in the clouds first, and then they come apart
-  yield* S.cloudWipe(2.8);
-  Juice.shake(6, 0.5);
-  AudioSys.sfx('roar', { pitch: 48, vol: 0.9, len: 1.4 });
-  yield 0.5;
-  // the mountain goes off, on cue
-  AudioSys.sfx('rumble', { vol: 1, len: 1.8 });
-  Juice.shake(12, 1.0);
-  for (let i = 0; i < 26; i++) Particles.spawn(rnd(0, W), rnd(40, 160),
-    { n: 1, color: ['#ffa832', '#e06a1b'], speed: 40, gravity: 30, life: 2.4, size: 5, sizeEnd: 0, world: false });
-  yield 0.6;
-  yield* S.titleCard('ONGA BONGA', 'a dream, obviously', 2.0);
-  Popups.add(W / 2, 112, 'STRIKE THE STRINGS', '#ffe98a', { world: false, scale: 1.8, life: 2.4, vy: -10 });
-  yield 0.3;
-  yield* S.riff({ bars: 3, density: 0.4, title: '', windowMult: 2.6, speedMul: 0.75 });
-  AudioSys.sfx('cheer');
-  for (let i = 0; i < 30; i++) Particles.confetti(rnd(W * 0.2, W * 0.8), 60, 1);
-  Juice.flash('#ffe98a', 0.4, 4);
-  yield 0.4;
-  yield* S.say('CROWD', 'BON-GA! BON-GA! BON-GA!', { at: null, portrait: 'icon_fire' });
-
-  // ================================================== 1. WAKING UP
-  // The dream lets go all at once and he is flat on his back in the dark.
-  Juice.shake(10, 0.4);
-  S.flash = 1;
-  AudioSys.stop(0.15);
-  yield 0.18;
-  S.overlay = null; S.backdrop = null; S.zoomMul = 1;
-  S.hide('rex', 'star', 'spino');
-  yield* S.cut('home', { night: true, fire: 0 }, [HOME.bed + 40, 330], 0.9);
-  AudioSys.play('home', { fade: 1.0 });
+  // ============================================== 0. MORNING, SUCH AS IT IS
+  // No logo, no dream, no waiting. A man on his back in a hole in a hill,
+  // making a noise you could quarry against.
+  S.set = 'home'; S.setOpt = { night: true, fire: 0 };
+  S.zoomMul = 1;
+  S.cam.lookAt(HOME.bed + 34, 330, true);
+  AudioSys.play('home', { fade: 1.6 });
   const bronk = S.add('bronk', { base: 'bronk', x: HOME.bed + 6, y: GY, scale: 1, facing: 1 });
   bronk.play('sleep');
   const dodo = S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 58, scale: 0.8, facing: -1 });
   dodo.play('idle');
-  yield 0.8;
-  yield* S.say('BRONK', '...thank you. thank you. I love you all...', { at: bronk });
-  yield 0.4;
+  // the snoring, drifting up off him and coming apart
+  let snore = 1;
+  S.overlay = world => {
+    if (!world || snore < 0.01) return;
+    const T = Time.t;
+    for (let i = 0; i < 3; i++) {
+      const k = ((T * 0.34 + i * 0.33) % 1);
+      const a = Math.sin(k * Math.PI) * snore;
+      if (a < 0.02) continue;
+      Gfx.ctx.globalAlpha = a * 0.9;
+      Gfx.text('Z', bronk.x - 26 + k * 46 + Math.sin(k * 7) * 5, GY - 34 - k * 66,
+        { color: '#c4b89a', align: 'center', scale: 1.2 + k * 2.2, outline: true, outlineWidth: 2 });
+      Gfx.ctx.globalAlpha = 1;
+    }
+  };
+  yield 0.9;
+  yield* S.titleCard('ONGA BONGA', 'a stone age rock saga', 2.8);
+  yield 0.5;
+  AudioSys.sfx('rumble', { vol: 0.3, len: 1.2 });
+  yield* S.say('BRONK', 'mnnghhh... hnnkkk... mnnn...', { at: bronk });
+  yield 0.3;
 
-  // ================================================ 2. VELA, AND PANCAKES
-  const vela = S.add('vela', { base: 'vela', x: HOME.rug + 120, y: GY, scale: 1, facing: -1 });
+  // ================================================== 1. VELA, THREE TIMES
+  const vela = S.add('vela', { base: 'vela', x: HOME.rug + 150, y: GY, scale: 1, facing: -1 });
   vela.play('walk');
-  yield* S.pan(HOME.bed + 96, 324);
-  while (!vela.moveTo(HOME.bed + 78, GY, Time.dt, 100)) yield 0;
+  yield* S.pan(HOME.bed + 104, 326);
+  while (!vela.moveTo(HOME.bed + 86, GY, Time.dt, 104)) yield 0;
   vela.play('idle'); vela.facing = -1;
-  yield 0.3;
-  yield* S.say('VELA', 'Up. Now.', { at: vela });
-  yield* S.say('BRONK', 'I was headlining. There were thousands of them.', { at: bronk });
-  yield* S.say('VELA', "There are four of us and one of you is still in bed.", { at: vela });
-  Emotes.show(vela, 'anger', 1.2);
-  yield 0.3;
-  bronk.play('sleep');
-  yield* S.say('BRONK', 'mmnnh. five more... centuries...', { at: bronk });
-  yield 0.3;
-  yield* S.say('VELA', "Fine. I'll just let the pancakes go cold.", { at: vela });
-  // the nose knows
-  yield* S.pan(bronk.x + 20, 312);
-  AudioSys.sfx('gasp');
   yield 0.4;
-  bronk.play('shock'); bronk.stretch(0.4);
-  Juice.flash('#ffe98a', 0.3, 3); Juice.punch(0.07);
+  yield* S.say('VELA', 'Up.', { at: vela });
+  yield 0.5;
+  yield* S.say('BRONK', '...', { at: bronk });
+  yield 0.3;
+  // she tries the volume
+  Emotes.show(vela, 'anger', 1.4);
   AudioSys.sfx('detect');
-  Particles.sparkle(bronk.x, bronk.y - 50, 16, ['#ffe98a', '#ffffff']);
+  Juice.shake(5, 0.25);
+  yield* S.say('VELA', 'BRONK. UP.', { at: vela });
+  bronk.squash(0.16);
+  snore = 0.45;
+  yield 0.4;
+  yield* S.say('BRONK', 'mmnnh. five more... centuries...', { at: bronk });
+  yield 0.4;
+  // she tries the other lever
+  yield* S.say('VELA', "Fine. I'll just let the pancakes go cold.", { at: vela });
+  yield* S.pan(bronk.x + 24, 316, 0.3);
+  AudioSys.sfx('gasp');
+  snore = 0;
+  yield 0.45;
+  // and he is vertical
+  bronk.play('shock'); bronk.stretch(0.42);
+  Juice.flash('#ffe98a', 0.3, 3); Juice.punch(0.08); Juice.shake(7, 0.3);
+  AudioSys.sfx('detect');
+  Particles.sparkle(bronk.x, GY - 50, 18, ['#ffe98a', '#ffffff']);
+  FX.burst(bronk.x, GY - 46, { scale: 1.2 });
   yield 0.45;
   yield* S.say('BRONK', 'PANCAKES.', { at: bronk });
   yield 0.2;
+  S.overlay = null;
   vela.visible = false; bronk.visible = false;
   // --- side-scroll: out of the bedroom, through the passage, to the table
   const dash = yield* S.mini(new SideScroll({
@@ -649,7 +564,19 @@ function* introScript(S) {
   yield 1.4;
   yield* S.say('ELDER', 'Rally what is left of this valley. Then go and get them back.', { at: elder });
   yield* S.say('BRONK', "I don't know how to play this.", { at: bronk });
-  yield* S.say('ELDER', 'You did in your sleep.', { at: elder });
+  yield* S.say('ELDER', 'Nobody does. Hit it and find out.', { at: elder });
+  // --- and this is where you learn what the whole game is: strike the strings
+  bronk.play('play');
+  AudioSys.play('title', { fade: 0.4, intensity: 1 });
+  Popups.add(W / 2, 112, 'STRIKE THE STRINGS', '#ffe98a', { world: false, scale: 1.8, life: 2.4, vy: -10 });
+  yield 0.4;
+  yield* S.riff({ bars: 3, density: 0.35, title: 'FIRST RIFF', windowMult: 2.8, speedMul: 0.7 });
+  AudioSys.sfx('cheer');
+  for (let i = 0; i < 24; i++) Particles.confetti(rnd(W * 0.25, W * 0.75), 70, 1);
+  Juice.flash('#ffe98a', 0.4, 4);
+  AudioSys.stop(0.4);
+  yield 0.5;
+  yield* S.say('ELDER', 'There it is.', { at: elder });
   // and he is gone
   AudioSys.sfx('ghost');
   Particles.sparkle(elder.x, GY - 60, 24, ['#ffe98a', '#b177e6']);
