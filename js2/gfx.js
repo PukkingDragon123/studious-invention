@@ -190,21 +190,40 @@ const Gfx = {
     }
   },
   line(x1, y1, x2, y2, color, lw = 1) { const c = this.ctx; c.strokeStyle = color; c.lineWidth = lw; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); },
+  // A chunky diagonal drawn as fills rather than a stroke. Stroking is the most
+  // expensive thing this engine can ask a canvas for, and a crowd wants four
+  // hundred little waving arms every frame.
+  seg(x1, y1, x2, y2, w, color) {
+    const c = this.ctx;
+    c.fillStyle = color;
+    const dx = x2 - x1, dy = y2 - y1, ww = Math.max(1, Math.ceil(w));
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / Math.max(1, w * 0.8)));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      c.fillRect(Math.round(x1 + dx * t - w / 2), Math.round(y1 + dy * t - w / 2), ww, ww);
+    }
+  },
   bands(x, y, w, h, colors) { const n = colors.length, bh = h / n; for (let i = 0; i < n; i++) this.rect(x, y + i * bh, w, Math.ceil(bh) + 1, colors[i]); },
   // rounded-corner rectangle drawn with pixel steps (no anti-aliasing)
+  // A rounded rect, drawn as spans. The corners used to go out one pixel at a
+  // time, which is O(r^2) fillRects - with a crowd of two hundred people on
+  // screen that alone was costing fifty thousand calls a frame.
   round(x, y, w, h, r, color) {
     x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(x + r, y, w - r * 2, h);
-    this.ctx.fillRect(x, y + r, w, h - r * 2);
-    const steps = [[r, r], [w - r, r], [r, h - r], [w - r, h - r]];
-    for (let i = 0; i < steps.length; i++) {
-      const [cx, cy] = steps[i];
-      for (let py = -r; py <= r; py++) for (let px = -r; px <= r; px++) {
-        if (px * px + py * py > r * r) continue;
-        const qx = (i % 2 === 0 ? px <= 0 : px >= 0), qy = (i < 2 ? py <= 0 : py >= 0);
-        if (qx && qy) this.ctx.fillRect(x + cx + px, y + cy + py, 1, 1);
-      }
+    r = Math.max(0, Math.round(r));
+    const c = this.ctx;
+    c.fillStyle = color;
+    if (r <= 1) { c.fillRect(x, y, w, h); return; }   // too small to be worth rounding
+    c.fillRect(x + r, y, w - r * 2, h);
+    c.fillRect(x, y + r, w, h - r * 2);
+    const rr = r * r;
+    for (let d = 0; d <= r; d++) {
+      const dx = Math.floor(Math.sqrt(Math.max(0, rr - d * d))) + 1;
+      const ty = y + r - d, by = y + h - r + d;
+      c.fillRect(x + r - dx + 1, ty, dx, 1);
+      c.fillRect(x + w - r, ty, dx, 1);
+      c.fillRect(x + r - dx + 1, by, dx, 1);
+      c.fillRect(x + w - r, by, dx, 1);
     }
   },
   bar(x, y, w, h, frac, fg, o = {}) {

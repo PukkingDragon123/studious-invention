@@ -33,6 +33,65 @@ class CutsceneScene {
     const at = o.at === undefined ? this.actors[who.toLowerCase()] : o.at;
     yield* Dialogue.say(who, text, Object.assign({ at }, o));
   }
+  // Clouds. The game opens inside them: two banks of soft weather that come
+  // apart to let the dream through, because waking up inside a guitar solo
+  // needs a door to walk out of.
+  *cloudWipe(dur = 2.8) {
+    let t = 0;
+    const prev = this.overlay;
+    const lobes = [];
+    for (let i = 0; i < 22; i++) lobes.push({
+      side: i % 2 ? 1 : -1, y: -70 + (i * 97) % (H + 140),
+      x: ((i * 53) % 260) - 40, r: 46 + ((i * 37) % 90), ph: (i * 1.7) % 6.3,
+    });
+    this.overlay = world => {
+      if (prev) prev(world);
+      if (world) return;
+      const k = clamp(t / dur, 0, 1);
+      const part = Ease.inOutCubic(k);
+      const ctx = Gfx.ctx;
+      Gfx.rectA(0, 0, W, H, '#fffaea', (1 - part) * 0.55);
+      Gfx.rectA(0, 0, W, H, '#b177e6', (1 - part) * 0.16);
+      for (const lo of lobes) {
+        const drift = Math.sin(Time.t * 0.5 + lo.ph) * 9;
+        const cx = lo.side < 0
+          ? lo.x + drift - part * (W * 0.72)
+          : W - lo.x - drift + part * (W * 0.72);
+        const r = lo.r * (1 + Math.sin(Time.t * 0.7 + lo.ph) * 0.04);
+        ctx.globalAlpha = 0.9;
+        Gfx.round(cx - r, lo.y - r * 0.62, r * 2, r * 1.24, r * 0.6, '#c4b89a');
+        Gfx.round(cx - r, lo.y - r * 0.72, r * 2, r * 1.24, r * 0.6, '#fffaea');
+        Gfx.round(cx - r * 0.8, lo.y - r * 0.78, r * 1.5, r * 0.5, r * 0.25, '#ffffff');
+        ctx.globalAlpha = 1;
+      }
+      // a glint of what is coming, through the gap
+      ctx.globalAlpha = (1 - Math.abs(part - 0.5) * 2) * 0.5;
+      Gfx.glow(W / 2, H * 0.52, 420, '#ffe98a', 0.6);
+      ctx.globalAlpha = 1;
+    };
+    while (t < dur) { t += Time.dt; yield 0; }
+    this.overlay = prev;
+  }
+  // A stone tablet, held up to the camera. Paperwork, in this valley, is
+  // eleven kilos of slate and somebody has to carry it.
+  *tabletCard(lines, dur = 3.0) {
+    let t = 0;
+    const prev = this.overlay;
+    const W2 = 380, H2 = 44 + lines.length * 30;
+    this.overlay = world => {
+      if (prev) prev(world);
+      if (world) return;
+      const k = clamp(t / 0.35, 0, 1), out = clamp((dur - t) / 0.3, 0, 1);
+      Gfx.rectA(0, 0, W, H, '#120c16', 0.78 * Math.min(k, out));
+      const rise = (1 - Ease.outBack(k)) * 60;
+      Gfx.ctx.globalAlpha = Math.min(1, out);
+      World.tablet(W / 2 - W2 / 2, H / 2 - H2 / 2 + rise + Math.sin(t * 2) * 3, W2, H2, lines, { pad: 24, gap: 30 });
+      Gfx.ctx.globalAlpha = 1;
+    };
+    AudioSys.sfx('card');
+    while (t < dur) { t += Time.dt; yield 0; }
+    this.overlay = prev;
+  }
   *titleCard(text, sub, dur = 2.6) {
     this.title = { text, sub, t: 0, life: dur };
     yield dur;
@@ -69,7 +128,7 @@ class CutsceneScene {
   *riff(o = {}) {
     let done = false, result = null;
     this.riffGame = new Riff(Object.assign({
-      bars: 2, density: 0.5, title: 'DREAM', windowMult: 2.2, speedMul: 0.8,
+      bars: 2, density: 0.5, title: '', windowMult: 2.2, speedMul: 0.8,
       onNote: (rating) => { if (rating) { Juice.punch(0.03); this.flash = Math.max(this.flash, 0.22); } },
       onDone: r => { result = r; done = true; },
     }, o));
@@ -152,7 +211,7 @@ function* introScript(S) {
   // shark in the air and a spinosaurus with two guns, because this is not a
   // place with rules.
   S.set = 'concert'; S.setOpt = { beat: 0 };
-  S.zoomMul = 0.72;                                  // stand back: it is a dream, not a room
+  S.zoomMul = 0.62;                                  // stand well back: it is a dream, not a room
   S.cam.lookAt(SX + 10, 302, true);
   AudioSys.play('boss3', { fade: 0.8, intensity: 2 });
   const rex = S.add('rex', { base: 'trex', x: SX + 34, y: GY - 46, scale: 1, facing: -1 });
@@ -166,8 +225,8 @@ function* introScript(S) {
   // the man standing on it
   S.backdrop = () => {
     const T = Time.t;
-    for (let i = 0; i < 12; i++) {
-      const t2 = i / 11;
+    for (let i = 0; i < 8; i++) {
+      const t2 = i / 7;
       const fx = rex.x - 76 + t2 * 150, fy = GY - 92 - Math.sin(t2 * Math.PI) * 54;
       World.flame(fx, fy, 22 + Math.abs(Math.sin(T * 6 + i)) * 16, 8, Math.sin(T * 5 + i) * 4,
         ['#e06a1b', '#ffa832', '#ffe98a']);
@@ -196,6 +255,8 @@ function* introScript(S) {
       yield 0;
     }
   }());
+  // in the clouds first, and then they come apart
+  yield* S.cloudWipe(2.8);
   Juice.shake(6, 0.5);
   AudioSys.sfx('roar', { pitch: 48, vol: 0.9, len: 1.4 });
   yield 0.5;
@@ -208,7 +269,7 @@ function* introScript(S) {
   yield* S.titleCard('ONGA BONGA', 'a dream, obviously', 2.0);
   Popups.add(W / 2, 112, 'STRIKE THE STRINGS', '#ffe98a', { world: false, scale: 1.8, life: 2.4, vy: -10 });
   yield 0.3;
-  yield* S.riff({ bars: 3, density: 0.4, title: 'DREAM', windowMult: 2.6, speedMul: 0.75 });
+  yield* S.riff({ bars: 3, density: 0.4, title: '', windowMult: 2.6, speedMul: 0.75 });
   AudioSys.sfx('cheer');
   for (let i = 0; i < 30; i++) Particles.confetti(rnd(W * 0.2, W * 0.8), 60, 1);
   Juice.flash('#ffe98a', 0.4, 4);
@@ -264,9 +325,21 @@ function* introScript(S) {
   // --- side-scroll: out of the bedroom, through the passage, to the table
   const dash = yield* S.mini(new SideScroll({
     base: 'bronk', moveClip: 'dash', idleClip: 'idle',
-    startX: HOME.bed + 6, goal: HOME.table - 40, speed: 300, grip: 9,
+    startX: HOME.bed + 6, goal: HOME.table - 40, speed: 300,
     paint: Scroll('home', { night: true, fire: 0 }),
     title: 'PANCAKES', sub: 'this way',
+    // rock shelves along the cave wall, because a man in a hurry takes the
+    // high road through his own kitchen
+    platforms: [
+      { x: HOME.drum + 40, w: 118, h: 50, warm: true },
+      { x: HOME.arch - 56, w: 132, h: 70, warm: true },
+      { x: HOME.fossil + 30, w: 122, h: 54, warm: true },
+    ],
+    pickups: [
+      { x: HOME.drum + 96, y: GY - 82, spr: 'icon_coin', label: '+1 shell' },
+      { x: HOME.arch + 10, y: GY - 102, spr: 'icon_coin', label: '+1 shell' },
+      { x: HOME.fossil + 88, y: GY - 86, spr: 'icon_coin', label: '+1 shell' },
+    ],
     props: [{ spr: 'vela_idle', x: HOME.table + 54, flip: true }],
   }));
   run.gold += 10;
@@ -352,68 +425,108 @@ function* introScript(S) {
   bronk.visible = false;
   yield 0.6;
 
-  // ==================================================== 7. THE CHILL DRIVE
+  // ==================================================== 7. THE COMMUTE
+  // Nobody wants to play the drive to work. It is a loading screen.
   AudioSys.play('drive', { fade: 0.4 });
-  const drive = yield* S.mini(new SideScroll({
-    vehicle: 'car', vehicleScale: 1, startX: 0, goal: 2400, speed: 130, auto: 140, grip: 3,
-    paint: Scroll('road'),
-    title: 'THE COMMUTE', sub: 'no rush',
-    pickups: Array.from({ length: 8 }, (_, i) => ({ x: 300 + i * 260, spr: 'icon_coin', label: '+1 shell' })),
-  }));
-  run.gold += (drive ? drive.got : 0) * 5;
+  yield* S.mini(new DriveCard({ dur: 4.4 }));
 
-  // ==================================================== 8. THE QUARRY
-  yield* S.cut('quarry', {}, [440, 318], 0.7);
-  bronk.visible = true; bronk.x = 380; bronk.y = GY; bronk.facing = 1; bronk.play('idle');
+  // ==================================================== 8. THE SHIFT
+  S.hide('dodo', 'mam', 'blaze', 'vela', 'kida', 'kidb');    // none of them came to work
+  yield* S.cut('quarry', {}, [QUARRY.boss + 40, 318], 0.7);
+  bronk.visible = true; bronk.x = QUARRY.boss - 130; bronk.y = GY; bronk.facing = 1; bronk.play('walk');
   AudioSys.play('drive', { fade: 0.6 });
-  yield 0.5;
-  yield* S.say('BRONK', 'Another beautiful day of hitting a big rock until it is small rocks.', { at: bronk });
+  const boss = S.add('boss', { base: 'brute', x: QUARRY.boss + 46, y: GY, scale: 1, facing: -1 });
+  // the foreman never takes the hat off. it is the whole personality.
+  S.overlay = world => {
+    if (!world || !boss.visible) return;
+    const hy = boss.y + boss.bob - 74;
+    Gfx.round(boss.x - 15, hy - 5, 30, 13, 5, '#6b4a10');
+    Gfx.round(boss.x - 12, hy - 4, 24, 6, 3, '#e0b93a');
+    Gfx.round(boss.x - 20, hy + 6, 40, 5, 2, '#6b4a10');
+    Gfx.round(boss.x - 4, hy - 10, 8, 7, 3, '#ffe98a');
+  };
+  yield* S.walk('bronk', QUARRY.boss - 62, GY, 120);
   yield 0.3;
-  // something comes out of the mine
-  const trex = S.add('trex', { base: 'trex', x: 700, y: GY, scale: 1, facing: -1 });
+  yield* S.say('FOREMAN', 'Rockbottom. You are four minutes late and I have written it down.', { at: boss });
+  yield* S.say('BRONK', 'You write everything down.', { at: bronk });
+  yield* S.say('FOREMAN', 'I write everything down.', { at: boss });
+  yield 0.3;
+  // the tablet: this is a job description, and it weighs eleven kilos
+  AudioSys.sfx('thud'); Juice.shake(6, 0.3); Juice.punch(0.05);
+  yield* S.say('FOREMAN', "Face three. Three crystal in the box and you get your shell. Same as yesterday.", { at: boss });
+  Popups.add(bronk.x, GY - 120, 'YOUR JOB', '#ffe98a', { scale: 1.8, life: 1.6 });
+  yield* S.tabletCard([
+    { t: 'DAY SHIFT', s: 1.2, c: '#241c2e' },
+    { t: 'BRONK ROCKBOTTOM', s: 1.8 },
+    { t: 'FACE THREE', s: 1.3, c: '#241c2e' },
+    { t: '3 CRYSTAL = 1 SHELL', s: 1.6, c: '#7d1d2b' },
+  ], 3.0);
+  yield* S.say('BRONK', 'Eleven kilos. My job description weighs eleven kilos.', { at: bronk });
+  yield 0.3;
+  // --- and then you do it
+  AudioSys.play('blaze', { fade: 0.5 });
+  const shift = yield* S.mini(new MineGame({ need: 3, title: 'FACE THREE' }));
+  run.gold += 1;
+  AudioSys.sfx('gold');
+  S.setOpt = Object.assign({}, S.setOpt, { mined: 3 });
+  yield* S.snap(QUARRY.box - 30, 318);
+  bronk.x = QUARRY.box - 96; bronk.play('idle'); bronk.facing = 1;
+  boss.visible = true; boss.x = QUARRY.box + 62; boss.facing = -1;
+  Popups.add(bronk.x, GY - 130, '+1 SHELL', '#ffe98a', { scale: 2.2, life: 2.0 });
+  Particles.sparkle(bronk.x, GY - 70, 20, ['#ffe98a', '#ffffff']);
+  yield 1.1;
+  yield* S.say('BRONK', 'One shell. For an entire mountain.', { at: bronk });
+  yield* S.say('FOREMAN', 'Market rate.', { at: boss });
+  yield 0.4;
+
+  // ----------------------------------------- and then the day stops being one
+  AudioSys.stop(0.2);
+  yield 0.5;
+  AudioSys.sfx('rumble', { vol: 1, len: 2.0 });
+  Juice.shake(12, 1.1);
+  Emotes.show(bronk, '?', 1.2);
+  yield 0.9;
+  AudioSys.play('chase', { fade: 0.3, intensity: 2 });
+  AudioSys.sfx('roar', { pitch: 46, vol: 1, len: 2.0 });
+  Juice.shake(20, 1.4); Juice.flash('#ffffff', 0.4, 4);
+  const trex = S.add('trex', { base: 'trex', x: QUARRY.face - 40, y: GY, scale: 1.1, facing: 1 });
   trex.play('roar');
-  const vic = S.add('vic', { base: 'villager', x: 600, y: GY, scale: 0.9, facing: -1 });
-  const vic2 = S.add('vic2', { base: 'villager2', x: 566, y: GY, scale: 0.9, facing: -1 });
-  yield* S.pan(600, 314);
-  AudioSys.play('chase', { fade: 0.4, intensity: 2 });
-  AudioSys.sfx('rumble', { vol: 0.9, len: 1.4 });
-  Juice.shake(10, 0.9);
+  yield* S.pan(QUARRY.face + 60, 310, 0.6);
+  Emotes.show(bronk, '!', 1.4);
   yield 0.8;
-  AudioSys.sfx('roar', { pitch: 46, vol: 1, len: 1.8 });
-  Juice.shake(16, 1.2); Juice.flash('#ffffff', 0.35, 4);
-  Emotes.show(vic, '!', 1.2); Emotes.show(vic2, '!', 1.2);
-  yield 0.7;
-  // the workforce leaves. one of them leaves vertically.
-  vic.play('walk'); vic2.play('walk');
-  Co.run(function* () {
-    for (let i = 0; i < 300; i++) { vic.x -= Time.dt * 210; vic2.x -= Time.dt * 190; yield 0; }
-  }());
-  yield 0.5;
-  const vic3 = S.add('vic3', { base: 'villager', x: 760, y: GY, scale: 0.9 });
-  AudioSys.sfx('chomp');
-  Juice.shake(8, 0.3);
-  Popups.add(760, GY - 110, 'NOM', '#ef6a5e', { scale: 2.4, life: 1.4, vy: -30 });
-  vic3.visible = false;
-  Particles.spawn(760, GY - 60, { n: 14, color: ['#d8a86b', '#b07a45'], speed: 200, spread: 6.28, life: 0.9, size: 5, sizeEnd: 0, gravity: 300 });
-  yield 0.6;
-  yield* S.say('', 'That is Gary. Gary is fine. Gary is mostly fine.', { at: trex, portrait: 'trex_idle' });
-  yield* S.say('BRONK', "Right. RIGHT. I am the Employee of the Week. This is an Employee of the Week problem.", { at: bronk });
-  yield 0.3;
-  // --- he gives chase. it does not go far.
-  bronk.play('run', { fps: 18 }); bronk.facing = 1;
+  yield* S.say('BRONK', 'THAT IS NOT ONE OF OURS.', { at: bronk });
+  // it walks through the shift. the shift does not survive it.
   trex.play('walk');
   Co.run(function* () {
-    for (let i = 0; i < 260; i++) {
-      bronk.x += Time.dt * 200; trex.x += Time.dt * 300;
-      Particles.dust(bronk.x - 22, GY, 1);
-      S.cam.lookAt(bronk.x + 90, 316);
+    for (let i = 0; i < 400; i++) {
+      trex.x += Time.dt * 120;
+      if (chance(Time.dt * 22)) Particles.spawn(trex.x + rnd(-80, 80), GY - rnd(0, 90),
+        { n: 1, color: ['#7a6d8a', '#574a66', '#e06a1b'], speed: 190, spread: 6.28, life: 1.2, size: 5, sizeEnd: 0, gravity: 340 });
+      if (chance(Time.dt * 3)) { Juice.shake(9, 0.2); AudioSys.sfx('thud', { vol: 0.7 }); }
       yield 0;
     }
   }());
-  yield 2.0;
-  bronk.play('idle');
-  yield* S.say('BRONK', '...it went towards the village. It went towards MY village.', { at: bronk });
+  for (let i = 0; i < 3; i++) {
+    Juice.pow(W / 2 + rnd(-200, 200), H * 0.5 + rnd(-60, 60), { r: 70, spikes: 11, col: '#ef6a5e', word: pick(['CRUNCH', 'WHAM', 'SMASH']) });
+    AudioSys.sfx('bighit');
+    yield 0.5;
+  }
+  yield* S.say('', 'Six derricks, four carts and a triceratops named Susan. All of it, in under a minute.', { at: trex, portrait: 'trex_idle' });
   yield 0.3;
+  bronk.play('dash', { fps: 18 }); bronk.facing = -1;
+  S.overlay = null;
+  boss.visible = false;
+  Co.run(function* () {
+    for (let i = 0; i < 200; i++) { bronk.x -= Time.dt * 260; Particles.dust(bronk.x + 22, GY, 1); S.cam.lookAt(bronk.x - 70, 314); yield 0; }
+  }());
+  yield 1.2;
+  yield* S.say('BRONK', 'car car car car car', { at: bronk });
+  AudioSys.sfx('car_start');
+  yield 0.6;
+  bronk.visible = false; trex.visible = false;
+
+  // ============================================ 8b. THE DRIVE HOME
+  yield* S.mini(new DriveCard({ scared: true, dur: 4.6 }));
 
   // =============================================== 9. HOME, AT DUSK
   yield* S.cut('home', { dusk: true, fire: 0, eggGone: true, carGone: true }, [HOME.door + 20, 318], 0.8);
@@ -452,7 +565,7 @@ function* introScript(S) {
       spr: i % 3 === 0 ? 'prop_deadtree' : i % 3 === 1 ? 'prop_rock' : 'prop_bones',
       scale: i % 3 === 0 ? 0.8 : 1.1, w: 40, h: i % 3 === 0 ? 54 : 36,
     })),
-    paint: Scroll('canyon', { embers: true }),
+    paint: Scroll('flight', { embers: true }),
     ahead: { spr: 'blaze_walk', gap: 420, speed: 258, scale: 1, carry: 'vela_cry' },
     pursuer: { spr: 'trex_walk', roarSpr: 'trex_roar', gap: 400, speed: 244, scale: 1.15 },
     pursuerRamp: 30, leash: 520, catchTime: 3.0,
@@ -460,7 +573,7 @@ function* introScript(S) {
   }));
 
   // =============================================== 10. THE BREAKDOWN
-  yield* S.cut('canyon', { embers: true }, [400, 318], 0.7);
+  yield* S.cut('flight', { embers: true }, [400, 318], 0.7);
   bronk.x = 380; bronk.y = GY; bronk.facing = 1; bronk.play('hurt');
   S.hide('vela', 'kida', 'kidb', 'blaze');
   trex.visible = true; trex.x = 620; trex.y = GY; trex.facing = -1; trex.play('walk');

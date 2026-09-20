@@ -327,43 +327,24 @@ class Trader extends Entity {
     }
     if (chance(dt * 0.14)) Dialogue.float(this.actor, pick(['Bell says: bargains!', 'Trunk-picked goods!', 'Ooo-ga! Best prices!', 'Two shells. No haggling.', 'Fresh off the tusk!']));
   }
-  // the outfit: a trade awning, a loaded pack, beads, hoops and a headdress
+  // The sprite carries the whole shop now - canopy, lamps, pennant and all -
+  // so the only things drawn on top are the ones that have to move: the lamp
+  // light, the tusk hoops and a bit of sparkle so you spot him across the ruin.
   draw() {
     const a = clamp(this.here, 0, 1);
     if (a < 0.02) return;
     const ctx = Gfx.ctx, x = this.x, y = this.y, t = Time.t;
     ctx.globalAlpha = a;
+    const flick = 0.82 + Math.sin(t * 7) * 0.12 + Math.sin(t * 17) * 0.06;
+    Gfx.glow(x - 6, y - 118, 90, '#ffa832', 0.26 * a * flick);      // under the canopy
     this.actor.draw({ alpha: a });
-    const top = y - 66;
-    // striped awning on four bone poles, swaying
-    const sway = Math.sin(t * 1.6) * 2;
-    for (const px of [-40, 34]) { Gfx.rect(x + px, top - 4, 4, 30, '#8a7f68'); Gfx.rect(x + px, top - 4, 2, 30, '#e8dfc6'); }
-    Gfx.round(x - 50, top - 20, 96, 12, 4, '#3a2415');
-    for (let i = 0; i < 6; i++) Gfx.rect(x - 48 + i * 16 + sway * 0.3, top - 18, 8, 9, i % 2 ? '#c2333c' : '#e8dfc6');
-    for (let i = 0; i < 5; i++) { const fx = x - 44 + i * 19 + sway; Gfx.round(fx, top - 9, 9, 7, 3, i % 2 ? '#2cb3a2' : '#ffa832'); }
-    // pack of wares strapped across the back
-    Gfx.round(x - 26, y - 62, 46, 24, 6, '#5c3a20');
-    Gfx.round(x - 24, y - 60, 42, 9, 4, '#85562f');
-    Gfx.sprite('prop_pot', x - 14, y - 60, { anchor: 'bc', scale: 0.5 });
-    Gfx.sprite('icon_coin', x + 4, y - 66, { anchor: 'c', scale: 0.8 });
-    Gfx.sprite('art_club', x + 18, y - 62, { anchor: 'bc', scale: 0.7, rot: 0.5 });
-    // shell beads round the neck, gold hoops on the tusks, feathers up top
-    for (let i = 0; i < 7; i++) {
-      const bx = x + 22 + i * 4, by = y - 44 + Math.abs(i - 3) * 2.2;
-      Gfx.circle(bx, by, 2.6, i % 2 ? '#ffe98a' : '#86e8d2');
+    for (const [lx, ly] of [[x - 18, y - 116], [x + 15, y - 116]]) {
+      Gfx.glow(lx, ly, 46, '#ffe98a', 0.34 * a * flick);
+      Gfx.circle(lx, ly, 2.2, '#fffaea');
     }
-    Gfx.ring(x + 46, y - 22, 6, '#e0b93a', 2);
-    Gfx.ring(x + 52, y - 14, 5, '#e0b93a', 2);
-    for (let i = 0; i < 3; i++) {
-      const fa = -0.5 + i * 0.42 + Math.sin(t * 2 + i) * 0.06;
-      const bx = x + 28, by = y - 74;
-      Gfx.line(bx, by, bx + Math.cos(fa - 1.6) * 16, by + Math.sin(fa - 1.6) * 16, ['#c2333c', '#2cb3a2', '#ffa832'][i], 3);
-    }
-    Gfx.round(x + 20, y - 80, 18, 8, 3, '#7c3eb2');
-    // a lantern, so you can spot him across the ruin
-    Gfx.glow(x - 46, y - 34, 40, '#ffe98a', 0.26 * a);
-    Gfx.circle(x - 46, y - 34, 5, '#ffe98a');
-    if (a > 0.9 && chance(0.06)) Particles.sparkle(x + rnd(-40, 40), y - 50, 1, ['#ffe98a']);
+    Gfx.ring(x + 52, y - 24, 6, '#e0b93a', 2);                      // hoops on the tusks
+    Gfx.ring(x + 59, y - 15, 5, '#e0b93a', 2);
+    if (a > 0.9 && chance(0.06)) Particles.sparkle(x + rnd(-48, 48), y - 70, 1, ['#ffe98a']);
     ctx.globalAlpha = 1;
   }
   *interact(V) { if (this.here > 0.6) Game.openShop(); yield 0; }

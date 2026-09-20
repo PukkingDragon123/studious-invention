@@ -231,10 +231,10 @@
   "file": "art_beasts"
  },
  "mammoth_trader": {
-  "w": 128,
-  "h": 96,
+  "w": 170,
+  "h": 150,
   "frames": 2,
-  "note": "the WANDERING MAMMOTH shopkeeper: same mammoth but loaded with trade goods - bundles, clay pots, a woven rug saddle, bones and gourds hanging off a frame strapped to its back, a little bone bell on the trunk.",
+  "note": "the WANDERING MAMMOTH shopkeeper: a whole shop on four legs - a striped canopy on poles with two burning lamps and a pennant, a woven rug saddle, bundles, clay pots, gourds and bone charms hung off a frame, and a bone bell on the trunk.",
   "file": "art_beasts"
  },
  "mammoth_shower": {

@@ -30,9 +30,9 @@ def rex_foot(cv, W, s, ax, ay, tx, gy_row, ramp, back=12.0, lift=0.0):
 
 def rex_head(cv, s, HX, jaw, rng, scar=True):
     JX = rot_xf(HX, -jaw * 0.80, 92.0, 33.5)
-    skull = [(89, 32), (89.5, 24), (92, 17), (97, 12), (103, 9.4), (109, 9.6),
-             (113.4, 12.6), (114.6, 16.4), (118, 17.2), (122.4, 19.8), (125.8, 23.6),
-             (126, 27.4), (124, 30.6), (117, 31.6), (108, 32.4), (99, 32.8), (92, 33.2)]
+    skull = [(88, 33), (88.5, 23), (91, 15.6), (96, 10.4), (102.5, 7.8), (109, 8.4),
+             (113.6, 11.6), (115.0, 15.8), (118.4, 16.6), (122.2, 19.4), (124.6, 23.4),
+             (124.4, 28.4), (121.6, 31.4), (116, 32.6), (107, 33.4), (98, 33.8), (91, 34.0)]
     sk = poly(PL(HX, skull))
     shade(cv, sk, REX, bias=-1.1, grad=True)
     # cheek mass
@@ -48,9 +48,9 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
                       (120.4, 22.4), (115.4, 20.4)]))
     shade(cv, nr & sk, REX, bias=1, grad=False)
     # ---- lower jaw
-    jw = poly([JX(*p) for p in [(90.4, 31.4), (99, 34.2), (109, 35.2), (119, 34.4),
-                                (124.6, 31.6), (125.4, 35.4), (120, 38.6), (109, 40.4),
-                                (99, 40.2), (91.6, 37.4)]])
+    jw = poly([JX(*p) for p in [(89.4, 31.8), (99, 34.6), (109, 35.6), (118.4, 34.8),
+                                (123.6, 32.0), (124.6, 36.4), (119, 40.4), (109, 42.4),
+                                (98, 42.0), (90.4, 38.4)]])
     if jaw > 0.03:
         cav = poly([HX(90, 29), HX(124, 29.8), HX(125.6, 31.6),
                     JX(124.6, 32.4), JX(92, 35.6)])
@@ -66,8 +66,8 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
     shade(cv, jw, REX, bias=-2, grad=True)
     for p in edge_of(jw, (0, 1)): cv.setif(p[0], p[1], 't', 'uvwx')
     # gums + teeth (visible even closed)
-    for p in polyline(PL(HX, [(92, 31.4), (124, 30.2)]), 1.0 * s, 6): cv.setif(p[0], p[1], 'D', 'tuvwx')
-    UT = ((96, 3.2), (100.5, 4.6), (105, 5.4), (109.5, 4.8), (114, 5.2), (118.5, 4.2), (122.5, 3.0))
+    for p in polyline(PL(HX, [(93, 31.6), (122, 30.6)]), 0.6 * s, 6): cv.setif(p[0], p[1], 'D', 'tuvwx')
+    UT = ((96, 1.8), (100.5, 2.4), (105, 2.8), (109.5, 2.6), (114, 2.8), (118.5, 2.2), (122, 1.6))
     for tx, th in UT:
         t = poly(PL(HX, [(tx - 1.9, 30.6), (tx + 1.9, 30.6), (tx + 0.2, 30.6 + th)]))
         shade(cv, t, BONE, bias=1, grad=False)
@@ -75,7 +75,7 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
         mx = (UT[i][0] + UT[i + 1][0]) / 2
         for dy in (0.0, 1.0, 2.0, 3.0, 4.0): cv.setif(*HX(mx, 30.8 + dy), '!', '@#$')
         for dy in (0.0, 1.0, 2.0, 3.0): cv.setif(*HX(mx, 30.8 + dy), 'D', '!')
-    LT = ((97, 2.6), (102, 3.6), (107, 4.2), (112, 3.8), (117, 3.4), (121.5, 2.4))
+    LT = ((97, 1.4), (102, 1.9), (107, 2.2), (112, 2.0), (117, 1.8), (121, 1.4))
     for tx, th in LT:
         t = poly([JX(tx - 1.7, 33.6), JX(tx + 1.7, 33.6), JX(tx + 0.2, 33.6 - th)])
         if jaw > 0.03 or tx > 112: shade(cv, t, BONE, bias=1, grad=False)
@@ -87,12 +87,14 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
     shade(cv, poly(PL(HX, [(121.4, 21.6), (124.4, 23.0), (123.4, 25.4), (120.6, 24.0)])),
           ['t', 't', '1', '0'], grad=False)
     # eye: one black dot, and a brow ridge you could shelter under
-    ey = ell(*HX(106.6, 20.4), 3.0 * s, 2.7 * s)
+    ey = ell(*HX(106.4, 19.4), 3.4 * s, 3.2 * s)
     flat(cv, dilate(ey, max(1.0, 1.0 * s)) - ey, 't')
     flat(cv, ey, '0')
-    br = ell(*HX(106.2, 14.6), 5.4 * s, 1.5 * s)
+    flat(cv, ell(*HX(105.4, 18.4), 1.2 * s, 1.1 * s), '7')          # a catchlight
+    flat(cv, ell(*HX(107.6, 20.6), 0.7 * s, 0.6 * s), '6')
+    br = ell(*HX(106.0, 13.6), 3.8 * s, 1.1 * s)   # a shelf, not a scowl
     flat(cv, dilate(br, max(1.0, 1.0 * s)) - br, 't')
-    flat(cv, br, '0')
+    flat(cv, br, 't')
     # scars across the snout
     if scar:
         for c in ([(112.5, 19.0), (116.5, 23.0), (118.0, 27.0)],
@@ -114,27 +116,28 @@ def draw_trex(cv, s, ox, oy, o):
 
     # -------- far leg
     kx, ky, ax, ay, tx, lift = o.get('farleg', (64.0, 74.0, 50.0, 88.0, 74.0, 0.0))
-    far = limb(LN(B, [(48, 50, 14.0), (kx, ky, 8.6), ((kx + ax) / 2 - 1.5, (ky + ay) / 2, 6.2),
-                      (ax, ay, 4.8), (ax + (tx - ax) * 0.5, ay + 7.0, 4.2)], s), 9)
+    far = limb(LN(B, [(47, 50, 15.6), (kx, ky, 9.6), ((kx + ax) / 2 - 1.5, (ky + ay) / 2, 6.8),
+                      (ax, ay, 5.0), (ax + (tx - ax) * 0.5, ay + 7.0, 4.4)], s), 9)
     shade(cv, far, REXB, bias=-1.3, grad=False)
     rex_foot(cv, B, s, ax + (tx - ax) * 0.55, ay + 8.0, tx, gy, REXB, back=11.0, lift=lift)
 
     # -------- tail
     tdy = o.get('tail_dy', 0.0); tc = o.get('tail_curl', 0.0)
-    tn = [(32, 48, 16.0), (23, 44 + tc * 0.4, 11.5), (15, 41 + tc * 1.0 + tdy * 0.3, 7.6),
+    tn = [(31, 49, 18.5), (22, 45 + tc * 0.4, 13.0), (15, 41 + tc * 1.0 + tdy * 0.3, 8.4),
           (9, 38 + tc * 1.6 + tdy * 0.7, 4.6), (4.2, 35.5 + tc * 2.1 + tdy * 1.1, 2.4),
           (1.0, 33.5 + tc * 2.5 + tdy * 1.4, 1.0)]
     tail = limb(LN(B, tn, s), 10)
     shade(cv, tail, REX, bias=-1.2, grad=True)
 
     # -------- body
-    body = ell(*B(55, 46), 30 * s, 18 * s)
-    body |= ell(*B(42, 48), 20 * s, 16.5 * s)
-    body |= ell(*B(75, 44), 16.5 * s, 15.5 * s)
-    body |= limb(LN(B, [(69, 32, 13), (79, 34, 13)], s), 6)
+    body = ell(*B(55, 47), 32 * s, 21.5 * s)
+    body |= ell(*B(41, 49), 22 * s, 19 * s)
+    body |= ell(*B(62, 56), 25 * s, 16 * s)                         # the gut, hanging
+    body |= ell(*B(75, 44), 18 * s, 17 * s)
+    body |= limb(LN(B, [(69, 31, 14.5), (79, 33, 14.5)], s), 6)
     shade(cv, body, REX, bias=-1.2, grad=True)
     # lighter belly
-    bel = set(p for p in (ell(*B(58, 58), 26 * s, 11 * s) & body) if p[1] > B(0, 48)[1])
+    bel = set(p for p in (ell(*B(57, 60), 29 * s, 14 * s) & body) if p[1] > B(0, 47)[1])
     shade(cv, bel, BELLY, bias=-0.5, grad=False, band=1)
     for i in range(9):
         x0 = B(36 + i * 5.2, 0)[0]
@@ -162,11 +165,11 @@ def draw_trex(cv, s, ox, oy, o):
         cv.setif(q[0], q[1], 't', 'uvwx')
     # -------- near leg
     kx, ky, ax, ay, tx, lift = o.get('nearleg', (78.0, 76.0, 62.0, 90.0, 90.0, 0.0))
-    near = limb(LN(B, [(58, 52, 16.5), (kx, ky, 10.5), ((kx + ax) / 2 + 1.5, (ky + ay) / 2, 7.2),
-                       (ax, ay, 5.4), (ax + (tx - ax) * 0.5, ay + 7.4, 4.8)], s), 9)
+    near = limb(LN(B, [(58, 52, 18.5), (kx, ky, 11.8), ((kx + ax) / 2 + 1.5, (ky + ay) / 2, 8.0),
+                       (ax, ay, 5.8), (ax + (tx - ax) * 0.5, ay + 7.4, 5.0)], s), 9)
     for p in dilate(near, 1) - near: cv.setif(p[0], p[1], 't', 'uvwx$1')
     shade(cv, near, REX, bias=-1.2, grad=True)
-    thg = ell(*B(62, 55), 10.5 * s, 13 * s) & near
+    thg = ell(*B(62, 55), 12.0 * s, 14.5 * s) & near
     shade(cv, thg, REX, bias=0, grad=False)
     for p in edge_of(thg, (1, 1)): cv.setif(p[0], p[1], 't', 'uvw')
     speck(cv, near, 'u', 0.018, rng, want='w')
@@ -187,17 +190,17 @@ def draw_trex(cv, s, ox, oy, o):
 
     # -------- neck + head
     HR = o.get('head_rot', 0.0); hdy = o.get('head_dy', 0.0); hdx = o.get('head_dx', 0.0)
-    neck = limb(LN(B, [(74, 39, 15.0), (80, 35 + hdy * 0.25, 13.6),
-                       (86 + hdx * 0.4, 31 + hdy * 0.6, 12.4),
-                       (92 + hdx * 0.8, 29 + hdy, 11.4)], s), 8)
+    neck = limb(LN(B, [(73, 39, 16.6), (80, 35 + hdy * 0.25, 15.2),
+                       (86 + hdx * 0.4, 31 + hdy * 0.6, 13.8),
+                       (92 + hdx * 0.8, 29 + hdy, 12.4)], s), 8)
     shade(cv, neck, REX, bias=-1.2, grad=True)
     for p in edge_of(neck, (1, 1)): cv.setif(p[0], p[1], 't', 'uvwx')
     for i in range(4):
         t = i / 3.0
         pl = ell(*B(77 + t * 14 + hdx * t * 0.8, 42 - t * 10 + hdy * t), 3.6 * s, 2.3 * s) & neck
         shade(cv, pl, REX, bias=-3, grad=False)
-    HX = rot_xf(lambda x, y: B(x + hdx, y + hdy), HR, 92.0, 30.0, 1.12, 1.22)
-    rex_head(cv, s, HX, o.get('jaw', 0.0), rng)
+    HX = rot_xf(lambda x, y: B(x + hdx, y + hdy), HR, 92.0, 30.0, 1.22, 1.30)
+    rex_head(cv, s, HX, o.get('jaw', 0.0), rng, scar=False)
     return cv
 
 def add_trex(add):

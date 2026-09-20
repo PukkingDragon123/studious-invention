@@ -19,12 +19,23 @@ const DOMES = [
   { x: 866, rx: 322, ry: 338 },      // the eating dome:   544 .. 1188
 ];
 
+// The slab the cave is baked into. hillY tapers to nothing at both ends of it,
+// so the hillside meets the ground instead of stopping at a wall.
+const SHELL = { x0: -190, x1: 1372, top: -300, bot: GY + 240 };
+
 const HOME = {
   bed: 152, drum: 268, rug: 330, perch: 402, shelf: 476,      // the sleeping dome
   arch: 546,                                                  // the passage
   fossil: 646, wallart: 762, table: 828, plaque: 920,         // the eating dome
   stove: 1026, clutter: 1104, door: 1150,
   shower: 1390, car: 1650, end: 1800,
+};
+
+// The quarry, laid out left to right: you park, the foreman tells you what to
+// do, you hit the face until three crystals come out, and they go in the box.
+const QUARRY = {
+  park: 150, boss: 430, face: 820, box: 1010, end: 1500,
+  gems: [{ x: 762, y: GY - 130 }, { x: 830, y: GY - 74 }, { x: 878, y: GY - 152 }],
 };
 
 // The camp: one clearing, laid out left to right. He sits west of the fire so
@@ -244,21 +255,39 @@ const World = {
 
   // Hard colour bands with a two-row checker where they meet: a pixel-art sky
   // gradient, and the only kind this game is allowed to have.
+  // The dither repeats every 8 pixels, so it is baked into an 8-wide tile once
+  // and laid down as a pattern. Drawing it a rect at a time was five thousand
+  // fill calls a frame, on the one thing every stage starts with.
+  _ramp: new Map(),
   skyRamp(L, R, top, bot, cols) {
-    const n = cols.length, bh = (bot - top) / n;
-    for (let i = 0; i < n; i++) {
-      Gfx.rect(L, top + i * bh, R - L, Math.ceil(bh) + 1, cols[i]);
-      if (!i) continue;
-      // three rows of ordered dither, 50 / 25 / 12 per cent of the band above
-      for (let k = 0; k < 3; k++) {
-        const y = top + i * bh + k * 2;
-        const w = [4, 2, 1][k], off = [0, 2, 5][k];
-        for (let x = Math.floor(L / 8) * 8; x < R; x += 8) {
-          Gfx.rect(x + off, y, w, 2, cols[i - 1]);
-          if (k === 0) Gfx.rect(x + 4, y + 1, 4, 1, cols[i]);
+    const h = Math.max(1, Math.ceil(bot - top));
+    const key = h + '|' + cols.join(',');
+    let hit = World._ramp.get(key);
+    if (!hit || hit.ctx !== Gfx.ctx) {
+      const c = document.createElement('canvas');
+      c.width = 8; c.height = h;
+      const g = c.getContext('2d');
+      const n = cols.length, bh = h / n;
+      for (let i = 0; i < n; i++) {
+        g.fillStyle = cols[i]; g.fillRect(0, i * bh, 8, Math.ceil(bh) + 1);
+        if (!i) continue;
+        for (let k = 0; k < 3; k++) {
+          const y = i * bh + k * 2;
+          const w = [4, 2, 1][k], off = [0, 2, 5][k];
+          g.fillStyle = cols[i - 1]; g.fillRect(off, y, w, 2);
+          if (k === 0) { g.fillStyle = cols[i]; g.fillRect(4, y + 1, 4, 1); }
         }
       }
+      hit = { ctx: Gfx.ctx, pat: Gfx.ctx.createPattern(c, 'repeat') };
+      World._ramp.set(key, hit);
+      if (World._ramp.size > 14) World._ramp.delete(World._ramp.keys().next().value);
     }
+    const ctx = Gfx.ctx;
+    ctx.save();
+    ctx.translate(0, Math.round(top));
+    ctx.fillStyle = hit.pat;
+    ctx.fillRect(Math.round(L), 0, Math.ceil(R - L), h);
+    ctx.restore();
   },
 
   // ------------------------------------------------------- the yard outside
@@ -358,7 +387,7 @@ const World = {
   // NB: the extents are constants on purpose. They key the cache, so anything
   // derived from the camera would rebuild this canvas every single frame.
   houseShell(night, dusk) {
-    const x0 = -110, x1 = 1250, top = -300, bot = GY + 240;
+    const { x0, x1, top, bot } = SHELL;
     const key = (night ? 'n' : dusk ? 'd' : 'day');
     let c = World._shell.get(key);
     if (!c) {
@@ -367,35 +396,145 @@ const World = {
       const real = Gfx.ctx;
       Gfx.ctx = c.getContext('2d');
       Gfx.ctx.translate(-x0, -top);
-      for (const d of DOMES) World.dome(d, night);
+      World.caveMass(x0, x1, night);
+      for (const d of DOMES) World.caveHollow(d, night);
+      World.cavePassage(night);             // the crawl, before the floor runs through it
       World.indoorFloor(x0, x1);
-      for (const d of DOMES) World.domeRim(d, night);
-      World.passage(night);                 // last, so the two domes really join
+      for (const d of DOMES) World.caveLip(d, night);
       Gfx.ctx = real;
       World._shell.set(key, c);
       if (World._shell.size > 4) World._shell.delete(World._shell.keys().next().value);
     }
     Gfx.ctx.drawImage(c, x0, top);
   },
-  // one dome, in cutaway: plastered inner face, rib beams, woven panels, a
-  // stone footing and a smoke hole at the crown
-  dome(d, night) {
+  // ------------------------------------------------------------- THE CAVE
+  // The Rockbottoms live in a hill, not in a house. Everything above the floor
+  // line is one mass of rock with two hollows eaten out of it - the one you
+  // sleep in and the one you eat in - joined by a crawl the two of them have
+  // worn smooth. All of it is baked once, so it can afford to be fussy.
+
+  // The crest of the hill the cave is cut into: thick rock everywhere, thicker
+  // over each hollow, and never a straight line anywhere on it.
+  hillY(x) {
+    let h = 104;
+    for (const d of DOMES) {
+      const k = clamp(1 - Math.abs(x - d.x) / (d.rx * 1.7), 0, 1);
+      h = Math.max(h, 104 + Ease.outCubic(k) * (d.ry - 26));
+    }
+    h += 70 + Math.sin(x * 0.0071) * 24 + Math.sin(x * 0.019 + 1.3) * 11 + Math.sin(x * 0.053) * 5;
+    // and it runs out at both ends, into the ground, instead of stopping dead
+    h *= Ease.inOutQuad(clamp((x - SHELL.x0) / 150, 0, 1))
+       * Ease.inOutQuad(clamp((SHELL.x1 - x) / 190, 0, 1));
+    return GY - h;
+  },
+  // The roof of a hollow at world x, or null where there is no hollow. A dome
+  // underneath, roughed up so it reads as something water made, not masons.
+  caveRoof(d, x) {
+    const y = World.domeY(d, x);
+    if (y == null) return null;
+    const edge = clamp((1 - Math.abs(x - d.x) / d.rx) * 2.6, 0, 1);
+    const wob = Math.sin(x * 0.041) * 11 + Math.sin(x * 0.017 + 2.1) * 8 + Math.sin(x * 0.113) * 3;
+    return y + (wob + 8) * edge;
+  },
+
+  // The roof over world x, wherever it is - used by anything that hangs.
+  roofAt(x) {
+    let y = null;
+    for (const d of DOMES) { const r = World.caveRoof(d, x); if (r != null && (y == null || r < y)) y = r; }
+    return y == null ? GY - 150 : y;
+  },
+
+  // ---- the hillside itself: strata, blotches, cracks and a mineral seam
+  caveMass(x0, x1, night) {
+    const S = 6;
+    const body = night ? ['#3b3048', '#4d4a5c', '#574a66'] : ['#4d4a5c', '#574a66', '#6e6b80'];
+    const lip = night ? '#7a6d8a' : '#9391a6';
+    const grass = night ? '#27632f' : '#3f9a45';
+    const grassLit = night ? '#3f9a45' : '#6cc95c';
+    for (let x = Math.floor(x0 / S) * S; x < x1; x += S) {
+      const y = Math.round(World.hillY(x + S / 2) / S) * S;
+      Gfx.rect(x, y, S, GY + 250 - y, body[0]);
+      Gfx.rect(x, y + 10, S, 8, body[1]);
+      Gfx.rect(x, y, S, 5, lip);                                  // the sunlit crest
+      // turf only where a slope could hold it. bare rock on the steep flanks.
+      const slope = Math.abs(World.hillY(x + S * 1.5) - World.hillY(x - S * 0.5));
+      if (slope < 9) {
+        Gfx.rect(x, y - 4, S, 5, grass);
+        Gfx.rect(x, y - 6, S, 3, grassLit);
+      } else if (slope < 16) Gfx.rectA(x, y - 2, S, 4, grass, 0.5);
+    }
+    // strata running through the rock, bent the way rock bends
+    for (let k = 0; k < 9; k++) {
+      for (let x = Math.floor(x0 / 14) * 14; x < x1; x += 14) {
+        const top = World.hillY(x);
+        const y = top + 46 + k * 58 + Math.sin(x * 0.0092 + k * 1.4) * 15 + Math.sin(x * 0.031) * 5;
+        if (y < top + 14) continue;
+        Gfx.rectA(x + jitter(x + k * 5, 10), y, 11, 4, k % 2 ? body[2] : '#241c2e', 0.34);
+        Gfx.rectA(x + jitter(x + k * 5, 10), y - 2, 8, 2, lip, 0.16);
+      }
+    }
+    // blotches, so no two square feet of it are the same colour
+    for (let x = Math.floor(x0 / 26) * 26; x < x1; x += 26) {
+      const i = Math.abs((x / 26) | 0);
+      const top = World.hillY(x);
+      for (let k = 0; k < 4; k++) {
+        const bx = x + jitter(x + k, 20), by = top + 24 + Math.abs(jitter(x + k * 3, 430));
+        if (by > GY + 200) continue;
+        Gfx.round(bx, by, 12 + (i + k) % 9, 8 + (i * k) % 6, 4, (i + k) % 2 ? body[1] : body[2]);
+      }
+    }
+    // cracks
+    for (let x = Math.floor(x0 / 150) * 150; x < x1; x += 150) {
+      let px = x + jitter(x, 80), py = World.hillY(px) + 20;
+      for (let i = 0; i < 9; i++) {
+        const nx = px + Math.sin(i * 2.3 + x) * 9, ny = py + 22;
+        Gfx.line(px, py, nx, ny, '#241c2e', 3 - i * 0.2);
+        px = nx; py = ny;
+      }
+    }
+    // and one seam of the same crystal they dig for at the quarry
+    for (let x = Math.floor(x0 / 9) * 9; x < x1; x += 9) {
+      const y = World.hillY(x) + 132 + Math.sin(x * 0.0061) * 44 + Math.sin(x * 0.024) * 9;
+      const on = Math.sin(x * 0.0037 + 1.1);
+      if (on < 0.35) continue;
+      Gfx.rectA(x, y, 9, 5, '#2f7d8f', 0.8);
+      Gfx.rectA(x, y + 1, 7, 2, '#86e8d2', 0.55);
+      Gfx.rect(x, y - 1, 9, 1, '#120c16');
+      Gfx.rect(x, y + 5, 9, 1, '#120c16');
+    }
+  },
+
+  // ---- one hollow, eaten out of the mass
+  caveHollow(d, night) {
     const S = 4;
-    const wall = night ? '#6e6b80' : '#9391a6';
-    const wallDark = night ? '#4d4a5c' : '#7a6d8a';
-    // --- the inner face, stepped in 4px columns so the curve stays pixelly
+    const air = night ? '#2a2338' : '#3b3048';
+    const back = night ? '#3b3048' : '#4d4a5c';
+    const backLit = night ? '#4d4a5c' : '#6e6b80';
     for (let x = d.x - d.rx; x < d.x + d.rx; x += S) {
-      const y = World.domeY(d, x + S / 2);
+      const y = World.caveRoof(d, x + S / 2);
       if (y == null) continue;
       const yt = Math.round(y / S) * S;
-      Gfx.rect(x, yt, S, GY - yt + 8, wall);
-      Gfx.rect(x, yt, S, 6, wallDark);                       // the curve's own shading
+      Gfx.rect(x, yt, S, GY - yt + 10, back);              // the far wall of the chamber
+      Gfx.rect(x, yt, S, 22, air);                         // deep shadow up under the roof
+      Gfx.rect(x, yt + 22, S, 5, night ? '#332b42' : '#443c55');
     }
-    // --- a soft vertical wash: brighter under the smoke hole
+    // the far wall is not flat either: shelves and bulges of rock on it
+    for (let x = d.x - d.rx + 20; x < d.x + d.rx - 20; x += 34) {
+      const y = World.caveRoof(d, x);
+      if (y == null) continue;
+      const i = Math.abs((x / 34) | 0);
+      for (let k = 0; k < 3; k++) {
+        const by = y + 44 + k * 62 + jitter(x + k * 7, 26);
+        if (by > GY - 14) continue;
+        Gfx.round(x + jitter(x + k, 22), by, 26 + (i % 3) * 10, 13 + (k % 2) * 6, 6, k % 2 ? back : backLit);
+        Gfx.round(x + jitter(x + k, 22) + 2, by, 20 + (i % 3) * 8, 4, 2, night ? '#574a66' : '#7a6d8a');
+      }
+    }
+    // a warm wash off the floor, because there is a fire in here somewhere
     const g = Gfx.ctx.createLinearGradient(0, GY - d.ry, 0, GY);
-    g.addColorStop(0, 'rgba(255,233,138,0.10)');
-    g.addColorStop(0.45, 'rgba(255,233,138,0.02)');
-    g.addColorStop(1, 'rgba(59,48,72,0.26)');
+    g.addColorStop(0, 'rgba(18,12,22,0.34)');
+    g.addColorStop(0.62, 'rgba(255,154,32,0.05)');
+    g.addColorStop(1, 'rgba(255,154,32,0.16)');
     Gfx.ctx.save();
     Gfx.ctx.beginPath();
     Gfx.ctx.ellipse(d.x, GY, d.rx, d.ry, 0, Math.PI, 0);
@@ -403,102 +542,81 @@ const World = {
     Gfx.ctx.clip();
     Gfx.ctx.fillStyle = g; Gfx.ctx.fillRect(d.x - d.rx, GY - d.ry, d.rx * 2, d.ry);
     Gfx.ctx.restore();
-    // --- latitude rings, then rib beams: a woven dome, seen from inside
-    for (const s of [0.34, 0.58, 0.79, 0.93]) {
-      World.archDots(d.x, GY, d.rx * s, d.ry * s, night ? '#4d4a5c' : '#6e6b80', 3, 0.03);
-      World.archDots(d.x, GY - 2, d.rx * s, d.ry * s, night ? '#6e6b80' : '#bdbccd', 3, 0.03);
-    }
-    for (let i = 1; i < 6; i++) {
-      const s = i / 6;
-      World.archDots(d.x, GY, d.rx * s, d.ry, '#3a2415', 5, 0.02);
-      World.archDots(d.x - 1, GY, d.rx * s, d.ry - 2, '#b07a45', 3, 0.02);
-    }
-    // --- hide panels stitched between the ribs, low down where you see them
-    for (let i = 0; i < 6; i++) {
-      const a0 = Math.PI * (i + 0.12) / 6, a1 = Math.PI * (i + 0.88) / 6;
-      for (let k = 0; k < 5; k++) {
-        const a = a0 + (a1 - a0) * (k / 4), r = 0.72 + (k % 2) * 0.04;
-        const x = d.x - Math.cos(a) * d.rx * r, y = GY - Math.sin(a) * d.ry * r;
-        Gfx.rect(Math.round(x / 3) * 3, Math.round(y / 3) * 3, 3, 3, '#b07a45');
-      }
-    }
-    // --- the stone footing: three courses of proper blocks around the base
-    World.footing(d, night);
-    // --- the smoke hole
-    const hy = GY - d.ry;
-    Gfx.rect(d.x - 26, hy - 2, 52, 16, '#3a2415');
-    Gfx.rect(d.x - 22, hy + 1, 44, 10, night ? '#4b2070' : '#a8d8ff');
-    Gfx.rect(d.x - 22, hy + 1, 44, 3, night ? '#7c3eb2' : '#ffe08a');
-    for (let i = 0; i < 4; i++) Gfx.rect(d.x - 18 + i * 11, hy - 1, 3, 14, '#5c3a20');
+    // the light shaft: a hole worn through the crown, which is where the smoke goes
+    const hy = World.caveRoof(d, d.x);
+    Gfx.round(d.x - 30, hy - 8, 60, 16, 7, '#241c2e');
+    Gfx.round(d.x - 24, hy - 5, 48, 10, 5, night ? '#4b2070' : '#a8d8ff');
+    Gfx.round(d.x - 24, hy - 5, 48, 4, 2, night ? '#7c3eb2' : '#ffe08a');
   },
-  // three courses of blocks around the foot of a dome, following its curve
-  footing(d, night) {
-    const base = night ? ['#4d4a5c', '#574a66', '#3b3048'] : ['#6e6b80', '#7a6d8a', '#574a66'];
-    const lit = night ? '#7a6d8a' : '#bdbccd';
-    for (let row = 0; row < 3; row++) {
-      const y = GY - 8 - row * 24;
-      for (let x = d.x - d.rx; x < d.x + d.rx; x += 46) {
-        const px = x + (row % 2) * 23;
-        const top = World.domeY(d, px + 22);
-        if (top == null || top > y - 6) continue;
-        const bw = Math.min(42, d.x + d.rx - px - 2);
-        if (bw < 10) continue;
-        Gfx.rect(px, y, bw, 21, base[Math.abs((px * 7 + row * 13) | 0) % base.length]);
-        Gfx.rectA(px, y, bw, 2, lit, 0.55);
-        Gfx.rectA(px, y + 19, bw, 2, '#120c16', 0.4);
-        Gfx.rectA(px + 5, y + 6, 5, 3, lit, 0.22);
-        Gfx.rectA(px + bw - 12, y + 12, 6, 3, '#120c16', 0.18);
-      }
-    }
-  },
-  // the thick outer shell, drawn last so it reads in front of the furniture
-  domeRim(d, night) {
-    const col = night ? '#3b3048' : '#574a66';
-    const lit = night ? '#574a66' : '#9391a6';
-    World.archDots(d.x, GY, d.rx, d.ry, col, 6, 0.012);
-    World.archDots(d.x, GY - 5, d.rx - 1, d.ry - 5, col, 5, 0.012);
-    World.archDots(d.x, GY - 10, d.rx - 2, d.ry - 10, lit, 3, 0.012);
-    // block joints around the shell
-    for (let i = 0; i <= 16; i++) {
-      const a = Math.PI * i / 16;
-      const x = d.x - Math.cos(a) * d.rx, y = GY - Math.sin(a) * d.ry;
-      Gfx.line(x, y, d.x - Math.cos(a) * (d.rx - 16), GY - Math.sin(a) * (d.ry - 16), '#241c2e', 3);
-    }
-  },
-  // the low barrel passage where the two domes lean together: a stone-ringed
-  // tunnel with a hide curtain hooked back, so you can see it is a way through
-  passage(night) {
+
+  // ---- the crawl between the two hollows: low, round and rubbed smooth
+  cavePassage(night) {
     const a = DOMES[0], b = DOMES[1];
-    const x0 = b.x - b.rx, x1 = a.x + a.rx;
-    const cx = (x0 + x1) / 2, rx = Math.max(52, (x1 - x0) / 2 + 40), ry = 152;
-    const inner = night ? '#4d4a5c' : '#7a6d8a';
+    const cx = ((b.x - b.rx) + (a.x + a.rx)) / 2, rx = Math.max(60, ((a.x + a.rx) - (b.x - b.rx)) / 2 + 46), ry = 158;
+    const back = night ? '#332b42' : '#443c55';
     for (let x = cx - rx; x < cx + rx; x += 4) {
       const k = (x + 2 - cx) / rx;
       if (k <= -1 || k >= 1) continue;
-      const yt = Math.round((GY - ry * Math.sqrt(1 - k * k)) / 4) * 4;
-      Gfx.rect(x, yt, 4, GY - yt + 8, inner);
-      Gfx.rect(x, yt, 4, 6, night ? '#3b3048' : '#574a66');
+      const wob = Math.sin(x * 0.047) * 9 + Math.sin(x * 0.019 + 1) * 6;
+      const yt = Math.round((GY - ry * Math.sqrt(1 - k * k) + wob * (1 - Math.abs(k))) / 4) * 4;
+      Gfx.rect(x, yt, 4, GY - yt + 10, back);
+      Gfx.rect(x, yt, 4, 18, night ? '#241c2e' : '#3b3048');
     }
-    // ring courses down the vault, so it reads as a tunnel and not a wall
-    for (const t of [0.86, 0.70, 0.54, 0.38, 0.22]) {
-      World.archDots(cx, GY, rx * t, ry * t, night ? '#4d4a5c' : '#6e6b80', 4, 0.02);
-      World.archDots(cx, GY - 3, rx * t, ry * t, night ? '#6e6b80' : '#9391a6', 2, 0.02);
+    Gfx.rectA(cx - rx, GY - 54, rx * 2, 60, '#120c16', 0.26);      // it is dim in there
+    // the lip of the crawl, worn pale by sixty years of shoulders
+    for (let x = cx - rx; x < cx + rx; x += 3) {
+      const k = (x + 1.5 - cx) / rx;
+      if (k <= -1 || k >= 1) continue;
+      const wob = Math.sin(x * 0.047) * 9 + Math.sin(x * 0.019 + 1) * 6;
+      const yt = GY - ry * Math.sqrt(1 - k * k) + wob * (1 - Math.abs(k));
+      Gfx.rect(Math.round(x / 3) * 3, Math.round(yt / 3) * 3, 3, 3, night ? '#574a66' : '#7a6d8a');
+      Gfx.rect(Math.round(x / 3) * 3, Math.round((yt - 3) / 3) * 3, 3, 3, night ? '#3b3048' : '#574a66');
     }
-    Gfx.rectA(cx - rx, GY - 40, rx * 2, 46, '#120c16', 0.18);      // it is dim in there
-    // the arch itself
-    World.archDots(cx, GY, rx, ry, '#3b3048', 6, 0.012);
-    World.archDots(cx, GY - 6, rx - 1, ry - 6, '#7a6d8a', 4, 0.012);
-    World.archDots(cx, GY - 11, rx - 2, ry - 11, '#bdbccd', 2, 0.012);
-    for (let i = 0; i <= 8; i++) {                            // keystones
-      const ang = Math.PI * i / 8;
-      const x = cx - Math.cos(ang) * rx, y = GY - Math.sin(ang) * ry;
-      Gfx.line(x, y, cx - Math.cos(ang) * (rx - 15), GY - Math.sin(ang) * (ry - 15), '#241c2e', 3);
+    World.dripstone(cx - rx + 30, cx + rx - 30, k => {
+      const kk = (k - cx) / rx;
+      if (kk <= -1 || kk >= 1) return null;
+      return GY - ry * Math.sqrt(1 - kk * kk) + (Math.sin(k * 0.047) * 9 + Math.sin(k * 0.019 + 1) * 6) * (1 - Math.abs(kk));
+    }, night, 0.55);
+  },
+
+  // ---- teeth. stalactites off a given roof line, and stalagmites under them.
+  dripstone(x0, x1, roofAt, night, density = 1) {
+    const rock = night ? '#574a66' : '#7a6d8a';
+    const dark = night ? '#3b3048' : '#574a66';
+    const wet = night ? '#6e6b80' : '#bdbccd';
+    for (let x = Math.floor(x0 / 27) * 27; x < x1; x += 27) {
+      const i = Math.abs((x / 27) | 0);
+      if ((i * 7 % 10) / 10 > density) continue;
+      const y = roofAt(x);
+      if (y == null) continue;
+      const h = 14 + (i % 5) * 11, w = 7 + (i % 3) * 3;
+      for (let k = 0; k < h; k += 2) {                      // a tapering tooth
+        const ww = Math.max(1, w * (1 - k / h));
+        Gfx.rect(x - ww / 2, y + k - 2, ww, 3, k > h * 0.62 ? dark : rock);
+      }
+      Gfx.rect(x - 1, y + h - 6, 2, 4, wet);                // the drip on the point
+      if (i % 4 === 0) {                                    // and what it has built below
+        const gh = 9 + (i % 3) * 8;
+        for (let k = 0; k < gh; k += 2) {
+          const ww = Math.max(2, (w + 2) * (k / gh));
+          Gfx.rect(x - ww / 2, GY - 2 - k, ww, 3, k > gh * 0.6 ? rock : dark);
+        }
+      }
     }
-    // the door-hide, rolled up and tied off, because someone here is tidy
-    Gfx.rect(cx - rx + 16, GY - ry + 14, rx * 2 - 32, 6, '#5c3a20');
-    for (let i = 0; i < 4; i++)
-      Gfx.round(cx - rx + 20 + i * ((rx * 2 - 44) / 4), GY - ry + 20, (rx * 2 - 44) / 4 - 2, 20, 6, i % 2 ? '#85562f' : '#b07a45');
-    for (let i = 0; i < 3; i++) Gfx.rect(cx - rx + 34 + i * 30, GY - ry + 18, 3, 26, '#3a2415');
+  },
+
+  // ---- the mouth of each hollow, drawn last so it stands in front of the room
+  caveLip(d, night) {
+    const S = 5;
+    const rock = night ? '#4d4a5c' : '#6e6b80';
+    const lit = night ? '#6e6b80' : '#9391a6';
+    for (let x = d.x - d.rx - 6; x < d.x + d.rx + 6; x += S) {
+      const y = World.caveRoof(d, x + S / 2);
+      if (y == null) continue;
+      Gfx.rect(Math.round(x / S) * S, Math.round((y - 7) / S) * S, S, S * 2, rock);
+      Gfx.rect(Math.round(x / S) * S, Math.round((y - 12) / S) * S, S, S, lit);
+    }
+    World.dripstone(d.x - d.rx + 26, d.x + d.rx - 26, x => World.caveRoof(d, x), night);
   },
 
   // The floor indoors is the same packed earth as the yard, just swept, with
@@ -524,23 +642,24 @@ const World = {
   // ------------------------------------------------------ the wall dressing
   homeWall(t, o, camX) {
     const ctx = Gfx.ctx;
-    // ---------------- sleeping dome: a round window over the bed
+    // ---------------- sleeping hollow: a fissure in the rock, and the morning
+    // coming through it sideways. nobody cut this. it was already here.
     const wx = HOME.bed + 44, wy = 236;
-    World.archDots(wx, wy + 46, 48, 50, '#3a2415', 5, 0.02);
-    for (let x = wx - 42; x < wx + 42; x += 4) {
-      const k = (x + 2 - wx) / 42;
-      if (k <= -1 || k >= 1) continue;
-      const h = 44 * Math.sqrt(1 - k * k);
-      Gfx.rect(x, wy + 46 - h, 4, h * 2, o.night ? '#7c3eb2' : '#6aa9ee');
-      Gfx.rect(x, wy + 46 - h, 4, h * 0.66, o.night ? '#a03a68' : '#a8d8ff');
+    const fissTop = World.roofAt(wx) + 14;
+    for (let y = fissTop; y < fissTop + 150; y += 3) {
+      const k = (y - fissTop) / 150;
+      const hw = (4 + 12 * Math.sin(k * Math.PI)) * (0.72 + Math.abs(Math.sin(y * 0.17)) * 0.5);
+      const lean = Math.sin(y * 0.031) * 9;
+      Gfx.rect(wx + lean - hw - 4, y, hw * 2 + 8, 3, '#241c2e');
+      Gfx.rect(wx + lean - hw, y, hw * 2, 3, o.night ? '#4b2070' : '#a8d8ff');
+      Gfx.rect(wx + lean - hw, y, hw * 0.8, 3, o.night ? '#7c3eb2' : '#fffaea');
     }
-    for (let i = 0; i < 3; i++)                                   // hills through the glass
-      Gfx.round(wx - 30 + i * 24, wy + 60 + (i % 2) * 6, 34, 24, 12, o.night ? '#4b2070' : '#3f9a45');
-    Gfx.rect(wx - 3, wy - 4, 6, 96, '#3a2415'); Gfx.rect(wx - 46, wy + 43, 92, 6, '#3a2415');
-    Gfx.round(wx - 50, wy + 88, 100, 9, 3, '#5c3a20');            // the sill
-    Gfx.round(wx - 50, wy + 88, 100, 3, 2, '#b07a45');
-    Gfx.sprite('prop_mushroom', wx - 26, wy + 88, { anchor: 'bc', scale: 0.6 });
-    World.flowerPatch(wx + 20, wy + 89, 3);
+    { const g2 = ctx.createLinearGradient(wx, wy, wx + 150, wy + 200);   // the shaft it throws
+      g2.addColorStop(0, o.night ? 'rgba(124,62,178,0.20)' : 'rgba(168,216,255,0.24)');
+      g2.addColorStop(1, 'rgba(168,216,255,0)');
+      ctx.fillStyle = g2; ctx.beginPath();
+      ctx.moveTo(wx - 18, fissTop); ctx.lineTo(wx + 18, fissTop);
+      ctx.lineTo(wx + 150, GY + 4); ctx.lineTo(wx + 30, GY + 4); ctx.fill(); }
     // ---------------- cave paintings between the window and the shelf
     const cx = HOME.drum + 4;
     const paint = (x, y, s, col) => {
@@ -557,16 +676,7 @@ const World = {
     Gfx.rect(cx + 109, 276, 6, 14, '#5c1607'); Gfx.rect(cx + 154, 276, 6, 14, '#5c1607');
     Gfx.line(cx + 104, 252, cx + 92, 244, '#5c1607', 4);
     ctx.globalAlpha = 1;
-    Gfx.sprite('house_shelf', HOME.shelf, GY - 148, { anchor: 'bc', scale: 1.15 });
-    // ---------------- eating dome: the fossil, the painting and the plaque
-    Gfx.sprite('house_fossil', HOME.fossil, 300, { anchor: 'c', scale: 1.05 });
-    Gfx.sprite('house_wallart', HOME.wallart, 282, { anchor: 'c', scale: 1.25 });
-    for (let i = 0; i < 4; i++) {                                 // a rib fossil in the wall
-      const rx = HOME.fossil + 76 + i * 20;
-      ctx.strokeStyle = '#c4b89a'; ctx.lineWidth = 5; ctx.beginPath();
-      ctx.arc(rx, 352, 34, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
-      ctx.strokeStyle = '#e8dfc6'; ctx.lineWidth = 2; ctx.stroke();
-    }
+    // ---------------- eating hollow: bare rock, and the one thing on it
     const px = HOME.plaque;
     Gfx.round(px - 66, 236, 132, 104, 6, '#241c2e');
     Gfx.round(px - 62, 240, 124, 96, 5, '#7a6d8a');
@@ -577,12 +687,14 @@ const World = {
     Gfx.text('BRONK', px, 324, { color: '#241c2e', align: 'center', scale: 1, font: 'small' });
     Gfx.rectA(px - 57, 245, 114, 20, '#ffffff', 0.12);
     // ---------------- the lamps, hung off the ribs, and the torches by the arch
-    for (const lx of [HOME.rug - 30, HOME.table - 60, HOME.stove - 80]) {
+    for (const lx of [HOME.rug - 30, HOME.table - 46]) {
       const sw = Math.sin(t * 1.2 + lx * 0.01) * 2;
-      Gfx.line(lx, 196, lx + sw, 252, '#3a2415', 2);
-      Gfx.sprite('house_lamp', lx + sw, 254, { anchor: 'tc', scale: 1.15 });
-      Gfx.glow(lx + sw, 280, 130, '#ff9a20', 0.22 + Math.sin(t * 7 + lx) * 0.04);
-      if (chance(0.25)) Particles.fire(lx + sw, 272, 1);
+      const top = World.roofAt(lx) + 8, hang = Math.max(top + 30, 250);
+      Gfx.rect(lx - 5, top - 4, 10, 7, '#574a66');                  // the peg it is jammed on
+      Gfx.line(lx, top, lx + sw, hang, '#3a2415', 2);
+      Gfx.sprite('house_lamp', lx + sw, hang + 2, { anchor: 'tc', scale: 1.15 });
+      Gfx.glow(lx + sw, hang + 28, 130, '#ff9a20', 0.22 + Math.sin(t * 7 + lx) * 0.04);
+      if (chance(0.25)) Particles.fire(lx + sw, hang + 20, 1);
     }
     for (const tx of [HOME.arch - 96, HOME.arch + 96]) {
       Gfx.rect(tx - 4, 318, 8, 46, '#5c3a20');
@@ -597,15 +709,13 @@ const World = {
   // house that is Vela's doing rather than Bronk's.
   drop(x, w, y = GY + 3, a = 0.34) { Gfx.shadow(x, y, w, a); },
   homeStuff(t, o, camX) {
-    for (const [x, w] of [[HOME.bed, 130], [HOME.drum, 60], [HOME.perch, 64], [HOME.perch + 98, 52],
-                          [HOME.perch + 48, 34], [HOME.fossil - 40, 40],
+    for (const [x, w] of [[HOME.bed, 130], [HOME.drum, 60], [HOME.perch, 64],
                           [HOME.table, 140], [HOME.table - 90, 40], [HOME.table + 90, 40],
-                          [HOME.stove, 140], [HOME.clutter, 60], [HOME.door - 70, 46]])
+                          [HOME.stove, 140], [HOME.clutter, 60]])
       World.drop(x, w);
 
-    // ============ the sleeping dome
+    // ============ the sleeping hollow. four things in it, and that is all.
     Gfx.sprite('house_bed', HOME.bed, GY + 4, { anchor: 'bc', scale: 1.1 });
-    Gfx.sprite('house_hiderack', HOME.bed - 120, GY + 4, { anchor: 'bc' });
     Gfx.sprite('house_drum', HOME.drum, GY + 4, { anchor: 'bc' });
     Gfx.sprite('art_club', HOME.drum + 30, GY - 16, { anchor: 'bc', scale: 1.3, rot: -0.42 });
     // a woven rug, laid square to the wall
@@ -624,13 +734,8 @@ const World = {
     Gfx.round(HOME.perch - 29, GY - 62, 58, 12, 4, '#bdbccd');
     Gfx.round(HOME.perch - 29, GY - 62, 24, 10, 4, '#ffffff');
     for (let i = 0; i < 4; i++) Gfx.rectA(HOME.perch - 16 + i * 10, GY - 40 + (i % 2) * 12, 3, 9, '#3b3048', 0.5);
-    Gfx.sprite('house_stool', HOME.perch + 48, GY + 4, { anchor: 'bc' });
-    Gfx.sprite('house_basket', HOME.perch + 98, GY + 4, { anchor: 'bc' });
-    Gfx.sprite('house_waterjar', HOME.perch + 140, GY + 4, { anchor: 'bc' });
-    Gfx.sprite('house_broom', HOME.bed + 76, GY + 4, { anchor: 'bc', rot: 0.16 });
 
-    // ============ the eating dome
-    Gfx.sprite('house_waterjar', HOME.fossil - 40, GY + 4, { anchor: 'bc', scale: 1.1 });
+    // ============ the eating hollow
     Gfx.sprite('house_table', HOME.table, GY + 6, { anchor: 'bc', scale: 1.1 });
     Gfx.sprite('house_stool', HOME.table - 90, GY + 5, { anchor: 'bc' });
     Gfx.sprite('house_stool', HOME.table + 90, GY + 5, { anchor: 'bc' });
@@ -641,30 +746,26 @@ const World = {
       Gfx.rect(sx + 12, GY - 58, 2, 8, '#fffaea');
     }
     Gfx.sprite('prop_pot', HOME.table + 6, GY - 56, { anchor: 'bc', scale: 0.6 });
-    // the pot rack over the hearth
-    { const sw = Math.sin(t * 0.9) * 1.5;
-      Gfx.line(HOME.stove - 66, 200, HOME.stove - 66 + sw, 252, '#3a2415', 2);
-      Gfx.line(HOME.stove + 20, 200, HOME.stove + 20 + sw, 252, '#3a2415', 2);
-      Gfx.sprite('house_potrack', HOME.stove - 23 + sw, 252, { anchor: 'tc', scale: 1.1 }); }
     Gfx.sprite('house_hearth', HOME.stove, GY + 6, { anchor: 'bc', scale: 1.1 });
     if (o.fire > 0) {
       for (let i = 0; i < 4; i++) if (chance(o.fire)) Particles.fire(HOME.stove + rnd(-40, 40), GY - 20, 1);
       Gfx.glow(HOME.stove, GY - 40, 260, '#ff9a20', 0.26 * o.fire * (0.85 + Math.sin(t * 9) * 0.15));
     }
-    Gfx.sprite('house_basket', HOME.clutter, GY + 4, { anchor: 'bc' });
     for (let k = 0; k < 6; k++)                                   // firewood, stacked square
       Gfx.round(HOME.clutter + 34 + (k % 2) * 5, GY - 4 - ((k / 2) | 0) * 10, 34, 9, 4, k % 2 ? '#5c3a20' : '#85562f');
-    // the doorway: a bright arch punched through the shell on the right
+    // the mouth of the cave: daylight, and a rough rock jamb around it
     const dx = HOME.door;
-    for (let x = dx - 52; x < dx + 52; x += 4) {
-      const k = (x + 2 - dx) / 52;
-      if (k <= -1 || k >= 1) continue;
-      const h = 176 * Math.sqrt(1 - k * k);
-      Gfx.rect(x, GY - h, 4, h + 6, o.night ? '#7c3eb2' : '#a8d8ff');
-      Gfx.rect(x, GY - 46, 4, 52, '#85562f');
+    for (let y = GY + 6; y > GY - 190; y -= 4) {
+      const k = (GY - y) / 186;
+      const hw = 56 * Math.sqrt(Math.max(0, 1 - k * k * k)) + Math.sin(y * 0.07) * 5;
+      Gfx.rect(dx - hw, y - 4, hw * 2, 4, o.night ? '#7c3eb2' : '#a8d8ff');
+      Gfx.rect(dx - hw, y - 4, hw * 0.5, 4, o.night ? '#a03a68' : '#ffe08a');
+      Gfx.rect(dx - hw - 7, y - 4, 7, 4, '#3b3048');
+      Gfx.rect(dx + hw, y - 4, 7, 4, '#3b3048');
+      Gfx.rect(dx - hw - 10, y - 4, 3, 4, '#241c2e');
+      Gfx.rect(dx + hw + 7, y - 4, 3, 4, '#241c2e');
     }
-    World.archDots(dx, GY, 54, 178, '#3a2415', 5, 0.02);
-    World.archDots(dx, GY - 6, 52, 172, '#85562f', 3, 0.02);
+    World.dripstone(dx - 44, dx + 44, () => GY - 178, !!o.night, 0.5);
     for (let i = 0; i < 3; i++) Gfx.sprite('prop_fern', dx - 20 + i * 20, GY + 4, { anchor: 'bc', scale: 0.8 });
   },
 
@@ -698,11 +799,11 @@ const World = {
   // into the flank of a live volcano, meteors coming down on the beat, and a
   // megalodon doing laps over the crowd. Painted bright: the fire is the point.
   concert(t, o = {}, camX = 0) {
-    const L = camX - 160, R = camX + VW + 160;
+    const L = camX - 320, R = camX + VW + 320;
     const beat = o.beat || 0;                       // 0..1, pulses on the downbeat
     const SX = 580;                                 // the stage, in world x
     const wob = Math.sin(t * 0.7) * 3;              // everything breathes, gently
-    Gfx.rect(L, -460, R - L, 580, '#0b0a18');
+    Gfx.rect(L, -380, R - L, 520, '#0b0a18');
     World.skyRamp(L, R, 128 + wob, GY - 120, ['#0b0a18', '#161233', '#281040', '#4b2070', '#7c3eb2', '#a03a68']);
     // stars
     for (let i = 0; i < 90; i++) {
@@ -724,7 +825,7 @@ const World = {
       const ox = 300 + i * 160;
       const ctx = Gfx.ctx;
       const g = ctx.createLinearGradient(ox, GY - 40, ox + Math.cos(a) * 600, GY - 40 + Math.sin(a) * 600);
-      g.addColorStop(0, ['rgba(255,233,138,0.32)', 'rgba(134,232,210,0.28)', 'rgba(177,119,230,0.30)', 'rgba(255,176,207,0.28)'][i]);
+      g.addColorStop(0, ['rgba(255,233,138,0.20)', 'rgba(134,232,210,0.18)', 'rgba(177,119,230,0.20)', 'rgba(255,176,207,0.18)'][i]);
       g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.moveTo(ox, GY - 40);
@@ -740,22 +841,9 @@ const World = {
       Gfx.rect(L, y, R - L, 32, ['#9391a6', '#7a6d8a', '#574a66'][s2]);
       Gfx.rectA(L, y, R - L, 3, '#bdbccd', 0.45);
       Gfx.rectA(L, y + 29, R - L, 3, '#120c16', 0.5);
-      for (let x = Math.floor(L / 34) * 34; x < R; x += 34) {
-        const j = jitter(x + s2 * 31, 12);
-        const bob = Math.sin(t * 5.4 + x * 0.05 + s2) * 3 + beat * 4;
-        const hx = x + j, hy = y + 4 - bob;
-        Gfx.round(hx - 5, hy - 14, 11, 16, 4, '#120c16');   // body
-        Gfx.circle(hx, hy - 18, 5, '#120c16');              // head
-        const up = Math.sin(t * 5.4 + x * 0.05 + s2) > 0;
-        Gfx.line(hx - 4, hy - 12, hx - 9, hy - (up ? 26 : 18), '#120c16', 3);
-        Gfx.line(hx + 4, hy - 12, hx + 9, hy - (up ? 26 : 18), '#120c16', 3);
-        if (((x / 34) | 0) % 3 === 0) {                     // torches in the crowd
-          Gfx.rect(hx + 8, hy - 30, 2, 12, '#3a2415');
-          Gfx.circle(hx + 9, hy - 33, 4, '#ffa832');
-          Gfx.circle(hx + 9, hy - 35, 2, '#ffe98a');
-          Gfx.glow(hx + 9, hy - 33, 30, '#ffa832', 0.4);
-        }
-      }
+      for (let x = Math.floor(L / 38) * 38; x < R; x += 38)
+        World.fan(x + jitter(x + s2 * 31, 14), y + 8, 0.36 + (2 - s2) * 0.03,
+          x * 0.05 + s2 * 1.7, t, beat, ['#ffe98a', '#b177e6', '#86e8d2'][s2]);
     }
     // banners, hung low off the front of the top terrace so they do not cover
     // the mountain
@@ -781,7 +869,7 @@ const World = {
       const fx2 = SX - 170 + i * 34;
       Gfx.rect(fx2 - 4, GY - 40, 9, 6, '#241c2e');
       Gfx.rect(fx2 - 3, GY - 42, 7, 3, i % 2 ? '#ffe98a' : '#86e8d2');
-      Gfx.glow(fx2, GY - 44, 40 + beat * 26, i % 2 ? '#ffe98a' : '#86e8d2', 0.34);
+      if (i % 2) Gfx.glow(fx2, GY - 44, 44 + beat * 26, '#ffe98a', 0.4);
     }
     for (const rx of [SX - 210, SX + 210]) {
       Gfx.rect(rx - 6, GY - 134, 12, 134, '#3a2415');
@@ -804,29 +892,17 @@ const World = {
       Gfx.ctx.globalAlpha = 1;
     }
     // the near crowd, right up against the camera: big, black and jumping
-    for (let x = Math.floor(L / 30) * 30; x < R; x += 30) {
-      const j = jitter(x + 7, 14);
-      const bob = Math.abs(Math.sin(t * 5.2 + x * 0.04)) * 6 + beat * 5;
-      const hx = x + j, hy = GY + 104 - bob;
-      Gfx.round(hx - 9, hy - 30, 19, 36, 6, '#120c16');
-      Gfx.circle(hx, hy - 37, 9, '#120c16');
-      const up = Math.sin(t * 5.2 + x * 0.04) > 0;
-      Gfx.line(hx - 8, hy - 26, hx - 15, hy - (up ? 54 : 38), '#120c16', 5);
-      Gfx.line(hx + 8, hy - 26, hx + 15, hy - (up ? 54 : 38), '#120c16', 5);
-      if (((x / 30) | 0) % 5 === 0) {
-        Gfx.rect(hx + 13, hy - 66, 3, 16, '#3a2415');
-        Gfx.circle(hx + 14, hy - 69, 5, '#ffa832');
-        Gfx.circle(hx + 14, hy - 71, 3, '#ffe98a');
-        Gfx.glow(hx + 14, hy - 69, 40, '#ffa832', 0.5);
-      }
-    }
+    for (let x = Math.floor(L / 34) * 34; x < R; x += 34)
+      World.fan(x + jitter(x + 3, 13), GY + 24, 0.62, x * 0.041 + 0.6, t, beat, '#ffb0cf');
+    for (let x = Math.floor(L / 44) * 44; x < R; x += 44)
+      World.fan(x + jitter(x + 7, 17), GY + 72, 0.88, x * 0.037, t, beat, '#ffe98a');
     // embers drifting up through the whole shot, and a warm dream haze over it
     for (let i = 0; i < 46; i++) {
       const ex = ((i * 211 - camX * 0.4) % 1600 + 1600) % 1600 + L - 200;
       const ey = GY + 60 - ((t * (22 + (i % 5) * 9) + i * 97) % 640);
       Gfx.rectA(ex + Math.sin(t * 2 + i) * 5, ey, 3, 3, i % 3 ? '#ffa832' : '#ffe98a', 0.75);
     }
-    Gfx.rectA(L, GY - 300, R - L, 400, '#e06a1b', 0.05);
+    Gfx.rectA(L, GY - 290, R - L, 330, '#e06a1b', 0.05);
     Gfx.glow(SX, GY - 90, 420, '#ffa832', 0.10 + beat * 0.08);
     // the dream wash: slow coloured light sliding over everything, and soft edges
     for (let i = 0; i < 3; i++) {
@@ -834,11 +910,69 @@ const World = {
       Gfx.glow(wx, GY - 150 + Math.cos(t * 0.3 + i) * 50, 300,
         ['#b177e6', '#86e8d2', '#ffb0cf'][i], 0.07);
     }
+    // a bloom off everything bright, faked with big soft glows - this is a
+    // dream, so nothing in it is allowed a hard edge
+    Gfx.glow(SX, GY - 44, 330, '#ffe98a', 0.13 + beat * 0.07);
+    for (let i = 0; i < 4; i++) Gfx.glow(SX - 170 + i * 115, GY - 40, 120, i % 2 ? '#86e8d2' : '#ffe98a', 0.10);
+    Gfx.glow(SX - 40, GY - 210, 260, '#e06a1b', 0.13);
+    // haze: slow bands of light drifting across the whole frame
+    for (let i = 0; i < 5; i++) {
+      const hy2 = GY - 320 + ((t * (7 + i * 3) + i * 120) % 460);
+      Gfx.rectA(L, hy2, R - L, 40 + i * 9, ['#b177e6', '#ffb0cf', '#86e8d2', '#ffe98a', '#a8d8ff'][i], 0.032);
+    }
+    // the vignette only has to cover what the camera can see, not the whole
+    // sky above it - this fill is the widest thing in the scene
     { const ctx = Gfx.ctx;
-      const g = ctx.createRadialGradient(SX, GY - 120, 120, SX, GY - 120, 460);
-      g.addColorStop(0, 'rgba(124,62,178,0)'); g.addColorStop(1, 'rgba(40,16,64,0.42)');
-      ctx.fillStyle = g; ctx.fillRect(L, -420, R - L, GY + 440); }
-    if (beat > 0.4) Gfx.rectA(L, -420, R - L, GY + 420, '#ffe98a', (beat - 0.4) * 0.10);
+      const g = ctx.createRadialGradient(SX, GY - 120, 150, SX, GY - 120, 520);
+      g.addColorStop(0, 'rgba(124,62,178,0)'); g.addColorStop(1, 'rgba(40,16,64,0.50)');
+      ctx.fillStyle = g; ctx.fillRect(L, GY - 430, R - L, 560); }
+    if (beat > 0.4) Gfx.rectA(L, GY - 430, R - L, 560, '#ffe98a', (beat - 0.4) * 0.10);
+  },
+
+  // ---- Somebody in a crowd, from behind, lit only by the stage. Every one is
+  // a different height, build and haircut, or it reads as a row of skittles.
+  fan(x, gy, s, ph, t, beat, rimCol) {
+    const i = Math.abs(Math.round(ph * 37));
+    const build = i % 4;                                   // thin / normal / wide / kid
+    const swing = Math.sin(t * 5.2 + ph);
+    const bob = Math.abs(swing) * 6 * s + beat * 5 * s;
+    const y = gy - bob;
+    const bw = [8, 10, 13, 7][build] * s, bh = [33, 36, 31, 23][build] * s;
+    const hr = [7, 8, 9, 6.6][build] * s;
+    const ink = '#120c16';
+    // arms: some up, some clapping, some holding something
+    const up = (i % 3) !== 1 ? swing > 0 : swing > 0.6;
+    const ay = y - bh - (up ? 26 * s : 8 * s);
+    Gfx.seg(x - bw * 0.75, y - bh * 0.72, x - bw - 7 * s, ay, 5 * s, ink);
+    Gfx.seg(x + bw * 0.75, y - bh * 0.72, x + bw + 7 * s, ay + (i % 2 ? 5 * s : 0), 5 * s, ink);
+    Gfx.rect(x - bw, y - bh, bw * 2, bh + 6 * s, ink);                  // body
+    Gfx.rect(x - bw * 0.7, y - bh - 3 * s, bw * 1.4, 4 * s, ink);       // shoulders
+    Gfx.circle(x, y - bh - hr * 0.7, hr, ink);                          // head
+    // hair, which is the only thing telling them apart at this size
+    const hair = i % 5;
+    const hy = y - bh - hr * 1.5;
+    if (hair === 0) { Gfx.rect(x - hr, hy - 2 * s, hr * 2, hr * 1.1, ink); }
+    else if (hair === 1) { Gfx.circle(x, hy - hr * 0.5, hr * 0.62, ink); }
+    else if (hair === 2) {
+      for (const d of [-1, 1]) Gfx.seg(x + d * hr * 0.5, hy, x + d * hr * 1.5, hy - hr * 1.4, 4 * s, ink);
+    } else if (hair === 3) {
+      Gfx.rect(x - hr * 1.3, hy, hr * 2.6, hr * 0.8, ink);
+      Gfx.seg(x, hy, x, hy - hr * 1.6, 3 * s, ink);
+    }
+    // the rim the stage puts on them
+    if (rimCol) {
+      Gfx.ctx.globalAlpha = 0.5;
+      Gfx.rect(x - hr * 0.8, y - bh - hr * 1.6, hr * 1.2, 2.5 * s, rimCol);
+      Gfx.rect(x - bw + 2 * s, y - bh - 1 * s, bw * 1.1, 2.5 * s, rimCol);
+      Gfx.ctx.globalAlpha = 1;
+    }
+    // and one in nine is holding a torch
+    if (i % 9 === 0) {
+      Gfx.rect(x + bw + 4 * s, ay - 2 * s, 2.5 * s, 16 * s, '#3a2415');
+      Gfx.circle(x + bw + 5 * s, ay - 5 * s, 4.5 * s, '#ffa832');
+      Gfx.circle(x + bw + 5 * s, ay - 7 * s, 2.6 * s, '#ffe98a');
+      Gfx.glow(x + bw + 5 * s, ay - 5 * s, 26 * s, '#ffa832', 0.5);
+    }
   },
 
   // a live volcano behind the stage: lava in the crater, three flows down the
@@ -853,7 +987,7 @@ const World = {
       const py = APEX - 14 - k * 190 + Math.sin(t * 0.5 + i) * 6;
       const r = 20 + k * 62;
       Gfx.ctx.globalAlpha = 0.30 * (1 - k * 0.7);
-      Gfx.round(px - r + Math.sin(t * 0.4 + i * 1.3) * 22, py - r * 0.5, r * 2, r, r * 0.5, '#3b3048');
+      Gfx.circle(px + Math.sin(t * 0.4 + i * 1.3) * 22, py, r * 0.62, '#3b3048');
       Gfx.ctx.globalAlpha = 1;
     }
     // the cone
@@ -943,8 +1077,8 @@ const World = {
     }
   },
   pyro(t, SX, beat) {
-    for (let i = 0; i < 19; i++) {
-      const fx = SX - 186 + i * 21;
+    for (let i = 0; i < 13; i++) {
+      const fx = SX - 186 + i * 31;
       const h = 15 + Math.abs(Math.sin(t * 5 + i * 1.7)) * 9 + beat * 16 + (i % 3) * 3;
       const sway = Math.sin(t * 4.4 + i) * 3.5;
       World.flame(fx, GY - 33, h, 7.5, sway, ['#e06a1b', '#ffa832', '#ffe98a']);
@@ -1155,7 +1289,7 @@ const World = {
   // A working mine. Every face is veined with something worth digging out, and
   // the whole place is scaffolded, carted, lamped and full of people.
   quarry(t, o = {}, camX = 0) {
-    const L = camX - 160, R = camX + VW + 160;
+    const L = camX - 300, R = camX + VW + 300;
     Gfx.rect(L, -400, R - L, 460, '#3f0e18');
     World.skyRamp(L, R, 60, 250, ['#3f0e18', '#7d1d2b', '#a03a68', '#e06a1b', '#ffa832']);
     const ctx = Gfx.ctx;
@@ -1230,19 +1364,165 @@ const World = {
       if (((x / 150) | 0) % 4 === 1) World.orePile(x + 92, GY + 4, Math.abs((x / 150) | 0) % 5);
       if (((x / 150) | 0) % 5 === 2) Gfx.sprite('art_club', x + 40, GY - 10, { anchor: 'bc', scale: 1.2, rot: -0.7 });
     }
-    for (let x = Math.floor(L / 700) * 700; x < R; x += 700) Gfx.sprite('prop_stage', x, GY + 4, { anchor: 'bc', scale: 0.8, alpha: 0.9 });
+
+    // ---- the plant: derricks lifting rock out of the pit
+    for (let x = Math.floor((L - 300) / 760) * 760; x < R + 300; x += 760) {
+      if (x > QUARRY.boss - 300 && x < QUARRY.box + 200) continue;   // keep the shift's end clear
+      World.crane(t, x, GY + 8, Math.abs((x / 760) | 0));
+    }
+    // ---- the office and the working face
+    if (L < QUARRY.boss + 260 && R > QUARRY.boss - 260) World.quarryOffice(t);
+    if (L < QUARRY.box + 300 && R > QUARRY.face - 300) World.quarryFace(t, o);
+    // ---- the crew, on the haul road: five species, all of them on the payroll
+    const KIND = ['tricera', 'stego', 'mammoth', 'brute', 'raptor'];
+    // the haul road runs along the front of the pit, nearer the camera than
+    // the face, so nothing on it ever parks in front of the work
+    for (let i = 0; i < 5; i++)
+      World.patrol(L, R, 2400, i * 480, (i % 2 ? 1 : -1) * (15 + i * 4), t,
+        px => World.workBeast(t, px, GY + 42 + (i % 3) * 10, KIND[i], { ph: i, drag: i % 2 === 0, flip: i % 2 === 1 }));
+    // ---- and the ones doing it with their hands
+    for (let i = 0; i < 7; i++)
+      World.patrol(L, R, 1700, i * 243, (i % 2 ? -1 : 1) * (21 + i * 3), t,
+        px => World.hauler(t, px, GY + 26 + (i % 3) * 14, i, i % 2 ? -1 : 1));
   },
+
+  // Something walking a loop of world, drawn wherever that loop currently puts
+  // it - anchored to the world, not to the camera, so it does not swim.
+  patrol(L, R, span, phase, speed, t, fn) {
+    const p = ((phase + t * speed) % span + span) % span;
+    for (let k = Math.floor((L - 300 - p) / span); ; k++) {
+      const px = p + k * span;
+      if (px > R + 300) break;
+      if (px > L - 300) fn(px);
+    }
+  },
+  // Where the shift actually happens. Fixed positions, because the mining game
+  // and the cutscene both need to know where the face and the box are.
+  quarryFace(t, o = {}) {
+    const x = QUARRY.face;
+    // ---- a shoulder of rock left standing where they are cutting. Not a slab:
+    // the profile is ragged and it sits into the pit floor.
+    const prof = px => {
+      const k = (px - x) / 132;
+      if (k <= -1 || k >= 1) return null;
+      return GY - 220 * Math.pow(1 - k * k * k * k * k * k, 0.34)
+        + Math.sin(px * 0.071) * 13 + Math.sin(px * 0.021 + 1.4) * 19 + Math.sin(px * 0.19) * 6
+        + Math.sin(px * 0.41 + 2) * 3;
+    };
+    Gfx.shadow(x, GY + 4, 250, 0.3);
+    for (let px = Math.floor((x - 136) / 4) * 4; px < x + 136; px += 4) {
+      const y = prof(px + 2); if (y == null) continue;
+      const yt = Math.round(y / 4) * 4;
+      Gfx.rect(px, yt, 4, GY - yt + 12, '#574a66');
+      Gfx.rect(px, yt, 4, 6, '#9391a6');                          // the lit top edge
+      Gfx.rect(px, yt + 6, 4, 6, '#7a6d8a');
+      Gfx.rect(px, yt - 3, 4, 3, '#241c2e');
+    }
+    for (let k = 0; k < 8; k++)                                   // strata, following the cut
+      for (let px = Math.floor((x - 132) / 9) * 9; px < x + 132; px += 9) {
+        const y = prof(px); if (y == null) continue;
+        const sy = y + 28 + k * 24 + Math.sin(px * 0.012 + k) * 5;
+        if (sy > GY - 4) continue;
+        Gfx.rectA(px, sy, 9, 3, k % 2 ? '#3b3048' : '#7a6d8a', 0.38);
+      }
+    for (let i = 0; i < 26; i++) {                                // chisel scars
+      const px = x - 118 + (i % 7) * 34 + jitter(i, 14);
+      const y = prof(px); if (y == null) continue;
+      const sy = y + 22 + ((i * 53) % 160);
+      if (sy > GY - 6) continue;
+      Gfx.rectA(px, sy, 11, 3, '#241c2e', 0.34);
+      Gfx.rectA(px, sy - 1, 7, 1, '#bdbccd', 0.22);
+    }
+    for (let i = 0; i < 5; i++) {                                 // vertical jointing
+      const px = x - 96 + i * 48 + jitter(i * 3, 16);
+      const y = prof(px); if (y == null) continue;
+      Gfx.rectA(px, y + 10, 3, GY - y - 14, '#241c2e', 0.32);
+      Gfx.rectA(px + 3, y + 10, 2, GY - y - 14, '#9391a6', 0.10);
+    }
+    // a ladder against the left shoulder, and the spoil heaped at the foot
+    { const lx = x - 108, ly = prof(lx) || GY - 90;
+      Gfx.rect(lx - 4, ly + 8, 4, GY - ly - 6, '#3a2415');
+      Gfx.rect(lx + 18, ly + 8, 4, GY - ly - 6, '#3a2415');
+      for (let k = 0; k * 16 < GY - ly - 10; k++) Gfx.rect(lx - 4, GY - 12 - k * 16, 26, 4, '#5c3a20'); }
+    for (let i = 0; i < 9; i++)
+      Gfx.round(x - 120 + i * 30 + jitter(i, 12), GY - 8 - (i % 3) * 5, 22 + (i % 4) * 7, 12, 4, i % 2 ? '#4d4a5c' : '#3b3048');
+    // ---- the three pockets of crystal, and how much of each is left
+    QUARRY.gems.forEach((g, i) => {
+      const got = (o.mined || 0) > i;
+      const c = World.oreCols[[2, 1, 0][i]];
+      Gfx.round(g.x - 30, g.y - 27, 60, 54, 10, '#120c16');
+      Gfx.round(g.x - 25, g.y - 22, 50, 44, 8, '#3b3048');
+      Gfx.round(g.x - 25, g.y - 22, 50, 6, 3, '#241c2e');
+      if (got) {                                                  // an empty socket, and the dust
+        Gfx.round(g.x - 19, g.y - 16, 38, 32, 6, '#241c2e');
+        for (let k = 0; k < 4; k++) Gfx.rectA(g.x - 14 + k * 9, g.y + 12, 7, 3, '#574a66', 0.7);
+        return;
+      }
+      for (let k = 0; k < 7; k++) {                               // the crystal, growing out
+        const a = -2.7 + k * 0.4, len = 17 + (k % 3) * 9;
+        const ex = g.x + Math.cos(a) * len, ey = g.y + 10 + Math.sin(a) * len;
+        Gfx.line(g.x, g.y + 10, ex, ey, '#120c16', 10);
+        Gfx.line(g.x, g.y + 10, ex, ey, c[0], 6);
+        Gfx.line(g.x, g.y + 10, g.x + Math.cos(a) * len * 0.7, g.y + 10 + Math.sin(a) * len * 0.7, c[1], 2);
+        Gfx.circle(ex, ey, 2.5, c[1]);
+      }
+      Gfx.glow(g.x, g.y, 66, c[1], 0.30 + Math.sin(t * 2.4 + i) * 0.09);
+    });
+    // ---- the box the crystal goes in, with a tally scratched on the lid
+    const bx = QUARRY.box;
+    Gfx.shadow(bx, GY + 4, 90, 0.32);
+    Gfx.round(bx - 44, GY - 52, 88, 56, 5, '#3a2415');
+    Gfx.round(bx - 40, GY - 48, 80, 48, 4, '#5c3a20');
+    for (let i = 0; i < 4; i++) Gfx.rect(bx - 36 + i * 21, GY - 48, 5, 48, '#3a2415');
+    Gfx.rect(bx - 40, GY - 30, 80, 5, '#85562f');
+    Gfx.round(bx - 46, GY - 58, 92, 12, 4, '#3a2415');            // the rim
+    Gfx.round(bx - 43, GY - 57, 86, 5, 2, '#b07a45');
+    for (let i = 0; i < Math.min(3, o.mined || 0); i++)           // what is in it so far
+      World.oreLump(bx - 18 + i * 18, GY - 58, 1.1, [2, 1, 0][i]);
+    Gfx.text('3 = 1', bx, GY - 82, { color: '#ffe98a', align: 'center', scale: 1.1, outline: true });
+    Gfx.sprite('icon_coin', bx + 34, GY - 78, { anchor: 'c', scale: 0.9 });
+  },
+
+  // The foreman works out of a lean-to with a slate on the front of it. He has
+  // never once been inside the mine.
+  quarryOffice(t) {
+    const x = QUARRY.boss;
+    Gfx.shadow(x, GY + 4, 150, 0.3);
+    for (const px of [x - 62, x + 58]) { Gfx.rect(px, GY - 120, 9, 124, '#3a2415'); Gfx.rect(px, GY - 120, 3, 124, '#85562f'); }
+    Gfx.round(x - 76, GY - 134, 156, 18, 4, '#3a2415');           // the lintel
+    Gfx.round(x - 72, GY - 132, 148, 6, 3, '#85562f');
+    for (let i = 0; i < 9; i++)                                   // a thatched lean-to roof
+      Gfx.round(x - 74 + i * 17, GY - 152 + (i % 2) * 4, 20, 22, 6, i % 2 ? '#85562f' : '#b07a45');
+    // the slate: this week's numbers, badly written
+    Gfx.round(x - 44, GY - 114, 88, 66, 4, '#241c2e');
+    Gfx.round(x - 40, GY - 110, 80, 58, 3, '#3b3048');
+    for (let i = 0; i < 4; i++) Gfx.rectA(x - 33, GY - 100 + i * 13, 44 + (i % 3) * 12, 3, '#bdbccd', 0.7);
+    Gfx.rectA(x + 14, GY - 100, 18, 42, '#ef6a5e', 0.5);
+    Gfx.sprite('prop_barrel', x + 76, GY + 4, { anchor: 'bc' });
+    Gfx.sprite('art_club', x - 84, GY - 6, { anchor: 'bc', scale: 1.2, rot: -0.5 });
+  },
+
   // Five ores, and each one looks like itself: amber, copper, amethyst,
   // emerald and the plain grey stone that pays the wages.
   oreCols: [['#e06a1b', '#ffa832', '#5c1607'], ['#18706a', '#2cb3a2', '#0f3838'],
             ['#7c3eb2', '#b177e6', '#281040'], ['#3f9a45', '#6cc95c', '#14331e'],
             ['#3570c0', '#6aa9ee', '#101f3d']],
+  // A chunk of ore reads as a chunk of ore because it has flat faces. Rounded
+  // ones read as sweets, which is not what this quarry sells.
+  LUMP: [[-4, 8], [-6, 12], [-7, 14], [-6, 13], [-4, 9], [-2, 5]],
   oreLump(x, y, s, kind) {
-    const c = World.oreCols[kind % 5];
-    Gfx.round(x - 7 * s, y - 6 * s, 14 * s, 11 * s, 3, c[2]);
-    Gfx.round(x - 5 * s, y - 5 * s, 10 * s, 8 * s, 2, c[0]);
-    Gfx.round(x - 4 * s, y - 5 * s, 4 * s, 3 * s, 1, c[1]);
-    Gfx.glow(x, y - 2 * s, 18 * s, c[0], 0.22);
+    const c = World.oreCols[kind % 5], top = y - 11 * s;
+    for (let i = 0; i < World.LUMP.length; i++) {
+      const [ox, w] = World.LUMP[i], yy = top + i * 2 * s;
+      Gfx.rect(x + (ox - 1) * s, yy - s, (w + 2) * s, 4 * s, '#120c16');
+    }
+    for (let i = 0; i < World.LUMP.length; i++) {
+      const [ox, w] = World.LUMP[i], yy = top + i * 2 * s;
+      Gfx.rect(x + ox * s, yy, w * s, 2 * s, c[0]);
+      Gfx.rect(x + ox * s, yy, Math.max(1, w * 0.4) * s, 2 * s, c[1]);
+      if (i > 3) Gfx.rect(x + (ox + w * 0.56) * s, yy, w * 0.44 * s, 2 * s, c[2]);
+    }
+    Gfx.glow(x, y - 5 * s, 15 * s, c[1], 0.16);
   },
   // An ore vein: not a cable. It runs in broken lenses through the host rock,
   // thick in places and pinched out in others, with crystal growing where it
@@ -1313,48 +1593,255 @@ const World = {
     Gfx.rect(x - 34, y - 14, 10, 4, '#3a2415');
   },
 
-  // ----------------------------------------------------------------- CANYON
-  // Dusk, on the way home, with something behind you.
-  canyon(t, o = {}, camX = 0) {
-    const L = camX - 160, R = camX + VW + 160;
-    Gfx.bands(L, -400, R - L, 760, ['#0b0a18', '#2a1430', '#5c1f3d', '#a03a68', '#e06a1b']);
-    const mx = 620 - camX * 0.04; Gfx.circle(mx, 130, 44, '#ef6a5e'); Gfx.glow(mx, 130, 260, '#e06a1b', 0.32);
+  // ------------------------------------------------------- THE WORKFORCE
+  // Nobody at this quarry works alone. Every beast on the payroll gets a hide
+  // blanket, a hammered plate over the shoulder and somebody sitting on it.
+  // The table is per-species because a stegosaur's back is not where a
+  // triceratops keeps one.
+  // back:  how high off the ground the saddle sits
+  // seat:  how far behind the middle the rider sits (negative is behind)
+  // plate: how far forward the shoulder plate rides
+  CREW: {
+    tricera: { spr: 'tricera_walk', scale: 1.05, back: 52, seat: -8, plate: 22, fps: 7 },
+    stego: { spr: 'stego_walk', scale: 1.05, back: 50, seat: -12, plate: 18, fps: 6 },
+    brute: { spr: 'brute_walk', scale: 0.95, back: 62, seat: -2, plate: 12, fps: 8 },
+    mammoth: { spr: 'mammoth_walk', scale: 0.95, back: 66, seat: -10, plate: 26, fps: 6 },
+    raptor: { spr: 'raptor_walk', scale: 0.9, back: 40, seat: -6, plate: 14, fps: 10 },
+  },
+  workBeast(t, x, gy, kind, o = {}) {
+    const c = World.CREW[kind] || World.CREW.tricera;
+    const sp = Gfx.spr(c.spr), sc = (o.scale || 1) * c.scale;
+    const w = sp.w * sc, h = sp.h * sc, dir = o.flip ? -1 : 1, ph = o.ph || 0;
+    const bob = Math.abs(Math.sin(t * c.fps * 0.8 + ph)) * 3;
+    Gfx.shadow(x, gy + 2, w * 0.66, 0.3);
+    // ---- what it is dragging, drawn behind it
+    if (o.drag) {
+      const sx = x - dir * (w * 0.5 + 44);
+      Gfx.line(x - dir * w * 0.36, gy - h * 0.34, sx + dir * 26, gy - 20, '#3a2415', 3);
+      Gfx.round(sx - 30, gy - 24, 60, 20, 4, '#3a2415');            // the sledge
+      Gfx.round(sx - 27, gy - 22, 54, 15, 3, '#5c3a20');
+      for (let i = 0; i < 6; i++) World.oreLump(sx - 20 + i * 8, gy - 28 - (i % 3) * 4, 0.85, (i + ph) % 5);
+      Gfx.round(sx - 32, gy - 6, 64, 6, 3, '#241c2e');              // the runners
+    }
+    Gfx.sprite(c.spr, x, gy - bob, { anchor: 'bc', scale: sc, frame: Math.floor(t * c.fps + ph * 3), flip: o.flip });
+    // ---- the tack: a hide blanket over the back, held with a bronze-studded girth
+    const by = gy - c.back * sc - bob, bx = x + dir * c.seat * sc, bw = 30 * sc;
+    Gfx.round(bx - bw / 2, by - 3, bw, 11, 3, '#7d1d2b');
+    Gfx.round(bx - bw / 2, by - 3, bw, 4, 2, '#ef6a5e');
+    for (let i = 0; i < 4; i++) Gfx.rect(bx - bw / 2 + 3 + i * (bw / 4.4), by + 6, 3, 4, '#e0b93a');
+    // ---- one plate of hammered bronze, over the shoulder and no bigger
+    const px = x + dir * c.plate * sc;
+    Gfx.round(px - 8, by + 2, 16, 20, 5, '#6b4a10');
+    Gfx.round(px - 6, by + 4, 12, 15, 4, '#e0b93a');
+    Gfx.round(px - 5, by + 5, 5, 5, 2, '#ffe98a');
+    Gfx.rectA(px - 6, by + 14, 12, 3, '#6b4a10', 0.7);
+    // ---- and the driver, sitting on it
+    if (o.rider !== false) {
+      const rx = bx - dir * 2, ry = by + 2;
+      Gfx.sprite(ph % 2 ? 'villager2_idle' : 'villager_idle', rx, ry, { anchor: 'bc', scale: 0.55, flip: o.flip });
+      Gfx.round(rx - 8, ry - 40, 16, 7, 3, '#6b4a10');              // a hard hat, of sorts
+      Gfx.round(rx - 6, ry - 41, 11, 3, 2, '#e0b93a');
+      Gfx.line(rx + dir * 6, ry - 28, px + dir * 4, by + 6, '#3a2415', 2);     // reins
+    }
+  },
+
+  // ---- a worker with a basket of rock on one shoulder, plodding
+  hauler(t, x, gy, seed, dir = 1) {
+    const ph = seed * 1.7;
+    const bob = Math.abs(Math.sin(t * 7 + ph)) * 3;
+    Gfx.shadow(x, gy + 2, 26, 0.3);
+    Gfx.sprite(seed % 2 ? 'villager_walk' : 'villager2_walk', x, gy - bob,
+      { anchor: 'bc', scale: 0.85, frame: Math.floor(t * 8 + ph) % 4, flip: dir < 0 });
+    // the basket, riding the shoulder and leaning with the step
+    const bx = x - dir * 12, by = gy - 54 - bob;
+    Gfx.round(bx - 15, by - 12, 30, 20, 5, '#3a2415');
+    Gfx.round(bx - 13, by - 10, 26, 15, 4, '#85562f');
+    for (let i = 0; i < 4; i++) Gfx.rectA(bx - 12 + i * 7, by - 10, 3, 15, '#5c3a20', 0.8);
+    for (let i = 0; i < 4; i++) World.oreLump(bx - 9 + i * 6, by - 12, 0.7, (seed + i) % 5);
+    Gfx.line(bx + dir * 12, by - 2, x - dir * 2, gy - 44 - bob, '#3a2415', 2);
+  },
+
+  // ---- a derrick: two legs, a boom, a rope and a bucket of rock going up
+  crane(t, x, gy, seed) {
+    const sw = Math.sin(t * 0.7 + seed) * 0.16;           // the boom swings, slowly
+    const topY = gy - 210, footW = 62;
+    Gfx.shadow(x, gy + 2, 130, 0.3);
+    // the legs
+    for (const s of [-1, 1]) {
+      Gfx.line(x + s * footW, gy, x + s * 8, topY + 12, '#3a2415', 9);
+      Gfx.line(x + s * footW, gy, x + s * 8, topY + 12, '#5c3a20', 5);
+    }
+    for (let i = 1; i < 5; i++) {                          // cross-bracing
+      const k = i / 5, y = gy - (gy - topY) * k;
+      const hw = footW * (1 - k) + 8 * k;
+      Gfx.line(x - hw, y, x + hw, y, '#3a2415', 4);
+      Gfx.line(x - hw, y, x + hw, y - 22, '#5c3a20', 2);
+    }
+    // the boom, out over the pit
+    const bx = x + Math.cos(-0.5 + sw) * 150, by = topY + 12 + Math.sin(-0.5 + sw) * 150;
+    Gfx.line(x, topY + 12, bx, by, '#3a2415', 10);
+    Gfx.line(x, topY + 12, bx, by, '#85562f', 5);
+    Gfx.line(x, topY + 12, x - 62, topY + 52, '#3a2415', 7);    // the counterweight arm
+    Gfx.round(x - 76, topY + 44, 28, 26, 6, '#574a66');
+    Gfx.round(x - 73, topY + 46, 22, 9, 3, '#9391a6');
+    // the rope, and what is on the end of it
+    const drop = 96 + Math.sin(t * 0.9 + seed * 2) * 52;
+    Gfx.line(bx, by, bx, by + drop, '#241c2e', 2);
+    Gfx.round(bx - 22, by + drop, 44, 30, 6, '#3a2415');
+    Gfx.round(bx - 19, by + drop + 3, 38, 23, 5, '#5c3a20');
+    for (let i = 0; i < 5; i++) World.oreLump(bx - 14 + i * 7, by + drop - 1, 0.8, (seed + i) % 5);
+    Gfx.line(bx - 18, by + drop + 2, bx, by + drop - 10, '#241c2e', 2);
+    Gfx.line(bx + 18, by + drop + 2, bx, by + drop - 10, '#241c2e', 2);
+    // two of them on the winch, walking it round
+    const wr = 26;
+    Gfx.round(x - 34, gy - 26, 68, 26, 6, '#3a2415');
+    Gfx.round(x - 31, gy - 24, 62, 9, 3, '#5c3a20');
+    for (let i = 0; i < 2; i++) {
+      const a = t * 1.1 + i * Math.PI + seed;
+      Gfx.sprite('villager_walk', x + Math.cos(a) * wr * 1.6, gy + 2,
+        { anchor: 'bc', scale: 0.7, frame: Math.floor(t * 7 + i) % 4, flip: Math.cos(a) < 0, alpha: 0.95 });
+    }
+  },
+
+  // ---- the tool of the trade: a stone head lashed to a bent haft
+  pickaxe(x, y, rot, s = 1) {
     const ctx = Gfx.ctx;
-    const wall = (depth, col, edge, base, amp, seed) => {
+    ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(rot); ctx.scale(s, s);
+    Gfx.round(-4, -2, 8, 62, 3, '#3a2415');                 // the haft
+    Gfx.round(-2, 0, 3, 58, 1, '#85562f');
+    Gfx.round(-5, 44, 10, 10, 3, '#5c3a20');                // the grip binding
+    ctx.save(); ctx.rotate(-0.12);
+    Gfx.round(-30, -16, 60, 13, 5, '#241c2e');              // the head
+    Gfx.round(-27, -14, 54, 8, 4, '#7a6d8a');
+    Gfx.round(-25, -14, 22, 4, 2, '#bdbccd');
+    Gfx.round(-34, -14, 9, 9, 3, '#4d4a5c');                // the two points
+    Gfx.round(25, -14, 9, 9, 3, '#4d4a5c');
+    ctx.restore();
+    for (let i = 0; i < 3; i++) Gfx.rectA(-6, -6 + i * 5, 12, 3, '#b07a45', 0.85);   // the lashing
+    ctx.restore();
+  },
+
+  // ---- a stone tablet with something chiselled on it. This is paperwork.
+  tablet(x, y, w, h, lines, o = {}) {
+    Gfx.round(x - 7, y - 7, w + 14, h + 14, 9, '#120c16');
+    Gfx.round(x - 3, y - 3, w + 6, h + 6, 7, '#3b3048');
+    Gfx.round(x, y, w, h, 6, '#574a66');
+    Gfx.round(x + 5, y + 5, w - 10, h - 10, 5, '#7a6d8a');
+    Gfx.round(x + 5, y + 5, w - 10, 8, 3, '#9391a6');             // the lit top face
+    Gfx.round(x + 5, y + h - 14, w - 10, 9, 3, '#4d4a5c');
+    for (let i = 0; i < 9; i++)                                   // chips out of the edge
+      Gfx.round(x + 6 + i * (w - 12) / 8, y + (i % 2 ? h - 8 : 1), 11, 8, 3, '#3b3048');
+    for (let i = 0; i < 22; i++)                                  // pits in the face
+      Gfx.rectA(x + 14 + ((i * 53) % (w - 30)), y + 14 + ((i * 37) % (h - 28)), 4 + (i % 3) * 3, 3, '#574a66', 0.5);
+    lines.forEach((ln, i) => {
+      const ty = y + (o.pad ?? 22) + i * (o.gap ?? 26);
+      Gfx.text(ln.t, x + w / 2, ty + 2, { color: '#3b3048', align: 'center', scale: ln.s || 1.4 });
+      Gfx.text(ln.t, x + w / 2, ty, { color: ln.c || '#120c16', align: 'center', scale: ln.s || 1.4 });
+    });
+  },
+
+  // ------------------------------------------------------------- THE FLIGHT
+  // The road out of the valley, after dark, with the village burning behind
+  // it. Three layers and nothing else: what is happening back there, the
+  // trees going past, and the road you are on. Everything in it is a tree, a
+  // hut or a dinosaur - no new parts, just more of them and worse news.
+  RAMPAGE: ['trex_walk', 'tricera_walk', 'stego_walk', 'raptor_walk', 'brute_walk', 'boar_walk'],
+  flight(t, o = {}, camX = 0) {
+    const L = camX - 300, R = camX + VW + 300;
+    const ctx = Gfx.ctx;
+    const j = (i, m) => Math.abs(jitter(i, m));
+
+    // ---- a sky that has already decided how this evening is going
+    World.skyRamp(L, R, -440, GY - 60, ['#0b0a18', '#281040', '#5c1f3d', '#a03a68', '#e06a1b', '#ffa832']);
+    { const mx = 520 - camX * 0.03;
+      Gfx.circle(mx, -30, 38, '#ef6a5e'); Gfx.glow(mx, -30, 300, '#e06a1b', 0.30); }
+    World.flock(t, camX, L, R, true, -230);
+
+    // ---- BACK: the village, and what is in it. All silhouette, all on fire.
+    const bo = camX * 0.16;
+    ctx.fillStyle = '#241c2e'; ctx.beginPath(); ctx.moveTo(L, GY);
+    for (let x = L; x <= R; x += 22) {
+      const k = (x + bo) * 0.0036;
+      ctx.lineTo(x, 288 + Math.sin(k) * 26 + Math.sin(k * 3.1 + 1) * 11);
+    }
+    ctx.lineTo(R, GY + 40); ctx.lineTo(L, GY + 40); ctx.fill();
+    for (let x = Math.floor((L + bo) / 128) * 128; x < R + bo; x += 128) {
+      const i = Math.abs((x / 128) | 0), px = x - bo;
+      const gy = 300 + j(i, 12);
+      const burning = i % 3 !== 1;
+      Gfx.sprite(i % 4 === 2 ? 'prop_hut_ruin' : 'prop_hut', px, gy,
+        { anchor: 'bc', scale: 0.76 + j(i + 2, 0.24), tint: '#3f0e18', tintAmount: 0.88 });
+      if (!burning) continue;
+      // flame on the roof, and a column of smoke leaning off it
+      for (let k = 0; k < 3; k++)
+        World.flame(px - 12 + k * 12, gy - 40 - j(i + k, 8),
+          18 + Math.abs(Math.sin(t * 5 + i + k)) * 14, 7, Math.sin(t * 3.7 + k) * 3,
+          ['#7d1d2b', '#e06a1b', '#ffa832']);
+      Gfx.glow(px, gy - 42, 120, '#e06a1b', 0.22 + Math.sin(t * 4 + i) * 0.05);
+      for (let k = 0; k < 6; k++) {                                // smoke, leaning off
+        const sy = gy - 62 - k * 46 - j(i + k, 14);
+        const sx = px + Math.sin(t * 0.35 + k * 0.55 + i) * (6 + k * 7) + k * 10;
+        Gfx.ctx.globalAlpha = 0.13 - k * 0.018;
+        for (const [ox, oy, r] of [[-10, 0, 17], [11, -7, 14], [2, 8, 12]])
+          Gfx.round(sx + ox - r - k * 2, sy + oy - r, (r + k * 4) * 2, (r + k * 3.4) * 2, r + k * 2, '#3b3048');
+        Gfx.ctx.globalAlpha = 1;
+      }
+    }
+    // the rampage: six species, all of them having a much better night than you
+    for (let i = 0; i < 9; i++) {
+      const spr = World.RAMPAGE[i % World.RAMPAGE.length];
+      const lane = i % 3;                                          // three depths of chaos
+      World.patrol(L, R, 2000, i * 222, (i % 2 ? 1 : -1) * (26 + i * 7), t, px => {
+        const sc = [0.6, 0.85, 1.05][lane];
+        const gy = [286, 306, 332][lane] + j(i, 8);
+        Gfx.sprite(spr, px, gy, {
+          anchor: 'bc', scale: sc, frame: Math.floor(t * 8 + i), flip: i % 2 === 0,
+          tint: '#3f0e18', tintAmount: 0.86,
+        });
+        if (i % 3 === 0 && chance(0.04)) Particles.spawn(px, gy - 20,
+          { n: 1, color: ['#e06a1b', '#ffa832'], speed: 40, gravity: -20, life: 1.6, size: 3, sizeEnd: 0 });
+      });
+    }
+    Gfx.rectA(L, 236, R - L, 100, '#e06a1b', 0.10);                 // the glow off it all
+
+    // ---- MIDDLE: the treeline going past, twice, at two speeds
+    const band = (depth, gy, scale, step, seed, tint) => {
       const off = camX * depth;
-      const hy = x => { const k = (x + off + seed) * 0.004;
-        return base + Math.sin(k) * amp + Math.sin(k * 3.3) * amp * 0.5 + Math.sin(k * 9) * amp * 0.3 + Math.sin(k * 23) * amp * 0.16; };
-      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(L, GY);
-      for (let x = L; x <= R; x += 18) ctx.lineTo(x, hy(x));
-      ctx.lineTo(R, GY + 220); ctx.lineTo(L, GY + 220); ctx.fill();
-      for (let x = Math.floor(L / 6) * 6; x < R; x += 6) Gfx.rect(x, hy(x), 6, 4, edge);      // sunlit rim
-      for (let k = 1; k < 6; k++)                                                            // strata
-        for (let x = Math.floor(L / 14) * 14; x < R; x += 14)
-          Gfx.rectA(x + jitter(x + k * 3, 10), hy(x) + 14 + k * 17, 10, 3, k % 2 ? edge : '#120c16', 0.22);
+      for (let x = Math.floor((L + off) / step) * step; x < R + off; x += step) {
+        const i = Math.abs((x / step) | 0) + seed;
+        Gfx.sprite(['prop_tree', 'prop_palm', 'prop_deadtree', 'prop_tree'][i % 4],
+          x - off + j(i * 3.1, step * 0.5), gy + j(i + 4, 10),
+          { anchor: 'bc', scale: scale * (0.85 + j(i + 1, 0.4)), tint, tintAmount: 1 });
+      }
     };
-    wall(0.62, '#3f0e18', '#7d1d2b', 170, 70, 0);
-    wall(0.44, '#281040', '#7c3eb2', 250, 50, 900);
-    wall(0.24, '#241c2e', '#574a66', 320, 30, 1700);
-    for (let x = Math.floor(L / 320) * 320; x < R; x += 320) Gfx.sprite('prop_deadtree', x + jitter(x, 60), GY + 2, { anchor: 'bc', alpha: 0.75 });
-    Gfx.rect(L, GY - 6, R - L, 300, '#5c3a20');
-    Gfx.rect(L, GY - 6, R - L, 5, '#b07a45');
-    Gfx.rectA(L, GY - 1, R - L, 300, '#3f0e18', 0.22);
-    for (let x = Math.floor(L / 18) * 18; x < R; x += 18) {
-      const yy = GY + 6 + jitter(x, 92);
-      Gfx.rectA(x + jitter(x + 1, 16), yy, 7 + jitter(x + 4, 10), 3, '#85562f', 0.6);
-      Gfx.rectA(x + jitter(x + 1, 16), yy - 1, 5, 1, '#d8a86b', 0.4);
-      if (((x / 18) | 0) % 4 === 0) Gfx.rectA(x + jitter(x + 6, 16), yy + 7, 3, 2, '#e06a1b', 0.45);
+    // a low bank for the far band to stand on, so nothing floats
+    { const off = camX * 0.30;
+      ctx.fillStyle = '#1d1230'; ctx.beginPath(); ctx.moveTo(L, GY);
+      for (let x = L; x <= R; x += 20) ctx.lineTo(x, 352 + Math.sin((x + off) * 0.0052) * 13);
+      ctx.lineTo(R, GY + 60); ctx.lineTo(L, GY + 60); ctx.fill(); }
+    band(0.30, 356, 0.95, 96, 0, '#241c2e');
+    band(0.62, GY - 4, 1.3, 146, 5, '#0b0a18');
+
+    // ---- FRONT: the road
+    Gfx.rect(L, GY - 6, R - L, 300, '#241109');
+    Gfx.rect(L, GY - 6, R - L, 5, '#5c3a20');
+    Gfx.rectA(L, GY - 1, R - L, 300, '#3f0e18', 0.24);
+    for (let x = Math.floor(L / 17) * 17; x < R; x += 17) {
+      const i = Math.abs((x / 17) | 0);
+      const yy = GY + 6 + j(i, 88);
+      Gfx.rectA(x + j(i + 1, 15), yy, 7 + j(i + 4, 10), 3, '#85562f', 0.55);
+      Gfx.rectA(x + j(i + 1, 15), yy - 1, 5, 1, '#d8a86b', 0.35);
+      if (i % 5 === 0) Gfx.rectA(x + j(i + 6, 15), yy + 7, 3, 2, '#e06a1b', 0.4);
     }
-    for (let x = Math.floor(L / 190) * 190; x < R; x += 190) Gfx.sprite('prop_rock', x + jitter(x, 60), GY + 4, { anchor: 'bc', scale: 0.8, alpha: 0.95 });
-    for (let x = Math.floor(L / 560) * 560; x < R; x += 560) Gfx.sprite('prop_bones', x + 120, GY + 6, { anchor: 'bc', alpha: 0.95 });
-    for (let i = 0; i < 4; i++) {                              // pteranodons riding the updraft
-      const px = ((i * 520 - camX * 0.12 + t * 34) % 2080 + 2080) % 2080 + L - 300;
-      Gfx.sprite('ptero_fly', px, 150 + (i % 3) * 40 + Math.sin(t + i) * 14,
-        { anchor: 'c', scale: 0.45 + (i % 2) * 0.2, frame: Math.floor(t * 6 + i) % 4, alpha: 0.85 });
+    for (let x = Math.floor(L / 210) * 210; x < R; x += 210) {
+      const i = Math.abs((x / 210) | 0);
+      Gfx.sprite(i % 3 ? 'prop_rock' : 'prop_bones', x + j(i, 70), GY + 4, { anchor: 'bc', scale: 0.85 });
     }
-    World.verge(t, camX, L, R, ['#241109', '#3a2415', '#5c3a20'], '#120c16', 'prop_bones', 0.8);
-    if (o.embers) for (let i = 0; i < 2; i++) if (chance(0.5))
-      Particles.spawn(camX + rnd(0, VW), GY - rnd(0, 200), { n: 1, color: ['#ffa832', '#e06a1b'], speed: 12, gravity: -20, life: 3, size: 3, sizeEnd: 0 });
+    World.verge(t, camX, L, R, ['#241109', '#3a2415', '#5c3a20'], '#120c16', 'prop_fern', 1.2);
+    // embers, riding up the whole frame
+    for (let i = 0; i < 3; i++) if (chance(0.55))
+      Particles.spawn(camX + rnd(-40, VW + 40), GY - rnd(0, 240),
+        { n: 1, color: ['#ffa832', '#e06a1b', '#ef6a5e'], speed: 16, gravity: -28, life: 3.2, size: 3, sizeEnd: 0 });
   },
 
   // ------------------------------------------------------ THE CAMP, AT NIGHT

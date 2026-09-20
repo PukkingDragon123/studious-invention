@@ -3,33 +3,70 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
-// the dawn-over-the-ruins painting behind both the boot prompt and the title
+// The menu sits at the campfire. Bronk is eating, the fire is going, and the
+// thing in the bush behind him has been there for some time.
 function drawTitleWorld(t) {
-  Gfx.bands(0, 0, W, 360, ['#281040', '#4b2070', '#a03a68', '#e06a1b', '#ffa832', '#ffe08a']);
-  Gfx.circle(760, 150, 46, '#ffe98a');
-  Gfx.glow(760, 150, 220, '#ffa832', 0.35);
   const ctx = Gfx.ctx;
-  ctx.fillStyle = '#5c1607';
-  ctx.beginPath(); ctx.moveTo(0, 320);
-  for (let x = 0; x <= W; x += 40) ctx.lineTo(x, 236 + Math.sin(x * 0.0055) * 52 + Math.sin(x * 0.014) * 16);
-  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
-  ctx.fillStyle = '#1a0c14';
-  ctx.beginPath(); ctx.moveTo(0, 340);
-  for (let x = 0; x <= W; x += 40) ctx.lineTo(x, 292 + Math.sin(x * 0.009 + 2) * 26);
-  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
-  Gfx.rect(0, 392, W, H - 392, '#241c2e');
-  Gfx.rect(0, 392, W, 4, '#3b3048');
-  for (let i = 0; i < 7; i++) Gfx.sprite(i % 2 ? 'prop_hut_ruin' : 'prop_hut', 80 + i * 150, 396, { anchor: 'bc', tint: '#120c16', tintAmount: 0.55 });
-  for (let i = 0; i < 9; i++) Gfx.sprite('prop_deadtree', 40 + i * 120, 398, { anchor: 'bc', tint: '#120c16', tintAmount: 0.7, alpha: 0.8 });
-  const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
-  const bob = Math.abs(Math.sin(beat * Math.PI));
-  Gfx.sprite('bronk_play', 640, 500 - bob * 6, { anchor: 'bc', frame: Math.floor(beat * 2) % 4, scale: 2 });
-  Gfx.sprite('blaze_idle', 840, 504, { anchor: 'bc', frame: Math.floor(t * 6) % 2, scale: 1.5 });
-  for (let i = 0; i < 2; i++) if (chance(0.45)) Particles.fire(840 + rnd(-30, 30), 420, 1);
-  for (let i = 0; i < 6; i++) Gfx.sprite(i % 2 ? 'villager_idle' : 'villager2_idle', 120 + i * 78, 512 - Math.abs(Math.sin((beat + i * 0.4) * Math.PI)) * 5, { anchor: 'bc', tint: '#120c16', tintAmount: 0.7, frame: Math.floor(beat + i) });
-  if (chance(0.35)) Particles.spawn(rnd(0, W), H, { n: 1, color: ['#ffa832', '#e06a1b', '#574a66'], speed: 16, gravity: -22, life: 4, size: 3, sizeEnd: 0, world: false });
+  const camX = 150, camY = GY - VH * 0.76;
+  Gfx.clear('#07060f');
+  ctx.save();
+  ctx.scale(VIEW, VIEW);
+  ctx.translate(-Math.round(camX), -Math.round(camY));
+  World.camp(t, { fireX: CAMP.fire, watchers: 0 }, camX);
+
+  // ---- the log, and the man on it
+  const BX = CAMP.bronk;
+  Gfx.round(BX - 64, GY - 18, 112, 22, 10, '#241109');
+  Gfx.round(BX - 60, GY - 17, 104, 5, 2, '#5c3a20');
+  for (let i = 0; i < 5; i++) Gfx.rectA(BX - 52 + i * 21, GY - 12, 13, 2, '#0b0a18', 0.5);
+  Gfx.rectA(BX - 60, GY - 6, 104, 7, '#e06a1b', 0.24 + Math.sin(t * 9) * 0.05);
+  Gfx.round(BX + 40, GY - 19, 15, 24, 7, '#3a2415');
+  Gfx.round(BX + 43, GY - 15, 9, 15, 4, '#5c3a20');
+
+  // ---- something enormous in the bush, and it is not blinking much
+  const RX = BX - 96, RY = GY + 26;
+  Gfx.sprite('trex_idle', RX, RY, { anchor: 'bc', scale: 1.2, frame: Math.floor(t * 2) % 2, tint: '#0d0a1c', tintAmount: 0.84 });
+  const hx = RX + 49, hy = RY - 116;   // the eye, on a head that faces the fire
+  if (Math.sin(t * 0.7) > -0.93) {                       // it blinks, about as often as it needs to
+    for (const [ex, ey, sc] of [[hx, hy, 1], [hx - 13, hy - 4, 0.6]]) {
+      Gfx.glow(ex, ey, 40 * sc, '#ffa832', 0.32 * sc);
+      Gfx.rectA(ex - 3, ey - 2, 7, 4, '#ffe98a', 0.95);
+      Gfx.rectA(ex - 1, ey - 1, 2, 2, '#ef6a5e', 0.9);
+    }
+  }
+  for (let i = 0; i < 3; i++) {                          // and it is drooling on the bush
+    const dx = hx - 16 + i * 13;
+    const len = 9 + Math.abs(Math.sin(t * (0.9 + i * 0.4) + i * 2.2)) * 24;
+    for (let k = 0; k < len; k += 3)
+      Gfx.rectA(dx + Math.sin(t * 2 + k * 0.1 + i) * 1.2, hy + 24 + k, k > len - 7 ? 3 : 2, 3, '#6aa9ee', 0.26 + 0.44 * (k / len));
+  }
+  if (chance(0.25)) Particles.spawn((hx - 16 + rnd(0, 30) - camX) * VIEW, (hy + 54 - camY) * VIEW,
+    { n: 1, color: ['#a8d8ff', '#6aa9ee'], speed: 6, gravity: 240, life: 1.1, size: 2, sizeEnd: 1, world: false });
+  for (const [bx, sc] of [[RX - 34, 2.4], [RX + 20, 2.8], [RX + 72, 2.3]])
+    Gfx.sprite('prop_bush', bx, GY + 6, { anchor: 'bc', scale: sc, tint: '#0b0a18', tintAmount: 0.92 });
+
+  // ---- dinner. it does not want to come off the bone, and he is not giving up.
+  const chew = Math.sin(t * 1.5);
+  const pull = clamp(chew, 0, 1);                        // 0 chewing, 1 hauling on it
+  const lean = pull * 7;
+  Gfx.sprite('bronk_eat', BX - lean, GY + 12, { anchor: 'bc', scale: 1, frame: Math.floor(t * 5) % 4 });
+  const mx = BX + 30 + pull * 34, my = GY - 40 - pull * 6;
+  // the strand between his teeth and the meat, which stretches and will not part
+  for (let k = 0; k <= 12; k++) {
+    const q = k / 12;
+    const sx2 = lerp(BX + 4 - lean, mx - 8, q);
+    const sy2 = lerp(GY - 44, my + 2, q) + Math.sin(q * Math.PI) * (5 + pull * 9);
+    const th = (5 - Math.sin(q * Math.PI) * 3.2) * (1 - pull * 0.45);
+    Gfx.round(sx2 - th, sy2 - th / 2, th * 2, th, th / 2, '#c4b89a');
+    Gfx.round(sx2 - th, sy2 - th / 2, th * 1.4, th * 0.5, th / 3, '#e8dfc6');
+  }
+  Gfx.sprite('meat_leg', mx, my, { anchor: 'c', scale: 2.2 + pull * 0.2, rot: -0.5 + pull * 0.5 });
+  if (pull > 0.9 && chance(0.4)) Particles.spawn((mx - camX) * VIEW, (my - camY) * VIEW,
+    { n: 1, color: ['#ef6a5e', '#c4b89a'], speed: 90, spread: 6.28, life: 0.6, size: 3, sizeEnd: 0, gravity: 300, world: false });
+  Particles.draw(Gfx.ctx, true);        // the fire's own sparks live in world space
+  ctx.restore();
   Particles.draw(Gfx.ctx, false);
-  Gfx.vignette(0.55);
+  Gfx.vignette(0.42);
 }
 
 class BootScene {
@@ -52,7 +89,7 @@ class BootScene {
 
 class TitleScene {
   constructor() { this.t = 0; }
-  enter() { AudioSys.play('home', { fade: 0.6 }); }
+  enter() { AudioSys.play('rest', { fade: 0.9 }); }
   exit() { }
   update(dt) {
     this.t += dt;

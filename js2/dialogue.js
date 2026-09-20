@@ -12,7 +12,7 @@ const SPEAKER_STYLE = {
   ROXY: { fill: '#f0fbff', name: '#18706a', portrait: 'kid_b_idle' },
   BLAZE: { fill: '#2a1410', name: '#ffa832', text: '#ffe08a', portrait: 'blaze_idle' },
   ELDER: { fill: '#f6f0ff', name: '#4b2070', portrait: 'elder_idle' },
-  MAMMOTH: { fill: '#fff6e6', name: '#85562f', portrait: 'mammoth_trader' },
+  MAMMOTH: { fill: '#fff6e6', name: '#85562f', portrait: 'mammoth_trader', portraitDX: -52 },
   '': { fill: '#fffaea', name: '#3b3048' },
 };
 
@@ -25,6 +25,7 @@ const Dialogue = {
       speaker, text, o, st, chars: 0, done: false, t: 0,
       at: o.at || null, x: o.x, y: o.y, choices: o.choices || null, choice: -1, hover: -1, pop: 0,
       portrait: o.portrait === false ? null : (o.portrait || st.portrait),
+      portraitDX: o.portraitDX ?? st.portraitDX ?? 0,
       shake: o.shake || 0, speed: o.speed || 48, auto: o.auto,
     };
     this.active = b;
@@ -114,9 +115,14 @@ const Dialogue = {
       const pw = 46, ph = L.h - 16;
       Gfx.round(L.x + 8 + sh, L.y + 8, pw, Math.min(ph, 52), 4, '#241c2e');
       const sp = Gfx.spr(b.portrait);
+      const bh = Math.min(ph, 52);
       const sc = Math.max(1, Math.min(2, Math.floor(44 / sp.h)));
-      Gfx.ctx.save(); Gfx.ctx.beginPath(); Gfx.ctx.rect(L.x + 8 + sh, L.y + 8, pw, Math.min(ph, 52)); Gfx.ctx.clip();
-      Gfx.sprite(b.portrait, L.x + 8 + pw / 2 + sh, L.y + 8 + Math.min(ph, 52) + 2, { anchor: 'bc', scale: sc, frame: Math.floor(Time.t * 3) });
+      // a portrait is a face, so a sprite taller than the box hangs from the
+      // top of it rather than standing on the bottom showing you its knees
+      const dy = sp.h * sc > bh ? L.y + 6 : L.y + 8 + (bh - sp.h * sc) / 2;
+      Gfx.ctx.save(); Gfx.ctx.beginPath(); Gfx.ctx.rect(L.x + 8 + sh, L.y + 8, pw, bh); Gfx.ctx.clip();
+      Gfx.sprite(b.portrait, L.x + 8 + pw / 2 + sh + (b.portraitDX || 0), dy,
+        { anchor: 'tc', scale: sc, frame: Math.floor(Time.t * 3) });
       Gfx.ctx.restore();
       Gfx.outlineRound(L.x + 8 + sh, L.y + 8, pw, Math.min(ph, 52), 4, '#120c16');
       tx += 54;

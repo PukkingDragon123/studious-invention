@@ -344,6 +344,41 @@ def trader_cargo(cv, s, B, body, rng, jig=0.0):
             g = ell(*B(hx, hy + 5), 3.6 * s, 4.6 * s)
             for p in dilate(g, 1) - g: cv.setif(p[0], p[1], 'j', 'jklmn!@#$DEFG89tuvwfghin')
             shade(cv, g, GOURD, bias=-0.2, grad=True)
+    # ---- a canopy over the whole shop, because weather happens
+    for px in (37.0, 73.0):
+        post = limb(LN(B, [(px, -3.0, 1.9), (px + (1 if px < 55 else -1), -22.0, 1.7)], s), 8)
+        for p in dilate(post, 1) - post: cv.setif(p[0], p[1], 'j', 'jklmnDEFG89!@#$')
+        shade(cv, post, WOOD, bias=-0.2, grad=True)
+    ridge = limb(LN(B, [(33, -21.0, 1.8), (55, -25.5, 1.8), (77, -21.0, 1.8)], s), 8)
+    for p in dilate(ridge, 1) - ridge: cv.setif(p[0], p[1], 'j', 'jklmnDEFG89!@#$')
+    shade(cv, ridge, WOOD, bias=0.2, grad=True)
+    # the cloth: two slopes of stripes with a scalloped hem
+    cloth = poly(PL(B, [(30, -19.0), (55, -24.5), (80, -19.0), (80, -14.0), (55, -19.0), (30, -14.0)]))
+    scal = set()
+    for i in range(11):
+        cxp = 31 + i * 4.8
+        scal |= disc(*B(cxp, -15.0 + abs(cxp - 55) * 0.20), 2.5 * s)
+    cloth |= scal
+    ST = ['8', '8', '9', 'D', 'D', 'E', 'E', 'F']
+    for (x, y) in cloth:
+        cv.set(x, y, ST[(int(x / max(1.0, 3.2 * s))) % len(ST)])
+    for p in edge_of(cloth, (0, 1)): cv.setif(p[0], p[1], '9', 'DEF8')
+    for p in edge_of(cloth, (0, -1)): cv.setif(p[0], p[1], 'F', 'DE89')
+    for p in dilate(cloth, 1) - cloth: cv.setif(p[0], p[1], '9', '.fghin')
+    # two lamps under it, and a little pennant on the ridge
+    for lx in (43.0, 68.0):
+        for p in polyline(PL(B, [(lx, -19.0), (lx, -15.0)]), max(0.5, 0.5 * s), 5):
+            cv.setif(p[0], p[1], 'k', '.fghinDEF89')
+        lamp = ell(*B(lx, -11.5), 3.2 * s, 4.0 * s)
+        for p in dilate(lamp, 1) - lamp: cv.setif(p[0], p[1], 'j', '.fghinDEF89!@#$')
+        shade(cv, lamp, ['z', 'A', 'B', 'C'], bias=0.6, grad=True)
+        shade(cv, ell(*B(lx, -11.5), 1.6 * s, 2.0 * s), ['B', 'C', 'C', 'C'], grad=False)
+    pen = poly(PL(B, [(55, -25.5), (55, -32.0), (66, -29.0), (55, -27.5)]))
+    for p in dilate(pen, 1) - pen: cv.setif(p[0], p[1], 'j', '.fghin')
+    shade(cv, pen, ['8', '9', 'D', 'E'], bias=0.4, grad=False)
+    for p in polyline(PL(B, [(55, -32.0), (55, -24.0)]), max(0.5, 0.5 * s), 5):
+        cv.setif(p[0], p[1], 'k', '.fghin89DE')
+
     # ---- leather straps round the belly
     for sx in (38, 72):
         st = limb(LN(B, [(sx, 24, 1.8), (sx - 2, 44, 1.8), (sx - 1, 60, 1.8)], s), 8)
@@ -408,8 +443,8 @@ def add_mammoth2(add):
         bsw = o.pop('_bell', 0.0)
         o['cargo'] = lambda c, s, B, body, rng: trader_cargo(c, s, B, body, rng, jig)
         o['after'] = lambda c, s, B, H, parts: bone_bell(c, s, H, 102, 76, bsw)
-        draw_mammoth(cv, 1.0, 4.0, 8.0, o)
-    add('mammoth_trader', 128, 96, [
+        draw_mammoth(cv, 1.30, 8.0, 40.0, o)
+    add('mammoth_trader', 170, 150, [
         dict(seed=31, bob=0.0, _jig=0.0, _bell=0.0, trunk=TRUNK_IDLE),
         dict(seed=32, bob=-1.0, _jig=0.9, _bell=1.6, head_dy=-0.7, tail=1.2,
              trunk=trunk_swing(0.5), legs=[(35, 0.0), (73, 0.0), (28, 0.0), (81, 0.0)]),
