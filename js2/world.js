@@ -802,21 +802,49 @@ const World = {
 
   // A tongue of flame: a teardrop with a hooked tip and a lick or two coming
   // off it, never a cone. Every fire in the game is a row of these.
-  flame(cx, by, h, w, sway, cols) {
-    const ctx = Gfx.ctx;
-    for (let k = 0; k < cols.length; k++) {
-      const kk = k / (cols.length - 1 || 1);
-      const ww = w * (1 - kk * 0.42), hh = h * (1 - kk * 0.30);
-      const tip = cx + sway * (1 + kk);
-      ctx.beginPath();
-      ctx.moveTo(cx - ww, by);
-      ctx.bezierCurveTo(cx - ww * 1.15, by - hh * 0.42, cx - ww * 0.45, by - hh * 0.62, tip - ww * 0.22, by - hh * 0.86);
-      ctx.quadraticCurveTo(tip + ww * 0.30, by - hh * 0.96, tip + ww * 0.05, by - hh);
-      ctx.quadraticCurveTo(tip + ww * 0.62, by - hh * 0.70, cx + ww * 0.55, by - hh * 0.40);
-      ctx.bezierCurveTo(cx + ww * 1.1, by - hh * 0.26, cx + ww, by - hh * 0.1, cx + ww, by);
-      ctx.closePath();
-      ctx.fillStyle = cols[k]; ctx.fill();
+  // A flame, built out of pixels instead of curves. Four nested envelopes -
+  // a dark ember skin, orange body, yellow heart and a white core at the very
+  // bottom - each one a stack of 3px rows whose width tapers to a tip and
+  // whose edge is chewed by a bit of noise. It leans with `sway`, it breathes
+  // on its own clock, and now and then the top of it lets go and rises as a
+  // separate blob, which is the thing that makes fire look like fire.
+  flame(cx, by, h, w, sway, cols, seed = 0) {
+    if (h < 2 || w < 1) return;
+    const STEP = 3;
+    const T = Time.t * 1000 % 1e6 / 1000;
+    const skin = cols[3] || '#7d1d2b';
+    const bands = [
+      { c: skin, k: 1.00, wk: 1.00 },
+      { c: cols[0], k: 0.93, wk: 0.78 },
+      { c: cols[1], k: 0.72, wk: 0.54 },
+      { c: cols[2], k: 0.44, wk: 0.32 },
+    ];
+    if (h > 26) bands.push({ c: '#fffaea', k: 0.20, wk: 0.17 });
+    const noise = (a) => ((Math.sin(a * 12.9898 + seed * 7.13) * 43758.5453) % 1);
+    for (const b of bands) {
+      const bh = h * b.k, bw = w * b.wk;
+      for (let y = 0; y < bh; y += STEP) {
+        const u = y / bh;                                   // 0 at the logs, 1 at the tip
+        // widest a little above the base, pinched to nothing at the top
+        let ww = bw * Math.pow(1 - u, 0.92) * (0.82 + 0.24 * Math.sin(u * 2.6 + 0.4));
+        ww += noise(y * 0.7 + Math.floor(T * 9)) * bw * 0.16 * (0.3 + u);
+        if (ww < 0.8) continue;
+        // it leans more the further up you go, and the lean travels
+        const lean = sway * u * u * 1.7 + Math.sin(T * 6.2 + seed + u * 4.4) * w * 0.20 * u;
+        const px = Math.round(cx + lean - ww);
+        Gfx.rect(px, Math.round(by - y - STEP), Math.max(1, Math.round(ww * 2)), STEP, b.c);
+      }
     }
+    // the bit that lets go, riding up above the tip
+    const lift = (T * 1.6 + seed * 0.37) % 1;
+    if (h > 18) {
+      const ly = by - h * (0.92 + lift * 0.55);
+      const lw = Math.max(1, Math.round(w * 0.34 * (1 - lift)));
+      Gfx.rect(Math.round(cx + sway * 1.6 - lw), Math.round(ly), lw * 2, Math.max(1, Math.round(STEP * (1 - lift * 0.5))), lift > 0.55 ? skin : cols[0]);
+      if (lift > 0.3) Gfx.rect(Math.round(cx + sway * 1.9 - lw * 0.5), Math.round(ly - 4), Math.max(1, lw), 2, skin);
+    }
+    // the hot floor right under it
+    Gfx.rectA(Math.round(cx - w * 1.1), Math.round(by - 2), Math.round(w * 2.2), 3, cols[1], 0.5);
   },
   // ------------------------------------------------------------------- ROAD
   // The chill commute. Nothing to dodge, just a long warm morning.
@@ -1009,7 +1037,7 @@ const World = {
         Gfx.round(bx + 100, gy - 40, 36, 38, 5, '#3b3048');
         Gfx.round(bx + 106, gy - 32, 24, 26, 4, '#241c2e');
         Gfx.sprite('prop_skull', bx + 118, gy - 8, { anchor: 'bc', scale: 0.7 });
-        World.flame(bx + 118, gy - 34, 12, 8, Math.sin(t * 3 + i), ['#e06a1b', '#ffa832', '#ffe98a']);
+        World.flame(bx + 118, gy - 34, 14, 7, Math.sin(t * 3 + i), ['#e06a1b', '#ffa832', '#ffe98a', '#7d1d2b'], i);
         Gfx.glow(bx + 118, gy - 40, 70, '#ffa832', 0.22);
       } else {                                                // a milestone, and somebody's laundry rock
         Gfx.round(bx + 110, gy - 26, 26, 28, 5, '#7a6d8a');
@@ -1956,11 +1984,14 @@ const World = {
       const ex = FX2 - 42 + i * 7, ey = GY - 13 + (i % 3);
       Gfx.rectA(ex, ey, 4, 3, i % 2 ? '#e06a1b' : '#ffa832', 0.45 + Math.abs(Math.sin(t * 5 + i * 1.3)) * 0.55);
     }
-    for (let i = 0; i < 5; i++) {
-      const k = i / 4;
-      const h2 = (50 + Math.abs(Math.sin(t * 6.3 + i * 1.9)) * 44) * (1 - Math.abs(k - 0.5) * 0.66) * lick;
-      World.flame(FX2 - 34 + k * 68, GY - 22, h2, 15 - Math.abs(k - 0.5) * 9,
-        Math.sin(t * 4.7 + i * 2.1) * 6, ['#e06a1b', '#ffa832', '#ffe98a']);
+    // one bed of fire, not five candles: seven tongues that overlap, tallest
+    // in the middle, drawn edges-first so the hot middle sits on top
+    for (const i of [0, 6, 1, 5, 2, 4, 3]) {
+      const k = i / 6;
+      const mid = 1 - Math.abs(k - 0.5) * 2;
+      const h2 = (14 + mid * 32 + Math.abs(Math.sin(t * 6.3 + i * 1.9)) * (10 + mid * 14)) * lick;
+      World.flame(FX2 + (k - 0.5) * 98, GY - 20, h2, 7 + mid * 9,
+        Math.sin(t * 4.7 + i * 2.1) * 5, ['#e06a1b', '#ffa832', '#ffe98a', '#9c3510'], i * 3.7);
     }
     Gfx.glow(FX2, GY - 56, 130 * lick, '#ffe98a', 0.28);
     for (let i = 0; i < 4; i++) stone(i + 5, 0.16 + i / 3 * 0.68 * Math.PI);  // and the front of it

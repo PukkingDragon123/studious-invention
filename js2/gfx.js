@@ -425,6 +425,91 @@ const Input = {
 };
 
 // ---------------------------------------------------------------------------
+// The thumb pad
+// ---------------------------------------------------------------------------
+// One stick and a column of round stone buttons, shared by every stage that
+// is played rather than watched. It is immediate-mode like the rest of the UI:
+// you draw it where you want it and it hands you back what the thumb is doing.
+// The only state it keeps between frames is which touch owns the stick.
+const Pad = {
+  stickId: null,
+  // A thumb stick anchored at (cx, cy). The first touch that lands in the
+  // claim zone owns it until it lifts, so the stick follows your thumb
+  // instead of teleporting to it. Returns { x, y } in -1..1.
+  joystick(cx, cy, r, o = {}) {
+    if (!Input.touch) return { x: 0, y: 0, live: false };
+    const ZW = o.zoneW ?? W * 0.46, ZY = o.zoneY ?? H * 0.30;
+    if (this.stickId === null)
+      for (const c of Input.clicks) if (c.touch && c.x < ZW && c.y > ZY) { this.stickId = c.id; break; }
+    if (this.stickId !== null && !Input.touches.has(this.stickId)) this.stickId = null;
+    let dx = 0, dy = 0;
+    if (this.stickId !== null) {
+      const p = Input.touches.get(this.stickId);
+      dx = (p.x - cx) / r; dy = (p.y - cy) / r;
+      const m = Math.hypot(dx, dy);
+      if (m > 1) { dx /= m; dy /= m; }
+    }
+    const ctx = Gfx.ctx;
+    ctx.globalAlpha = 0.30; Gfx.circle(cx, cy, r, '#120c16'); ctx.globalAlpha = 1;
+    Gfx.ring(cx, cy, r, SKIN.ink, 3);
+    Gfx.ring(cx, cy, r - 3, SKIN.faceMid, 2);
+    for (let i = 0; i < 4; i++) {                    // four notches, so it reads as a stick
+      const a = i * Math.PI / 2;
+      Gfx.rectA(cx + Math.cos(a) * (r - 14) - 3, cy + Math.sin(a) * (r - 14) - 3, 7, 7, SKIN.faceLit, 0.7);
+    }
+    const kx = cx + dx * (r - 24), ky = cy + dy * (r - 24), live = this.stickId !== null;
+    Gfx.circle(kx, ky, 29, SKIN.ink);
+    Gfx.circle(kx, ky, 26, SKIN.btnDark);
+    Gfx.circle(kx, ky, 23, live ? SKIN.btn : SKIN.btnFace);
+    Gfx.circle(kx - 6, ky - 8, 8, SKIN.btnLit);
+    Gfx.ring(kx, ky, 24, SKIN.gold, 2);
+    return { x: dx, y: dy, live };
+  },
+  // A round stone button. Returns { held, pressed } - held for run and move,
+  // pressed for the one-shot things like a jump or a swing.
+  button(cx, cy, r, label, o = {}) {
+    let held = false, pressed = false;
+    const inside = (x, y) => (x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r * 1.1;
+    if (Input.touch) {
+      for (const [id, p] of Input.touches) if (id !== this.stickId && inside(p.x, p.y)) held = true;
+      for (const c of Input.clicks) if (c.touch && inside(c.x, c.y)) pressed = true;
+    } else {
+      held = Input.down && inside(Input.mx, Input.my);
+      pressed = Input.clicks.some(c => inside(c.x, c.y));
+    }
+    if (o.disabled) { held = false; pressed = false; }
+    const lit = held && !o.disabled;
+    Gfx.circle(cx, cy + 3, r, '#120c16');
+    Gfx.circle(cx, cy + (lit ? 2 : 0), r, SKIN.ink);
+    Gfx.circle(cx, cy + (lit ? 2 : 0), r - 3, o.danger ? SKIN.redDark : SKIN.btnDark);
+    Gfx.circle(cx, cy + (lit ? 2 : 0), r - 5, o.disabled ? SKIN.faceMid : o.danger ? SKIN.red : lit ? SKIN.btnLit : SKIN.btn);
+    Gfx.circle(cx - r * 0.3, cy - r * 0.34 + (lit ? 2 : 0), r * 0.3, o.disabled ? SKIN.face : SKIN.btnLit);
+    Gfx.ring(cx, cy + (lit ? 2 : 0), r - 2, o.disabled ? SKIN.faceDark : SKIN.gold, 2);
+    Gfx.text(label, cx, cy - 6 + (lit ? 2 : 0), {
+      color: o.disabled ? SKIN.faceDark : SKIN.textLit, align: 'center', scale: o.scale || 1.2,
+    });
+    return { held, pressed };
+  },
+  // Everything a walking stage needs, laid out for two thumbs. Pass what the
+  // buttons should say; get back one object the stage can read like a gamepad.
+  legs(o = {}) {
+    if (!Input.touch) return { x: 0, jump: false, act: false, run: false };
+    const st = this.joystick(o.stickX ?? 104, o.stickY ?? H - 100, 64);
+    const R = 44, bx = W - 74;
+    const jump = this.button(bx, H - 176, R, o.jumpLabel || 'JUMP');
+    const act = o.act === false ? { held: false, pressed: false }
+      : this.button(bx - 104, H - 108, R - 4, o.actLabel || 'ACT', { disabled: !!o.actOff });
+    const main = this.button(bx, H - 80, R + 6, o.mainLabel || 'GO', { danger: !!o.mainDanger });
+    return {
+      x: st.x, y: st.y, stick: st.live,
+      jump: jump.pressed, jumpHeld: jump.held,
+      act: act.pressed, actHeld: act.held,
+      run: main.held, runPressed: main.pressed,
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Immediate-mode UI
 // ---------------------------------------------------------------------------
 // The look of every window in the game: dark ink outline, parchment face,

@@ -634,10 +634,12 @@ def drive_frames(name):
     return [[(r + '.' * w)[:w] for r in (['.' * w] * (h - len(f)) + f)] for f in out]
 
 def sleep_frames(name):
-    """Flat on his back and properly asleep. Four frames of one slow breath:
-    the belly rises and falls, the jaw drops further on the out-breath, the
-    hand riding on the belly goes with it, and a foot twitches at the top of
-    the cycle. Built from the same primitives as the standing figure."""
+    """On his side with his back to the room, which is what a man looks like
+    when he does not want the morning to start. Four frames of one slow
+    breath: the ribs lift, the shoulder rolls with them, the hide over his
+    hip rises, and a foot twitches at the top of the cycle. No face - that is
+    the point of the pose - so the whole read is the curve of the back, the
+    shoulder blade, the nape and the hair."""
     spec = CAST[name]
     out = []
     BREATH = (0.0, 1.3, 2.2, 1.0)
@@ -647,98 +649,106 @@ def sleep_frames(name):
         g = Grid(W, H)
         GY2 = H - 3
         hr = spec['headR']
-        hx, hy = 13, GY2 - hr - 2
-        # --- the far arm, flung out flat on the floor behind him
-        capsule(g, 27, GY2 - 3, 44, GY2 - 1, 2.6, SKIN['dark'])
-        g.disc(46, GY2 - 1, 3.2, SKIN['dark'])
-        # --- the body, laid out along the ground: chest, belly, hip, knee,
-        # shin, foot. Each one a separate lump, or it reads as a sausage.
-        g.ellipse(25, GY2 - 7 - lift * 0.5, 9, 7 + lift * 0.4, SKIN['base'])       # chest
-        g.ellipse(38, GY2 - 8 - lift, 13, 9 + lift, SKIN['base'])                  # belly
-        g.ellipse(50, GY2 - 6, 9, 6, SKIN['base'])                                 # hip
-        g.ellipse(61, GY2 - 9 - twitch, 7.5, 8, SKIN['base'])                      # the knee, up in the air
-        g.ellipse(69, GY2 - 4 - twitch, 6, 4, SKIN['base'])                        # shin
-        g.ellipse(75, GY2 - 6 - twitch * 2, 3.6, 5.0, SKIN['base'])                # foot, toes up
+        hx, hy = 14, GY2 - hr - 3
+        # --- the far arm, out in front of him where we can only just see it
+        capsule(g, 20, GY2 - 5, 31, GY2 - 2, 2.4, SKIN['dark'])
+        g.disc(32, GY2 - 2, 3.0, SKIN['dark'])
+        # --- the legs, drawn up: thigh, knee, shin, foot, all behind the back
+        g.ellipse(54, GY2 - 7, 10, 7, SKIN['dark'])                            # far thigh
+        g.ellipse(64, GY2 - 5 - twitch, 7, 5, SKIN['dark'])                    # far shin
+        # --- the back itself: shoulder, the long of the back, the hip. The
+        # top edge is the silhouette everything else hangs off.
+        g.ellipse(26, GY2 - 11 - lift * 0.7, 10, 9 + lift * 0.5, SKIN['base'])  # shoulder / ribs
+        g.ellipse(38, GY2 - 10 - lift * 0.5, 12, 8 + lift * 0.4, SKIN['base'])  # the small of the back
+        g.ellipse(51, GY2 - 9, 11, 8, SKIN['base'])                             # hip, the widest point
+        g.ellipse(61, GY2 - 8 - twitch, 8, 7.0, SKIN['base'])                   # near thigh
+        g.ellipse(70, GY2 - 5 - twitch, 6, 4.5, SKIN['base'])                   # near shin
+        g.ellipse(75, GY2 - 5 - twitch * 2, 3.4, 4.6, SKIN['base'])             # foot
         if twitch:
-            g.px(77, GY2 - 12, SKIN['hi']); g.px(78, GY2 - 11, SKIN['hi'])
-        # --- head and neck
+            g.px(77, GY2 - 10, SKIN['hi']); g.px(78, GY2 - 9, SKIN['hi'])
+        for k in range(5):                                                     # the crease behind the knee
+            g.px(67, GY2 - 3 - k - twitch, SKIN['dark'])
+        # --- the nape and the back of the head
+        capsule(g, hx + hr * 0.75, hy + hr * 0.45, 22, GY2 - 14, hr * 0.44, SKIN['base'])
         g.ellipse(hx, hy, hr, hr * 1.02, SKIN['base'])
-        g.ellipse(hx + 1, hy + hr * 0.45, hr * 0.8, hr * 0.5, SKIN['base'])
-        capsule(g, hx + hr * 0.7, hy + hr * 0.5, 21, GY2 - 10, hr * 0.42, SKIN['base'])
-        sil_shade(g, SKIN, 999, edge_dark=True)          # shade by row, light from above-left
+        sil_shade(g, SKIN, 999, edge_dark=True)
         rim(g, SKIN, 999)
-        # --- the hide, over the middle only: the chest, the knees and the feet
-        # all stay outside it, or the whole figure reads as one sausage
+        # --- the shoulder blade and the spine, which is what says 'back'
+        for i in range(7):
+            g.px(24 + i, GY2 - 16 - int(lift * 0.6) + (i > 3), SKIN['mid'])
+        for i in range(5):
+            g.px(23 + i, GY2 - 13 - int(lift * 0.5), SKIN['mid'])
+        for i in range(16):                                                    # the spine, in shadow
+            x = 28 + i
+            y = GY2 - 13 - int(lift * 0.5) + int(math.sin(i / 15 * math.pi) * 2)
+            g.px(x, y, SKIN['dark'])
+            if i % 3 == 0: g.px(x, y + 1, SKIN['dark'])
+        # --- the hide, pulled up over the hip and the small of the back
         gf = Grid(W, H)
-        for x in range(32, 57):
-            t = (x - 32) / 25
-            h2 = 9 + math.sin(t * math.pi) * 5 + lift
-            for k in range(int(h2)):
+        X0, X1 = 33, 60
+        def hide_h(x):
+            t = (x - X0) / (X1 - X0)
+            return 11 + math.sin(t * math.pi) * 6 + lift
+        for x in range(X0, X1):
+            for k in range(int(hide_h(x))):
                 gf.px(x, GY2 - k, FUR['base'])
-        for x in range(32, 57):
-            base = int(9 + math.sin((x - 32) / 25 * math.pi) * 5 + lift)
+        for x in range(X0, X1):
+            base = int(hide_h(x))
             for k in range(1 + ((x * 5) % 3)): gf.px(x, GY2 - base - k, FUR['mid'])
         sil_shade(gf, FUR, 999, edge_dark=False)
         for y in range(H):
             for x in range(W):
                 if gf.get(x, y) != '.': g.px(x, y, gf.get(x, y))
-        for x in range(32, 57):                               # tufts along the top edge
-            base = int(9 + math.sin((x - 32) / 25 * math.pi) * 5 + lift)
-            top = GY2 - base - (1 + ((x * 5) % 3))
+        for x in range(X0, X1):                                # tufts along the top edge
+            top = GY2 - int(hide_h(x)) - (1 + ((x * 5) % 3))
             g.px(x, top - 1, FUR['dark'])
             if x % 4 == 0:
                 for k in range(1 + (x % 2)): g.px(x, top - 2 - k, FUR['mid'])
-        for k in range(int(10 + lift)):                       # it hangs off the sides
-            g.px(31, GY2 - k, FUR['dark'])
-            g.px(57, GY2 - k, FUR['dark'])
-        for x in range(33, 56, 4):                            # and the nap of it
-            b2 = int(9 + math.sin((x - 32) / 25 * math.pi) * 5 + lift)
+        for k in range(int(12 + lift)):                        # it hangs off both ends
+            g.px(X0 - 1, GY2 - k, FUR['dark'])
+            g.px(X1, GY2 - k, FUR['dark'])
+        for x in range(X0 + 1, X1 - 1, 4):                     # the nap of it
+            b2 = int(hide_h(x))
             for k in range(2, b2 - 1, 3): g.px(x + (k % 2), GY2 - k, FUR['dark'])
-        # --- the near arm, lying over the hide with the hand on his chest
+        # --- the top arm, lying along his side and over the hide
         ga = Grid(W, H)
-        capsule(ga, 25, GY2 - 12, 37, GY2 - 16 - lift, 3.4, SKIN['base'])
-        ga.disc(39, GY2 - 16 - lift, 3.8, SKIN['base'])
+        capsule(ga, 27, GY2 - 15 - int(lift * 0.6), 40, GY2 - 12 - int(lift * 0.4), 3.4, SKIN['base'])
+        capsule(ga, 40, GY2 - 12 - int(lift * 0.4), 47, GY2 - 14, 3.0, SKIN['base'])
+        ga.disc(48, GY2 - 14, 3.4, SKIN['base'])
         sil_shade(ga, SKIN, 999, edge_dark=True)
-        for p in ga.cells() if hasattr(ga, 'cells') else []: pass
         for y in range(H):
             for x in range(W):
                 if ga.get(x, y) != '.':
-                    if (ga.get(x, y - 1) == '.' and y > 0): g.px(x, y - 1, '0')
+                    if y > 0 and ga.get(x, y - 1) == '.': g.px(x, y - 1, '0')
                     g.px(x, y, ga.get(x, y))
         for y in range(H):
             for x in range(W):
                 if ga.get(x, y) != '.' and ga.get(x, y + 1) == '.': g.px(x, y + 1, '0')
-        for (px2, py2) in ((27, GY2 - 13), (32, GY2 - 15), (36, GY2 - 17)):
-            g.px(px2, py2 - int(lift * 0.5), SKIN['line'])
-        g.disc(40, GY2 - 17 - lift, 1.8, SKIN['hi'])
-        # --- face: one heavy shut eye, a dash brow, and a snoring cavern
+        for (px2, py2) in ((30, GY2 - 18), (36, GY2 - 16), (42, GY2 - 14)):    # the line of it
+            g.px(px2, py2 - int(lift * 0.4), SKIN['line'])
+        # --- the ear, only just, and the hair over the crown and down the nape
         hcol = spec.get('hair', 'f'); hlit = spec.get('hair2', 'g'); hdark = spec.get('hair3', '0')
-        for i in range(4):                                                    # brow
-            g.px(hx - 10 + i, hy - 5 + (i > 1), '0'); g.px(hx - 10 + i, hy - 4 + (i > 1), '0')
-        for i, dy in enumerate((0, -1, -1, 0, 1)):                            # the shut eye, curved
-            g.px(hx - 10 + i, hy + dy, '0'); g.px(hx - 10 + i, hy + dy + 1, '0')
-        g.px(hx - 5, hy + 2, '0')
-        g.ellipse(hx - 11, hy + 3.4, 2.8, 2.3, SKIN['base'])                  # the nose, pointing up
-        g.ellipse(hx - 11.4, hy + 2.8, 1.6, 1.2, SKIN['hi'])
-        g.px(hx - 9, hy + 4, SKIN['line'])
-        mw = 4.0 + lift * 0.9
-        g.ellipse(hx - 5, hy + 8, mw + 1, 2.6 + lift * 0.6, SKIN['line'])     # the snoring cavern
-        g.ellipse(hx - 5, hy + 8, mw, 2.0 + lift * 0.6, '0')
-        for i in range(int(mw * 1.4)): g.px(hx - 5 - mw * 0.7 + i, hy + 8 - 1.6, '$')
-        g.ellipse(hx - 5, hy + 9.2, mw * 0.55, 1.0 + lift * 0.2, 'E')
-        if lift > 1.6:                                                        # a bubble, at the top of the breath
-            g.ellipse(hx - 13, hy + 5.5, 2.6, 2.4, SKIN['line'])
-            g.ellipse(hx - 13, hy + 5.5, 1.7, 1.5, '6')
-            g.px(hx - 14, hy + 4.5, '7')
-        # --- hair, shoved back over the crown by the pillow
-        for (ox, oy, r2) in ((-0.34, -0.94, 0.40), (0.10, -1.00, 0.44),
-                             (0.56, -0.92, 0.42), (0.94, -0.66, 0.38), (1.14, -0.26, 0.30)):
-            g.disc(hx + ox * hr, hy + oy * hr, r2 * hr, hcol)
-        for (ox, oy, r2) in ((-0.26, -1.06, 0.22), (0.24, -1.14, 0.22), (0.72, -1.02, 0.18)):
-            g.disc(hx + ox * hr, hy + oy * hr, r2 * hr, hlit)
-        for (ox, oy, r2) in ((0.44, -0.62, 0.18), (1.02, -0.44, 0.16)):
-            g.disc(hx + ox * hr, hy + oy * hr, r2 * hr, hdark)
-        # --- necklace
-        for i in range(6): g.px(21 + i, GY2 - 13 - int(lift * 0.5) + abs(i - 2), BONE['hi'] if i % 2 else BONE['base'])
+        g.ellipse(hx + hr * 0.74, hy + hr * 0.12, hr * 0.20, hr * 0.28, SKIN['mid'])   # the ear, only just
+        gh = Grid(W, H)
+        HAIR = dict(hi=hlit, base=hcol, mid=hdark, dark=hdark, line='0')
+        # one mass, not a bag of circles: a cap over the crown that runs down
+        # the nape and thins out where it meets the shoulder
+        gh.ellipse(hx - hr * 0.10, hy - hr * 0.34, hr * 1.06, hr * 0.94, hcol)
+        gh.ellipse(hx - hr * 0.62, hy + hr * 0.16, hr * 0.62, hr * 0.74, hcol)
+        gh.ellipse(hx - hr * 0.50, hy + hr * 0.62, hr * 0.46, hr * 0.44, hcol)
+        gh.ellipse(hx + hr * 0.34, hy - hr * 0.62, hr * 0.54, hr * 0.44, hcol)
+        sil_shade(gh, HAIR, 999, edge_dark=True)
+        for y in range(H):
+            for x in range(W):
+                if gh.get(x, y) != '.': g.px(x, y, gh.get(x, y))
+        for i in range(9):                                     # strands, so it is not a helmet
+            ang = -2.5 + i * 0.30
+            r0 = hr * 0.5
+            x0 = hx + math.cos(ang) * r0 - hr * 0.1
+            y0 = hy + math.sin(ang) * r0 - hr * 0.3
+            for k in range(3):
+                g.px(int(x0 + math.cos(ang) * k * 1.4), int(y0 + math.sin(ang) * k * 1.4),
+                     hlit if i % 3 == 0 else hdark)
+        # the necklace is under him, where a necklace goes when you lie down
         out.append([''.join(r) for r in g.g])
     return out

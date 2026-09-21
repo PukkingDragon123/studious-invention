@@ -91,7 +91,7 @@ class SideScroll extends MiniGame {
     this.lunge = 0;                                // how hard the pursuer is snapping
     this.intro = o.intro ?? 1.2;
     this.o.hint = o.hint || (Input.touch
-      ? 'HOLD LOW TO WALK  -  TAP HIGH TO JUMP'
+      ? 'STICK TO WALK  -  GO TO RUN ON  -  JUMP TO JUMP'
       : 'A / D TO WALK  -  SPACE TO JUMP  -  HOLD IT TO JUMP HIGHER');
   }
   step(dt) {
@@ -101,17 +101,21 @@ class SideScroll extends MiniGame {
     if (Input.isDown('KeyA', 'ArrowLeft')) dir = -1;
     if (Input.pressed('Space', 'KeyW', 'ArrowUp')) jumpPress = true;
     let jumpHeld = Input.isDown('Space', 'KeyW', 'ArrowUp');
-    if (Input.touch) {
-      // the bottom of the screen steers, the top of it jumps. no overlap.
-      for (const p of Input.touches.values()) if (p.y > H * 0.42) dir = p.x > W * 0.5 ? 1 : -1;
-      for (const c of Input.clicks) if (c.y <= H * 0.42) jumpPress = true;
-    } else if (Input.down && Input.my > 120) dir = Input.mx > W * 0.5 ? 1 : -1;
+    // the thumb pad, drawn in drawHud and read here: a stick to walk with and
+    // a jump button, so a phone plays the same game a keyboard does
+    const pad = this.pad;
+    if (pad) {
+      if (pad.run) dir = 1;                        // the big button is 'forward'
+      if (Math.abs(pad.x) > 0.18) dir = pad.x > 0 ? 1 : -1;
+      if (pad.jump || pad.act) jumpPress = true;
+      if (pad.jumpHeld || pad.actHeld) jumpHeld = true;
+    } else if (!Input.touch && Input.down && Input.my > 120 && Input.my < H - 150) dir = Input.mx > W * 0.5 ? 1 : -1;
     if (jumpPress && Input.touch) this.touchHold = 0.17;      // a tap still gets a full jump
     this.touchHold = Math.max(0, this.touchHold - dt);
     jumpHeld = jumpHeld || this.touchHold > 0;
 
     // --------------------------------------------------------- left / right
-    const cap = this.runSpeed;
+    const cap = this.runSpeed * (pad && Math.abs(pad.x) > 0.18 ? clamp(Math.abs(pad.x) * 1.35, 0.4, 1) : 1);
     const accel = (this.onGround ? PLAT.accel : PLAT.airAccel) * (this.o.accelMul || 1);
     if (dir) this.vx = clamp(this.vx + dir * accel * dt, -cap, cap);
     else {
@@ -332,6 +336,11 @@ class SideScroll extends MiniGame {
     this.drawHud();
   }
   drawHud() {
+    this.pad = Input.touch ? Pad.legs({
+      jumpLabel: this.o.vehicle ? 'HOP' : 'JUMP',
+      mainLabel: this.o.vehicle ? 'GO' : 'RUN',
+      act: false,
+    }) : null;
     if (this.o.bare) { if (this.intro > 0) this.drawFrame('', '', undefined); return; }
     if (this.pursuer) {
       const px = this.sx(this.pursuer.x);
@@ -461,7 +470,7 @@ class DriveGame extends SideScroll {
       pursuerRamp: ev ? 120 : 0,
       title: ev ? 'DRIVING HOME' : 'DRIVING TO WORK',
       sub: ev ? 'faster. faster. faster.' : 'same as every day',
-      hint: Input.touch ? 'HOLD RIGHT TO DRIVE  -  TAP HIGH TO HOP' : 'D TO DRIVE  -  SPACE TO HOP THE ROCKS',
+      hint: Input.touch ? 'HOLD GO TO DRIVE  -  HOP OVER THE ROCKS' : 'D TO DRIVE  -  SPACE TO HOP THE ROCKS',
       paint: (camX, t) => World.road(t, { scared: ev }, camX),
     }, o));
     this.ev = ev;
@@ -577,7 +586,7 @@ class MineGame extends SideScroll {
     }
     // ------------------------------------------------------------- the input
     const act = Input.pressed('Space', 'Enter', 'KeyE')
-      || (Input.clicks.length > 0 && (!Input.touch || Input.clicks.some(c => c.y > H * 0.42)));
+      || (this.pad ? this.pad.act : Input.clicks.length > 0);
     if (act && this.swing < 0) {
       if (face >= 0) { this.swing = 0; this.struck = false; this.lastFace = face; AudioSys.sfx('whoosh', { vol: 0.4 }); }
       else if (this.atBox) this.deposit();
@@ -655,6 +664,8 @@ class MineGame extends SideScroll {
         for (let k = 0; k < 3; k++) Gfx.rectA(ax + d * k * 9, ay - k * 2, 7, 4 + k * 3, '#ffe98a', 0.5 - k * 0.12);
       }
     });
+    this.pad = Input.touch ? Pad.legs({ jumpLabel: 'JUMP', mainLabel: 'GO', actLabel: 'SWING',
+      actOff: this.atFace < 0 && !this.atBox }) : null;
     if (this.barkT > 0 && this.bark) this.drawBark();
     if (this.atFace >= 0) this.drawBar();
     else if (this.prompt) this.drawPrompt();
@@ -671,7 +682,7 @@ class MineGame extends SideScroll {
     Gfx.ctx.globalAlpha = 1;
   }
   drawPrompt() {
-    const w = 300, x = W / 2 - w / 2, y = H - 104;
+    const w = 300, x = W / 2 - w / 2, y = Input.touch ? H - 196 : H - 104;
     UI.slab(x, y, w, 44, { r: 5 });
     Gfx.text(this.prompt, W / 2, y + 14, { color: SKIN.text, align: 'center', scale: 1.4 });
     Gfx.text(Input.touch ? 'TAP' : 'SPACE', W / 2, y + 32, { color: SKIN.faceDark, align: 'center', scale: 0.9 });
@@ -679,7 +690,7 @@ class MineGame extends SideScroll {
   // the swing bar: a green window, a sweeping marker, and how cracked the
   // face is underneath it
   drawBar() {
-    const w = 420, x = W / 2 - w / 2, y = H - 104;
+    const w = Input.touch ? 320 : 420, x = W / 2 - w / 2, y = Input.touch ? H - 196 : H - 104;
     Gfx.rectA(x - 14, y - 12, w + 28, 84, '#120c16', 0.72);
     Gfx.rect(x - 14, y - 14, w + 28, 3, '#ffe98a');
     Gfx.round(x, y, w, 30, 6, '#241c2e');

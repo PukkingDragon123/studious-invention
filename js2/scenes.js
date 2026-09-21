@@ -85,9 +85,10 @@ function titleStone(t) {
     for (let i = 0; i < 4; i++) Gfx.rect(tx - 8, y + 200 + i * 78, 16, 6, '#241109');
     Gfx.round(tx - 15, y + 150, 30, 24, 8, '#241c2e');
     Gfx.round(tx - 12, y + 152, 24, 8, 4, '#574a66');
-    for (let i = 0; i < 3; i++)
-      World.flame(tx + sw + (i - 1) * 7, y + 156, 34 + Math.abs(Math.sin(t * 6 + i)) * 26, 9,
-        Math.sin(t * 4.3 + i * 2) * 4, ['#9c3510', '#e06a1b', '#ffa832', '#ffe08a']);
+    for (const i of [0, 2, 1])
+      World.flame(tx + sw + (i - 1) * 5, y + 156, (i === 1 ? 46 : 30) + Math.abs(Math.sin(t * 6 + i)) * 18,
+        i === 1 ? 13 : 8, Math.sin(t * 4.3 + i * 2) * 4,
+        ['#e06a1b', '#ffa832', '#ffe98a', '#9c3510'], i * 2.3 + tx);
     Gfx.glow(tx, y + 130, 190, '#ffa832', 0.26 + Math.sin(t * 8 + tx) * 0.05);
     if (chance(0.4)) Particles.fire(tx + rnd(-8, 8), y + 140, 1);
   }
@@ -125,11 +126,11 @@ function titleStone(t) {
     Gfx.text(txt, cx + 1, ty + 1, { color: '#3a2415', align: 'center', scale: sc });
     Gfx.text(txt, cx, ty, { color: col, align: 'center', scale: sc });
   };
-  carve('ONGA', y + 62, 6.2, '#9c3510');
-  carve('BONGA', y + 140, 6.2, '#5c1607');
-  Gfx.rect(x + 40, y + 220, w - 80, 3, '#3a2415');
-  Gfx.rect(x + 40, y + 223, w - 80, 2, SKIN.faceHi);
-  carve('A STONE AGE ROCK SAGA', y + 232, 1.3, '#3a2415');
+  carve('ONGA', y + 48, 5.6, '#9c3510');
+  carve('BONGA', y + 116, 5.6, '#5c1607');
+  Gfx.rect(x + 40, y + 188, w - 80, 3, '#3a2415');
+  Gfx.rect(x + 40, y + 191, w - 80, 2, SKIN.faceHi);
+  carve('A STONE AGE ROCK SAGA', y + 200, 1.3, '#3a2415');
   // ---- hand prints, the way you sign a wall
   for (const [hx, hy, fl] of [[x + 34, y + 96, false], [x + w - 46, y + 128, true]]) {
     ctx.globalAlpha = 0.5;
@@ -170,12 +171,18 @@ class TitleScene {
   draw() {
     drawTitleWorld(this.t);
     const st = titleStone(this.t);
+    // the menu, sized to fit whatever it holds: five entries with a save,
+    // four without, and never off the bottom of the stone
+    const items = [];
+    if (Game.hasSave()) items.push(['CONTINUE', () => Game.continueRun()]);
+    items.push([Game.hasSave() ? 'NEW STORY' : 'START', () => Game.newRun()]);
+    items.push(['HOW TO PLAY', () => Game.overlay = new HowToOverlay()]);
+    items.push(['SETTINGS', () => Game.overlay = new PauseOverlay(true)]);
+    items.push(['CREDITS', () => Game.overlay = new CreditsOverlay()]);
     const bw = 260, bx = st.cx - bw / 2;
-    let y = st.y + 270;
-    if (Game.hasSave()) { UI.wbutton(bx, y, bw, 46, 'CONTINUE', () => Game.continueRun(), { scale: 1.4 }); y += 56; }
-    UI.wbutton(bx, y, bw, 46, Game.hasSave() ? 'NEW STORY' : 'START', () => Game.newRun(), { scale: 1.4 }); y += 56;
-    UI.wbutton(bx, y, bw, 46, 'HOW TO PLAY', () => Game.overlay = new HowToOverlay(), { scale: 1.4 }); y += 56;
-    UI.wbutton(bx, y, bw, 46, 'SETTINGS', () => Game.overlay = new PauseOverlay(true), { scale: 1.4 });
+    const bh = items.length > 4 ? 40 : 46, gap = bh + 8;
+    let y = Math.max(st.y + 236, st.y + st.h - 26 - items.length * gap + 8);
+    for (const [label, cb] of items) { UI.wbutton(bx, y, bw, bh, label, cb, { scale: 1.4 }); y += gap; }
     Gfx.text(Input.touch ? 'tap the frets, save the family' : 'arrows or D F J K  -  save the family',
       W / 2, H - 22, { color: '#c4b89a', align: 'center', outline: true });
   }
@@ -371,6 +378,84 @@ class PauseOverlay {
       Gfx.textWrap('Notes landing late? Lower the offset. Early? Raise it.', x + 2, y, w - 210, { color: SKIN.textDim, lineHeight: 14 });
       UI.wbutton(W / 2 - 90, 56 + PH - 56, 180, 44, 'BACK', () => { if (this.settingsOnly) Game.overlay = null; else this.mode = 'menu'; });
     }
+  }
+}
+
+// ------------------------------------------------------------------ CREDITS
+// The names, carved and scrolling, over the fire. It reads itself if you
+// leave it alone, and you can drag it with the wheel or a finger.
+class CreditsOverlay {
+  constructor(onClose) {
+    this.onClose = onClose; this.y = -140; this.t = 0; this.drag = null;
+    this.lines = [
+      { t: 'ONGA BONGA', s: 2.6, c: SKIN.red, gap: 10 },
+      { t: 'a stone age rock opera', s: 1.2, c: SKIN.textDim, gap: 30 },
+
+      { t: 'THE BAND', s: 1.6, c: SKIN.red, gap: 8 },
+      { t: 'BRONK ROCKBOTTOM . . . . . . . rhythm, mostly', s: 1.1 },
+      { t: 'PEBBLE . . . . . . . . . . . . . . . . . . drums', s: 1.1 },
+      { t: 'ROXY . . . . . . . . . . . . . . . . . . . flute', s: 1.1 },
+      { t: 'VELA . . . . . . . . . . . . . . . . management', s: 1.1 },
+      { t: 'BLAZE . . . . . . . . . . . . . . . . percussion', s: 1.1, gap: 30 },
+
+      { t: 'SUPPORTING', s: 1.6, c: SKIN.red, gap: 8 },
+      { t: 'TRUNKS . . . . . . . . . . . . . . . . plumbing', s: 1.1 },
+      { t: 'THE FOREMAN . . . . . . . . . . . . . . . slate', s: 1.1 },
+      { t: 'THE CHAMELEON ON THE POLE . . . . . . . traffic', s: 1.1 },
+      { t: 'SUSAN . . . . . . . . . . . . . . . triceratops', s: 1.1 },
+      { t: 'A DODO . . . . . . . . . . . . . . . . flattened', s: 1.1, gap: 30 },
+
+      { t: 'MADE OF', s: 1.6, c: SKIN.red, gap: 8 },
+      { t: 'one canvas, 960 by 540', s: 1.1 },
+      { t: 'no engine, no libraries, no build step', s: 1.1 },
+      { t: 'every sprite placed a pixel at a time', s: 1.1 },
+      { t: 'every note synthesised in your browser', s: 1.1, gap: 30 },
+
+      { t: 'BUILT WITH CLAUDE CODE', s: 1.4, c: SKIN.goldDark, gap: 34 },
+
+      { t: 'and nobody found a rock shaped like a face.', s: 1.1, c: SKIN.textDim, gap: 40 },
+      { t: 'THANK YOU FOR PLAYING', s: 1.8, c: SKIN.red, gap: 60 },
+    ];
+  }
+  close() { if (this.onClose) this.onClose(); else Game.overlay = null; }
+  update(dt) {
+    this.t += dt;
+    if (Input.pressed('Escape')) this.close();
+    if (this.t > 0.6 && !this.drag) this.y += dt * 34;
+    if (Input.wheel) this.y += Input.wheel * 26;            // it reads itself
+    // a finger anywhere in the panel scrolls it
+    if (Input.down) {
+      if (this.drag === null) this.drag = { y: Input.my, at: this.y };
+      this.y = this.drag.at - (Input.my - this.drag.y);
+    } else this.drag = null;
+    const total = this.height();
+    if (this.y > total) this.y = -260;                            // it loops
+    if (this.y < -300) this.y = -300;
+  }
+  height() { return this.lines.reduce((a, l) => a + Math.round(18 * (l.s || 1.1)) + (l.gap || 6), 0); }
+  draw() {
+    Gfx.rectA(0, 0, W, H, '#120c16', 0.78);
+    const PW = 560, PH = 452, PX = W / 2 - PW / 2, PY = 44;
+    const r = UI.window(PX, PY, PW, PH, 'CREDITS', { onClose: () => this.close() });
+    const ctx = Gfx.ctx;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h - 54); ctx.clip();
+    let y = r.y + r.h - 54 - this.y;
+    for (const l of this.lines) {
+      const h = Math.round(18 * (l.s || 1.1));
+      if (y > r.y - h && y < r.y + r.h) {
+        Gfx.text(l.t, PX + PW / 2, y + 1, { color: SKIN.faceHi, align: 'center', scale: l.s || 1.1 });
+        Gfx.text(l.t, PX + PW / 2, y, { color: l.c || SKIN.text, align: 'center', scale: l.s || 1.1 });
+      }
+      y += h + (l.gap || 6);
+    }
+    ctx.restore();
+    // the fade at each end, so the text arrives out of the stone
+    for (let i = 0; i < 10; i++) {
+      Gfx.rectA(r.x, r.y + i * 2, r.w, 2, SKIN.face, 0.85 - i * 0.085);
+      Gfx.rectA(r.x, r.y + r.h - 56 - i * 2, r.w, 2, SKIN.face, 0.85 - i * 0.085);
+    }
+    UI.wbutton(W / 2 - 90, PY + PH - 58, 180, 44, 'BACK', () => this.close());
   }
 }
 
