@@ -405,20 +405,28 @@ function* introScript(S) {
   AudioSys.play('chase', { fade: 0.3, intensity: 2 });
   AudioSys.sfx('roar', { pitch: 46, vol: 1, len: 2.0 });
   Juice.shake(20, 1.4); Juice.flash('#ffffff', 0.4, 4);
-  const trex = S.add('trex', { base: 'trex', x: QUARRY.face - 40, y: GY, scale: 1.1, facing: 1 });
+  const trex = S.add('trex', { base: 'trex', x: QUARRY.box - 380, y: GY, scale: 1.1, facing: 1 });
   trex.play('roar');
-  yield* S.pan(QUARRY.face + 60, 310, 0.6);
+  yield* S.pan(QUARRY.box - 280, 310, 0.6);
   Emotes.show(bronk, '!', 1.4);
   yield 0.8;
   yield* S.say('BRONK', 'THAT IS NOT ONE OF OURS.', { at: bronk });
   // it walks through the shift. the shift does not survive it.
   trex.play('walk');
   Co.run(function* () {
+    let stepT = 0;
     for (let i = 0; i < 400; i++) {
       trex.x += Time.dt * 120;
       if (chance(Time.dt * 22)) Particles.spawn(trex.x + rnd(-80, 80), GY - rnd(0, 90),
         { n: 1, color: ['#7a6d8a', '#574a66', '#e06a1b'], speed: 190, spread: 6.28, life: 1.2, size: 5, sizeEnd: 0, gravity: 340 });
-      if (chance(Time.dt * 3)) { Juice.shake(9, 0.2); AudioSys.sfx('thud', { vol: 0.7 }); }
+      // every footfall throws a piece of the quarry floor at the camera
+      stepT += Time.dt;
+      if (stepT > 0.44) {
+        stepT = 0;
+        Particles.stomp(trex.x - 16, GY + 2, 1.5);
+        Particles.debris(trex.x + rnd(-60, 60), GY, 6);
+        Juice.shake(9, 0.2); AudioSys.sfx('thud', { vol: 0.7 });
+      }
       yield 0;
     }
   }());
@@ -477,15 +485,15 @@ function* introScript(S) {
   const chase = yield* S.mini(new SideScroll({
     vehicle: 'car', vehicleScale: 1, startX: 0, goal: 2200, speed: 320, grip: 5,
     jump: true,
-    obstacles: Array.from({ length: 11 }, (_, i) => ({
-      x: 260 + i * 170 + (i % 3) * 40,
-      spr: i % 3 === 0 ? 'prop_deadtree' : i % 3 === 1 ? 'prop_rock' : 'prop_bones',
-      scale: i % 3 === 0 ? 0.8 : 1.1, w: 40, h: i % 3 === 0 ? 54 : 36,
+    obstacles: Array.from({ length: 15 }, (_, i) => ({
+      x: 240 + i * 132 + (i % 3) * 38,
+      spr: ['prop_deadtree', 'prop_rock', 'prop_bones', 'prop_barrel'][i % 4],
+      scale: i % 4 === 0 ? 0.8 : 1.1, w: 40, h: i % 4 === 0 ? 54 : 36,
     })),
     paint: Scroll('flight', { embers: true }),
     ahead: { spr: 'blaze_walk', gap: 420, speed: 258, scale: 1, carry: 'vela_cry' },
     pursuer: { spr: 'trex_walk', roarSpr: 'trex_roar', gap: 400, speed: 244, scale: 1.15 },
-    pursuerRamp: 30, leash: 520, catchTime: 3.0,
+    pursuerRamp: 46, leash: 520, catchTime: 3.0,
     title: 'ONE IN FRONT, ONE BEHIND', sub: 'jump, or be lunch',
   }));
 
@@ -497,13 +505,29 @@ function* introScript(S) {
   S.overlay = world => { if (!world) return; Gfx.sprite('car', 336, GY + 2, { anchor: 'bc', frame: 0, rot: 0.12 }); };
   AudioSys.sfx('thud'); Juice.shake(10, 0.5);
   for (let i = 0; i < 16; i++) Particles.spawn(336, GY - 40, { n: 1, color: ['#3b3048', '#574a66'], speed: 60, gravity: -40, life: 2.2, size: 6, sizeEnd: 0 });
+  Particles.debris(336, GY, 18, ['#3b3048', '#574a66', '#5c3a20', '#85562f']);
+  Particles.embers(336, GY - 30, 8);
   yield 0.9;
   yield* S.say('BRONK', 'No. No no no. Not the wheel. NOT THE WHEEL.', { at: bronk });
   trex.play('roar');
   yield* S.pan(500, 306);
   AudioSys.sfx('roar', { pitch: 40, vol: 1, len: 2 });
   Juice.shake(18, 1.4);
-  Co.run(function* () { for (let i = 0; i < 300; i++) { if (trex.x > 452) trex.x -= Time.dt * 48; yield 0; } }());
+  Co.run(function* () {
+    let st = 0;
+    for (let i = 0; i < 300; i++) {
+      if (trex.x > 452) trex.x -= Time.dt * 48;
+      st += Time.dt;
+      if (st > 0.62) {                                  // it is in no hurry, and it is very heavy
+        st = 0;
+        Particles.stomp(trex.x + 10, GY + 2, 1.7);
+        Particles.debris(trex.x + rnd(-40, 40), GY, 7);
+        Juice.shake(7, 0.22); AudioSys.sfx('thud', { vol: 0.8 });
+      }
+      if (chance(Time.dt * 8)) Particles.embers(rnd(280, 700), GY - rnd(0, 60), 1);
+      yield 0;
+    }
+  }());
   yield 1.4;
   bronk.play('shock');
   yield* S.say('BRONK', "...alright. Alright. It's been a good run. Tell the kids I said the rock looked like a face.", { at: bronk });

@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------- HUD icons
-SPRITES.icon_heart = { frames: [[
+SPRITES.icon_heart = { outline: true, frames: [[
   '..................',
   '..................',
   '...DDDDD..DDDDD...',
@@ -42,7 +42,7 @@ SPRITES.icon_heart = { frames: [[
   '..................',
   '..................',
 ]]};
-SPRITES.icon_energy = { frames: [[
+SPRITES.icon_energy = { outline: true, frames: [[
   '......................',
   '..........JJ..........',
   '..........KK..........',
@@ -89,7 +89,7 @@ SPRITES.icon_energy = { frames: [[
   '..........LL..........',
   '..........KK..........',
 ]]};
-SPRITES.icon_coin = [
+SPRITES.icon_coin = { outline: true, frames: [[
   '..................',
   '......99999Z......',
   '....ZZ99Z998ZZ....',
@@ -108,8 +108,8 @@ SPRITES.icon_coin = [
   '....ZY8ZYYZZYY....',
   '......ZYYYYY......',
   '..................',
-];
-SPRITES.icon_shield = [
+]] };
+SPRITES.icon_shield = { outline: true, frames: [[
   '....................',
   '...ssssssssssrrrp...',
   '..srrrrrrrrrqqqqpo..',
@@ -132,8 +132,8 @@ SPRITES.icon_shield = [
   '........sqpo........',
   '.........qo.........',
   '....................',
-];
-SPRITES.icon_stamina = [
+]] };
+SPRITES.icon_stamina = { outline: true, frames: [[
   '.......tttt.......',
   '.....tvvvvvvt.....',
   '...tvvvuuuuuuvt...',
@@ -152,8 +152,8 @@ SPRITES.icon_stamina = [
   '...tuuuuuuuuuut...',
   '.....tuuuuuut.....',
   '.......tttt.......',
-];
-SPRITES.icon_note = [
+]] };
+SPRITES.icon_note = { outline: true, frames: [[
   '.........$##....',
   '.........$#$#...',
   '.........$#$#@..',
@@ -174,8 +174,8 @@ SPRITES.icon_note = [
   '.$######@@!.....',
   '..####@@@!!.....',
   '....@@!!!!......',
-];
-SPRITES.icon_skull = [
+]] };
+SPRITES.icon_skull = { outline: true, frames: [[
   '..................',
   '..................',
   '.....$$####@@.....',
@@ -194,8 +194,8 @@ SPRITES.icon_skull = [
   '......!@@@!!......',
   '..................',
   '..................',
-];
-SPRITES.icon_fire = [
+]] };
+SPRITES.icon_fire = { outline: true, frames: [[
   '................',
   '........zz......',
   '.......zAAz.....',
@@ -216,8 +216,8 @@ SPRITES.icon_fire = [
   '....yzAAAAzy....',
   '......yzzy......',
   '................',
-];
-SPRITES.icon_star = [
+]] };
+SPRITES.icon_star = { outline: true, frames: [[
   '..................',
   '........YY........',
   '........98........',
@@ -236,8 +236,8 @@ SPRITES.icon_star = [
   '.Y9Z..........8ZZ.',
   '..................',
   '..................',
-];
-SPRITES.icon_lock = [
+]] };
+SPRITES.icon_lock = { outline: true, frames: [[
   '................',
   '......rqqp......',
   '.....rq..qp.....',
@@ -256,8 +256,8 @@ SPRITES.icon_lock = [
   '..spppppppppoo..',
   '...oooooooooo...',
   '................',
-];
-SPRITES.icon_check = [
+]] };
+SPRITES.icon_check = { outline: true, frames: [[
   '................',
   '................',
   '..........xwwu..',
@@ -272,8 +272,8 @@ SPRITES.icon_check = [
   '....uuu.........',
   '................',
   '................',
-];
-SPRITES.icon_cross = [
+]] };
+SPRITES.icon_cross = { outline: true, frames: [[
   '................',
   '................',
   '..GFFE....GFFE..',
@@ -290,8 +290,8 @@ SPRITES.icon_cross = [
   '..EFFE....EFFD..',
   '................',
   '................',
-];
-SPRITES.icon_menu = [
+]] };
+SPRITES.icon_menu = { outline: true, frames: [[
   '..................',
   '..$############$..',
   '$################$',
@@ -308,8 +308,8 @@ SPRITES.icon_menu = [
   '$##############@@@',
   '..@@@@@@@@@@@@@@..',
   '..................',
-];
-SPRITES.icon_bag = [
+]] };
+SPRITES.icon_bag = { outline: true, frames: [[
   '....................',
   '....................',
   '......llllllll......',
@@ -330,7 +330,7 @@ SPRITES.icon_bag = [
   '..kkkkkkkkkkkkkkjj..',
   '....................',
   '....................',
-];
+]] };
 
 // -------------------------------------------- rhythm arrows and receptors
 SPRITES.note_left = { outline: true, frames: [[
@@ -883,7 +883,7 @@ SPRITES.target_right = { frames: [[
 ]]};
 
 // ------------------------------------- enemy intents and status badges
-SPRITES.intent_attack = [
+SPRITES.intent_attack = { outline: true, frames: [[
   '......................',
   '........GE............',
   '.......GFE............',
@@ -906,8 +906,8 @@ SPRITES.intent_attack = [
   '....GE........GFE.....',
   '..............GE......',
   '......................',
-];
-SPRITES.intent_defend = [
+]] };
+SPRITES.intent_defend = { outline: true, frames: [[
   '......................',
   '......................',
   '....LLLLLLLLLKKKJI....',
@@ -930,8 +930,8 @@ SPRITES.intent_defend = [
   '..........IH..........',
   '......................',
   '......................',
-];
-SPRITES.intent_buff = [
+]] };
+SPRITES.intent_buff = { outline: true, frames: [[
   '......................',
   '......................',
   '...w..................',
@@ -954,8 +954,8 @@ SPRITES.intent_buff = [
   '......................',
   '......................',
   '......................',
-];
-SPRITES.intent_debuff = [
+]] };
+SPRITES.intent_debuff = { outline: true, frames: [[
   '......................',
   '......................',
   '........TTSSSS........',
@@ -978,8 +978,8 @@ SPRITES.intent_debuff = [
   '.........TSSR.........',
   '..........TR..........',
   '......................',
-];
-SPRITES.intent_heal = [
+]] };
+SPRITES.intent_heal = { outline: true, frames: [[
   '......................',
   '......................',
   '......................',
@@ -1002,8 +1002,8 @@ SPRITES.intent_heal = [
   '......................',
   '......................',
   '......................',
-];
-SPRITES.intent_summon = [
+]] };
+SPRITES.intent_summon = { outline: true, frames: [[
   '......................',
   '......................',
   '.................8....',
@@ -1026,8 +1026,8 @@ SPRITES.intent_summon = [
   '......................',
   '......................',
   '......................',
-];
-SPRITES.intent_unknown = [
+]] };
+SPRITES.intent_unknown = { outline: true, frames: [[
   '......................',
   '......................',
   '......................',
@@ -1050,8 +1050,8 @@ SPRITES.intent_unknown = [
   '.........4443.........',
   '......................',
   '......................',
-];
-SPRITES.st_str = [
+]] };
+SPRITES.st_str = { outline: true, frames: [[
   '................',
   '.......GFFFE....',
   '......GFFFFFE...',
@@ -1068,8 +1068,8 @@ SPRITES.st_str = [
   '.EEEEEEEEE......',
   '................',
   '................',
-];
-SPRITES.st_weak = [
+]] };
+SPRITES.st_weak = { outline: true, frames: [[
   '................',
   '................',
   '..6655..........',
@@ -1086,8 +1086,8 @@ SPRITES.st_weak = [
   '.....6655443....',
   '......55443.....',
   '................',
-];
-SPRITES.st_vuln = [
+]] };
+SPRITES.st_vuln = { outline: true, frames: [[
   '................',
   '................',
   '...TTTTTQSSSS...',
@@ -1104,8 +1104,8 @@ SPRITES.st_vuln = [
   '.......QR.......',
   '................',
   '................',
-];
-SPRITES.st_burn = [
+]] };
+SPRITES.st_burn = { outline: true, frames: [[
   '................',
   '................',
   '.......zz.......',
@@ -1122,8 +1122,8 @@ SPRITES.st_burn = [
   '.....yzAAzy.....',
   '.......yy.......',
   '................',
-];
-SPRITES.st_stun = [
+]] };
+SPRITES.st_stun = { outline: true, frames: [[
   '................',
   '...8............',
   '...9............',
@@ -1140,8 +1140,8 @@ SPRITES.st_stun = [
   '......8.....8...',
   '................',
   '................',
-];
-SPRITES.st_thorns = [
+]] };
+SPRITES.st_thorns = { outline: true, frames: [[
   '................',
   '................',
   '........$.......',
@@ -1158,8 +1158,8 @@ SPRITES.st_thorns = [
   '.!!!!!!!!!!!!!!.',
   '................',
   '................',
-];
-SPRITES.st_regen = [
+]] };
+SPRITES.st_regen = { outline: true, frames: [[
   '................',
   '................',
   '...........xw...',
@@ -1176,8 +1176,8 @@ SPRITES.st_regen = [
   '.....v..........',
   '................',
   '................',
-];
-SPRITES.st_hype = [
+]] };
+SPRITES.st_hype = { outline: true, frames: [[
   '................',
   '.......XW.......',
   '......XWWV......',
@@ -1194,7 +1194,7 @@ SPRITES.st_hype = [
   '......XWWV......',
   '.......WV.......',
   '................',
-];
+]] };
 
 // ------------------------------------------------------------- relics
 SPRITES.relic_trex_tooth = { outline: true, frames: [[

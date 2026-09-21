@@ -278,6 +278,24 @@ const Particles = {
   confetti(x, y, n = 30) { this.spawn(x, y, { n, color: ['#e06a9b', '#6aa9ee', '#a8e878', '#ffe08a', '#ffffff', '#b177e6'], speed: 340, spread: 3.14, life: 1.6, size: 5, gravity: 420, shape: 'confetti', drag: 0.97 }); },
   notes(x, y, n = 4) { this.spawn(x, y, { n, color: ['#ffe08a', '#e06a9b', '#86e8d2', '#ffffff'], speed: 60, angle: -Math.PI / 2, spread: 0.8, gravity: -50, life: 1.1, size: 8, shape: 'note' }); },
   blood(x, y, col = ['#c2333c', '#7d1d2b'], n = 12) { this.spawn(x, y, { n, color: col, speed: 220, life: 0.6, size: 4, gravity: 600, shape: 'square' }); },
+  // chunks of the world coming loose: heavier, slower, and they land and sit
+  // there for a moment instead of puffing away. This is the one that makes a
+  // stomp read as weight rather than as smoke.
+  debris(x, y, n = 8, col = ['#574a66', '#3b3048', '#7a6d8a', '#241c2e', '#5c3a20']) {
+    this.spawn(x, y, { n, color: col, speed: 280, speedMin: 90, angle: -Math.PI / 2, spread: 1.5,
+      gravity: 860, life: 1.3, lifeMin: 0.7, size: 6, sizeEnd: 4, shape: 'square', drag: 0.995, bounceY: y + 2 });
+  },
+  // a footfall: a low ring of dust plus the grit it throws
+  stomp(x, y, power = 1) {
+    this.spawn(x, y, { n: Math.round(6 * power), color: ['#9391a6', '#bdbccd', '#7a6d8a'], speed: 190 * power,
+      angle: -Math.PI / 2, spread: 1.5, gravity: 90, life: 0.7, size: 6, sizeEnd: 0, drag: 0.93 });
+    this.debris(x, y, Math.round(4 * power));
+  },
+  // embers, for anything on fire and everything downwind of it
+  embers(x, y, n = 3) {
+    this.spawn(x, y, { n, color: ['#e06a1b', '#ffa832', '#ffe98a', '#7d1d2b'], speed: 70, angle: -Math.PI / 2,
+      spread: 1.1, gravity: -60, life: 1.6, size: 3, sizeEnd: 0, drag: 0.97, glow: true });
+  },
   splash(x, y, n = 14) { this.spawn(x, y, { n, color: ['#6aa9ee', '#a8d8ff', '#ffffff'], speed: 220, angle: -Math.PI / 2, spread: 1.2, life: 0.6, size: 4, gravity: 520, shape: 'drop' }); },
   update(dt) {
     const L = this.list;

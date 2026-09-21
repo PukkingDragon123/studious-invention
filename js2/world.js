@@ -33,9 +33,14 @@ const HOME = {
 
 // The quarry, laid out left to right: you park, the foreman tells you what to
 // do, you hit the face until three crystals come out, and they go in the box.
+// The quarry is a place you walk through, not a backdrop: half a mile of pit
+// between the car park and the box, with three working faces strung along it
+// and a shift's worth of people in between.
 const QUARRY = {
-  park: 150, boss: 430, face: 820, box: 1010, end: 1500,
-  gems: [{ x: 762, y: GY - 130 }, { x: 830, y: GY - 74 }, { x: 878, y: GY - 152 }],
+  park: 150, boss: 460, box: 2460, end: 2900,
+  faces: [900, 1540, 2080],
+  gems: [{ x: 880, y: GY - 92 }, { x: 1524, y: GY - 68 }, { x: 2062, y: GY - 104 }],
+  get face() { return QUARRY.faces[0]; },
 };
 
 // The camp: one clearing, laid out left to right. He sits west of the fire so
@@ -1263,7 +1268,9 @@ const World = {
     }
     // the pit floor
     Gfx.rect(L, GY - 6, R - L, 300, '#7a6d8a');
+    Gfx.rect(L, GY - 7, R - L, 1, '#120c16');
     Gfx.rect(L, GY - 6, R - L, 5, '#bdbccd');
+    Gfx.rectA(L, GY - 1, R - L, 2, '#120c16', 0.35);
     Gfx.rectA(L, GY - 6, R - L, 300, '#3a2415', 0.20);
     for (let x = Math.floor(L / 16) * 16; x < R; x += 16) {
       const yy = GY + 6 + jitter(x, 86);
@@ -1289,12 +1296,17 @@ const World = {
 
     // ---- the plant: derricks lifting rock out of the pit
     for (let x = Math.floor((L - 300) / 760) * 760; x < R + 300; x += 760) {
-      if (x > QUARRY.boss - 300 && x < QUARRY.box + 200) continue;   // keep the shift's end clear
+      if (Math.abs(x - QUARRY.boss) < 280 || Math.abs(x - QUARRY.box) < 260) continue;
+      if (QUARRY.faces.some(fx => Math.abs(x - fx) < 300)) continue;    // never over a face
       World.crane(t, x, GY + 8, Math.abs((x / 760) | 0));
     }
     // ---- the office and the working face
     if (L < QUARRY.boss + 260 && R > QUARRY.boss - 260) World.quarryOffice(t);
-    if (L < QUARRY.box + 300 && R > QUARRY.face - 300) World.quarryFace(t, o);
+    QUARRY.faces.forEach((fx, i) => {
+      if (L < fx + 320 && R > fx - 320) World.quarryFace(t, o, fx, i);
+    });
+    if (L < QUARRY.box + 300 && R > QUARRY.box - 300) World.quarryBox(t, o);
+    World.quarryFolk(t, L, R);
     // ---- the crew, on the haul road: five species, all of them on the payroll
     const KIND = ['tricera', 'stego', 'mammoth', 'brute', 'raptor'];
     // the haul road runs along the front of the pit, nearer the camera than
@@ -1320,8 +1332,8 @@ const World = {
   },
   // Where the shift actually happens. Fixed positions, because the mining game
   // and the cutscene both need to know where the face and the box are.
-  quarryFace(t, o = {}) {
-    const x = QUARRY.face;
+  quarryFace(t, o = {}, fx, gi = 0) {
+    const x = fx ?? QUARRY.faces[0];
     // ---- a shoulder of rock left standing where they are cutting. Not a slab:
     // the profile is ragged and it sits into the pit floor.
     const prof = px => {
@@ -1368,13 +1380,22 @@ const World = {
       for (let k = 0; k * 16 < GY - ly - 10; k++) Gfx.rect(lx - 4, GY - 12 - k * 16, 26, 4, '#5c3a20'); }
     for (let i = 0; i < 9; i++)
       Gfx.round(x - 120 + i * 30 + jitter(i, 12), GY - 8 - (i % 3) * 5, 22 + (i % 4) * 7, 12, 4, i % 2 ? '#4d4a5c' : '#3b3048');
-    // ---- the three pockets of crystal, and how much of each is left
-    QUARRY.gems.forEach((g, i) => {
+    // ---- the pocket of crystal this face is being cut for
+    [QUARRY.gems[gi]].forEach((g, _i) => {
+      const i = gi;
       const got = (o.mined || 0) > i;
       const c = World.oreCols[[2, 1, 0][i]];
-      Gfx.round(g.x - 30, g.y - 27, 60, 54, 10, '#120c16');
-      Gfx.round(g.x - 25, g.y - 22, 50, 44, 8, '#3b3048');
-      Gfx.round(g.x - 25, g.y - 22, 50, 6, 3, '#241c2e');
+      // the hollow it sits in, broken open rather than framed
+      for (let k = 0; k < 7; k++) {
+        const a = k / 7 * 6.283;
+        Gfx.circle(g.x + Math.cos(a) * 20, g.y + 4 + Math.sin(a) * 15, 13 + jitter(k * 9, 6), '#241c2e');
+      }
+      for (let k = 0; k < 6; k++) {
+        const a = k / 6 * 6.283 + 0.4;
+        Gfx.circle(g.x + Math.cos(a) * 17, g.y + 4 + Math.sin(a) * 12, 9, '#120c16');
+      }
+      for (let k = 0; k < 5; k++)                                 // fresh chisel marks around it
+        Gfx.rectA(g.x - 34 + k * 17, g.y - 26 + (k % 2) * 46, 10, 3, '#bdbccd', 0.26);
       if (got) {                                                  // an empty socket, and the dust
         Gfx.round(g.x - 19, g.y - 16, 38, 32, 6, '#241c2e');
         for (let k = 0; k < 4; k++) Gfx.rectA(g.x - 14 + k * 9, g.y + 12, 7, 3, '#574a66', 0.7);
@@ -1389,7 +1410,13 @@ const World = {
         Gfx.circle(ex, ey, 2.5, c[1]);
       }
       Gfx.glow(g.x, g.y, 66, c[1], 0.30 + Math.sin(t * 2.4 + i) * 0.09);
+      // the face number, painted on the rock by somebody with one brush
+      Gfx.text(`FACE ${i + 1}`, g.x, g.y - 52, { color: '#ffe98a', align: 'center', scale: 1.2, outline: true });
     });
+  },
+
+  // The box at the end of the shift. Three crystal in, one shell out.
+  quarryBox(t, o = {}) {
     // ---- the box the crystal goes in, with a tally scratched on the lid
     const bx = QUARRY.box;
     Gfx.shadow(bx, GY + 4, 90, 0.32);
@@ -1402,7 +1429,8 @@ const World = {
     for (let i = 0; i < Math.min(3, o.mined || 0); i++)           // what is in it so far
       World.oreLump(bx - 18 + i * 18, GY - 58, 1.1, [2, 1, 0][i]);
     Gfx.text('3 = 1', bx, GY - 82, { color: '#ffe98a', align: 'center', scale: 1.1, outline: true });
-    Gfx.sprite('icon_coin', bx + 34, GY - 78, { anchor: 'c', scale: 0.9 });
+    Gfx.sprite('relic_shell', bx + 36, GY - 80, { anchor: 'c', scale: 0.9 });
+    Gfx.glow(bx + 36, GY - 80, 46, '#ffe98a', 0.22);
   },
 
   // The foreman works out of a lean-to with a slate on the front of it. He has
@@ -1422,6 +1450,63 @@ const World = {
     Gfx.rectA(x + 14, GY - 100, 18, 42, '#ef6a5e', 0.5);
     Gfx.sprite('prop_barrel', x + 76, GY + 4, { anchor: 'bc' });
     Gfx.sprite('art_club', x - 84, GY - 6, { anchor: 'bc', scale: 1.2, rot: -0.5 });
+  },
+
+  // The people who are here every day. They are at posts, not on loops: each
+  // one has a job, a spot and something to say to you when you walk past it.
+  FOLK: [
+    { x: 250, base: 'villager', name: 'GRIT', job: 'lamp', line: "Lamp oil's short. Mine carefully, or mine in the dark." },
+    { x: 620, base: 'villager2', name: 'MOSS', job: 'sharpen', line: 'Blunt pick, long day. Give it here.' },
+    { x: 760, base: 'brute', name: 'TUSK', job: 'haul', line: 'Face one is soft today. Face three is not.' },
+    { x: 1160, base: 'villager', name: 'PEAT', job: 'sit', line: "Fourteen years. Never found a rock shaped like a face." },
+    { x: 1330, base: 'villager2', name: 'BRACK', job: 'tally', line: 'Every crystal gets written down. Every one.' },
+    { x: 1760, base: 'brute', name: 'SHALE', job: 'sharpen', line: "Something's been knocking on the deep wall. Not us." },
+    { x: 1920, base: 'villager', name: 'FLINT', job: 'sleep', line: '...five more minutes...' },
+    { x: 2260, base: 'villager2', name: 'CINDER', job: 'haul', line: 'Box is that way. Foreman counts it twice.' },
+    { x: 2380, base: 'villager', name: 'OCHRE', job: 'sit', line: 'One shell. Buys a fish. Half a fish.' },
+  ],
+  quarryFolk(t, L, R) {
+    for (let i = 0; i < World.FOLK.length; i++) {
+      const f = World.FOLK[i];
+      if (f.x < L - 80 || f.x > R + 80) continue;
+      const gy = GY + 4, sc = f.base === 'brute' ? 0.95 : 0.9;
+      Gfx.shadow(f.x, gy + 2, 34 * sc, 0.3);
+      if (f.job === 'lamp') {
+        Gfx.rect(f.x + 26, gy - 96, 6, 96, '#3a2415');
+        Gfx.rect(f.x + 26, gy - 96, 2, 96, '#85562f');
+        Gfx.sprite('house_lamp', f.x + 29, gy - 96, { anchor: 'tc', scale: 1.1 });
+        Gfx.glow(f.x + 29, gy - 78, 100, '#ff9a20', 0.26 + Math.sin(t * 3 + i) * 0.05);
+        Gfx.sprite(f.base + '_idle', f.x, gy, { anchor: 'bc', scale: sc, frame: Math.floor(t * 2 + i) % 2 });
+      } else if (f.job === 'sharpen') {
+        Gfx.round(f.x + 20, gy - 24, 34, 26, 6, '#574a66');       // the grindstone
+        Gfx.round(f.x + 23, gy - 22, 28, 8, 3, '#9391a6');
+        Gfx.rectA(f.x + 20, gy - 2, 34, 3, '#120c16', 0.4);
+        const sw = Math.sin(t * 6 + i) * 0.22;
+        World.pickaxe(f.x + 34, gy - 30, -0.6 + sw, 0.5);
+        if (chance(Time.dt * 8)) Particles.spawn((f.x + 36), (gy - 30), { n: 1, color: ['#ffe98a', '#ffa832'], speed: 120, spread: 1.4, angle: -0.8, gravity: 300, life: 0.4, size: 2, sizeEnd: 0 });
+        Gfx.sprite(f.base + '_idle', f.x, gy, { anchor: 'bc', scale: sc, frame: Math.floor(t * 5 + i) % 2 });
+      } else if (f.job === 'haul') {
+        const push = Math.sin(t * 2.2 + i) * 5;
+        World.oreCart(f.x + 52 + push, gy + 2, i);
+        Gfx.sprite(f.base + '_walk', f.x + push, gy, { anchor: 'bc', scale: sc, frame: Math.floor(t * 5 + i) % 4 });
+      } else if (f.job === 'tally') {
+        Gfx.round(f.x + 22, gy - 76, 44, 54, 4, '#241c2e');       // the slate
+        Gfx.round(f.x + 25, gy - 73, 38, 48, 3, '#3b3048');
+        for (let k = 0; k < 4; k++) Gfx.rectA(f.x + 29, gy - 66 + k * 11, 18 + (k % 3) * 8, 3, '#bdbccd', 0.7);
+        Gfx.rect(f.x + 40, gy - 22, 6, 26, '#3a2415');
+        Gfx.sprite(f.base + '_idle', f.x, gy, { anchor: 'bc', scale: sc, frame: Math.floor(t * 3 + i) % 2 });
+        if (chance(Time.dt * 0.5)) Popups.add(f.x + 44, gy - 92, 'tick', '#bdbccd', { scale: 0.9, life: 1.0 });
+      } else if (f.job === 'sleep') {
+        Gfx.sprite('prop_barrel', f.x + 34, gy + 2, { anchor: 'bc' });
+        Gfx.sprite('bronk_sleep', f.x, gy, { anchor: 'bc', scale: 0.75, frame: Math.floor(t * 2) % 4, tint: '#5c3a20', tintAmount: 0.35 });
+        const zk = (t * 0.7 + i) % 1;
+        Gfx.text('z', f.x + 22, gy - 46 - zk * 30, { color: '#d6cfe0', align: 'center', scale: 1 + zk, alpha: 1 - zk });
+      } else {                                                    // sitting on a rock with a jar
+        Gfx.sprite('prop_rock', f.x + 6, gy + 2, { anchor: 'bc', scale: 1.1 });
+        Gfx.sprite(f.base + '_idle', f.x, gy - 16, { anchor: 'bc', scale: sc, frame: Math.floor(t * 1.6 + i) % 2 });
+        Gfx.sprite('house_waterjar', f.x + 34, gy + 2, { anchor: 'bc', scale: 0.8 });
+      }
+    }
   },
 
   // Five ores, and each one looks like itself: amber, copper, amethyst,
@@ -1756,6 +1841,21 @@ const World = {
     for (let i = 0; i < 3; i++) if (chance(0.55))
       Particles.spawn(camX + rnd(-40, VW + 40), GY - rnd(0, 240),
         { n: 1, color: ['#ffa832', '#e06a1b', '#ef6a5e'], speed: 16, gravity: -28, life: 3.2, size: 3, sizeEnd: 0 });
+    // ash coming down through it, which is the village arriving in pieces
+    for (let i = 0; i < 2; i++) if (chance(0.5))
+      Particles.spawn(camX + rnd(-60, VW + 60), GY - 320,
+        { n: 1, color: ['#574a66', '#3b3048', '#9391a6'], speed: 18, angle: Math.PI / 2, spread: 0.4,
+          gravity: 12, life: 4.2, size: 2, sizeEnd: 2, drag: 0.999 });
+    // and now and then a whole piece of roof, thrown from somewhere behind
+    if (chance(0.014))
+      Particles.spawn(camX + VW + 40, GY - rnd(140, 250),
+        { n: 1, color: ['#5c3a20', '#3a2415', '#85562f'], speed: 0, vx: -330, vy: -70,
+          gravity: 540, life: 2.6, size: 7, sizeEnd: 5, shape: 'square', bounceY: GY + 4 });
+    // grit skidding along the road towards you
+    if (chance(0.5))
+      Particles.spawn(camX + VW + 20, GY + rnd(-4, 26),
+        { n: 1, color: ['#85562f', '#3a2415'], speed: 0, vx: -rnd(240, 420), vy: -rnd(0, 60),
+          gravity: 420, life: 1.4, size: 3, sizeEnd: 2, bounceY: GY + 26 });
   },
 
   // ------------------------------------------------------ THE CAMP, AT NIGHT
@@ -1816,7 +1916,10 @@ const World = {
 
     // ---- the floor of the clearing, trodden flat where people sit
     Gfx.rect(L, GY - 4, R - L, 320, '#140f26');
+    Gfx.rect(L, GY - 5, R - L, 1, '#07060f');                  // the ink line the ground sits under
     Gfx.rect(L, GY - 4, R - L, 3, '#281040');
+    for (let x = Math.floor(L / 9) * 9; x < R; x += 9)          // grain, so the floor is not a flat fill
+      Gfx.rectA(x, GY - 1 + j(x, 5), 5 + j(x + 3, 4), 1, '#07060f', 0.35);
     // the bare patch people have worn into it - flat, or it reads as a bench
     Gfx.ctx.globalAlpha = 0.85; Gfx.round(FX2 - 236, GY - 6, 472, 18, 9, '#1d1230'); Gfx.ctx.globalAlpha = 1;
     Gfx.ctx.globalAlpha = 0.7; Gfx.round(FX2 - 186, GY - 4, 372, 13, 6, '#241109'); Gfx.ctx.globalAlpha = 1;

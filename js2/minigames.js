@@ -136,6 +136,7 @@ class SideScroll extends MiniGame {
       if (!this.onGround && this.vz < -220) {
         Juice.shake(4, 0.12); AudioSys.sfx('thud', { vol: 0.4 });
         Particles.dust(this.sx(this.x), this.sy(this.ground - floor), 5);
+        Particles.debris(this.sx(this.x), this.sy(this.ground - floor), 4);
         this.hero.squash(Math.min(0.28, -this.vz / 1900));
       }
       this.z = floor; this.vz = 0; this.onGround = true; this.coyote = PLAT.coyote;
@@ -162,6 +163,7 @@ class SideScroll extends MiniGame {
       b.hit = true; this.stumble = 0.55; this.bump = 1;
       Juice.stop(0.08); Juice.shake(10, 0.3); Juice.flash('#ef6a5e', 0.22, 5);
       Juice.pow(this.sx(b.x), this.sy(this.ground - 20), { r: 44, spikes: 9, col: '#ef6a5e' });
+      Particles.debris(this.sx(b.x), this.sy(this.ground), 12);
       AudioSys.sfx('hurt');
     }
     // --- animation and dust
@@ -185,6 +187,30 @@ class SideScroll extends MiniGame {
     if (this.pursuer) {
       const p = this.pursuer; p.t += dt;
       p.x += (p.speed + (this.o.pursuerRamp || 0) * (this.x / this.goal)) * dt;
+      // every footfall lands. you feel it before you see it.
+      p.step = (p.step || 0) + dt;
+      const period = 0.42 - this.lunge * 0.1;
+      if (p.step > period) {
+        p.step = 0;
+        const fx = this.sx(p.x - 10), fy = this.sy(this.ground);
+        if (fx > -120 && fx < W + 120) {
+          Particles.stomp(fx, fy, 1.1 + this.lunge);
+          Juice.shake(3 + this.lunge * 5, 0.12);
+          AudioSys.sfx('thud', { vol: 0.35 + this.lunge * 0.4 });
+        }
+      }
+      // and it goes through whatever you went round
+      for (const b of this.obstacles) {
+        if (b.smashed || b.x > p.x + 30) continue;
+        b.smashed = true;
+        const bx = this.sx(b.x), by = this.sy(this.ground - 20);
+        if (bx > -140 && bx < W + 140) {
+          Particles.debris(bx, by, 16, ['#5c3a20', '#3a2415', '#574a66', '#85562f']);
+          Juice.pow(bx, by, { r: 52, spikes: 10, col: '#9391a6', word: pick(['CRACK', 'SNAP', 'CRUNCH']) });
+          AudioSys.sfx('bighit', { vol: 0.6 });
+          Juice.shake(7, 0.16);
+        }
+      }
       p.x = Math.max(p.x, this.x - (this.o.leash ?? 900));
       // how close it is to having you, 0..1 - everything scary keys off this
       this.lunge = clamp(1 - (this.x - p.x) / 300, 0, 1);
@@ -196,9 +222,13 @@ class SideScroll extends MiniGame {
       if (this.lunge > 0.55) {
         Juice.shake(this.lunge * 5, 0.1);
         if (chance(dt * 1.3)) AudioSys.sfx('roar', { pitch: 44, vol: 0.9, len: 1.1 });
-        if (chance(dt * 22)) Particles.spawn(this.sx(p.x + 40), this.sy(this.ground - 60) + rnd(-20, 20),
-          { n: 1, color: ['#e8dfc6', '#d6cfe0'], speed: 60, gravity: 200, life: 0.7, size: 3, sizeEnd: 0 });
+        // spit, and the grit its feet are throwing forward past your ears
+        if (chance(dt * 26)) Particles.spawn(this.sx(p.x + 40), this.sy(this.ground - 60) + rnd(-20, 20),
+          { n: 1, color: ['#e8dfc6', '#d6cfe0'], speed: 90, gravity: 220, life: 0.7, size: 3, sizeEnd: 0 });
+        if (chance(dt * 14)) Particles.spawn(this.sx(p.x + 60), this.sy(this.ground) - rnd(0, 40),
+          { n: 1, color: ['#574a66', '#3b3048'], speed: 340, angle: 0, spread: 0.5, gravity: 500, life: 0.6, size: 4, sizeEnd: 0 });
       }
+      p.rage = damp(p.rage || 0, this.lunge, 6, dt);
     }
     if (this.ahead) { const a = this.ahead; a.t += dt; a.x += a.speed * dt; }
     // --- pickups
@@ -261,11 +291,16 @@ class SideScroll extends MiniGame {
         const snap = this.lunge > 0.5 ? Math.max(0, Math.sin(p.t * 11)) * this.lunge : 0;
         Gfx.shadow(p.x, this.ground, 44 * p.scale, 0.34);
         if (this.lunge > 0.3) Gfx.glow(p.x + 30, this.ground - 60, 90 * this.lunge, '#c2333c', 0.3 * this.lunge);
-        Gfx.sprite(p.spr, p.x + snap * 26, this.ground - bob, {
-          anchor: 'bc', scale: p.scale * (1 + snap * 0.06), frame: Math.floor(p.t * 10), flip: p.flip,
+        // when it is close enough to bite it stops running and starts roaring
+        const raging = snap > 0.4 && p.roarSpr;
+        Gfx.sprite(raging ? p.roarSpr : p.spr, p.x + snap * 28, this.ground - bob, {
+          anchor: 'bc', scale: p.scale * (1 + snap * 0.08), frame: Math.floor(p.t * (raging ? 8 : 10)), flip: p.flip,
         });
-        if (snap > 0.4 && p.roarSpr) Gfx.sprite(p.roarSpr, p.x + snap * 30, this.ground - bob,
-          { anchor: 'bc', scale: p.scale * (1 + snap * 0.08), frame: Math.floor(p.t * 8), flip: p.flip });
+        if (raging) {                                     // breath, and the light off its teeth
+          Gfx.glow(p.x + 54 * (p.flip ? -1 : 1), this.ground - 92, 70, '#ef6a5e', 0.22 * snap);
+          if (chance(Time.dt * 30)) Particles.spawn(this.sx(p.x + 56), this.sy(this.ground - 92),
+            { n: 1, color: ['#d6cfe0', '#9391a6'], speed: 140, angle: 0, spread: 0.5, gravity: -30, life: 0.5, size: 4, sizeEnd: 0, world: false });
+        }
       } });
       list.push({ y: this.ground + 2, f: () => {
         if (this.o.vehicle) {
@@ -284,7 +319,7 @@ class SideScroll extends MiniGame {
       list.sort((a, b) => a.y - b.y);
       for (const it of list) it.f();
       for (const b of this.obstacles) {
-        if (b.x < this.camX - 60 || b.x > this.camX + VW + 60) continue;
+        if (b.smashed || b.x < this.camX - 60 || b.x > this.camX + VW + 60) continue;
         Gfx.shadow(b.x, this.ground + 2, (b.w || 34) + 14, 0.3);
         Gfx.sprite(b.spr || 'prop_rock', b.x, this.ground + 2, { anchor: 'bc', scale: b.scale || 1, alpha: b.hit ? 0.5 : 1 });
         if (!b.hit) {
@@ -465,100 +500,184 @@ class DriveGame extends SideScroll {
   }
 }
 // ----------------------------------------------------------------- MINEGAME -
-// The shift. Three crystals out of the face and into the box, and the foreman
-// gives you one shell for the lot. Hitting rock is a timing problem: a marker
-// sweeps the swing bar, and the middle of it is where the pick bites.
-class MineGame extends MiniGame {
+// The shift, walked. The quarry is half a mile long and you are somewhere in
+// it: walk the haul road past the crew, find each of the three faces, swing
+// for the crystal, carry it to the box at the far end. Hitting rock is still
+// a timing problem - a marker sweeps the swing bar and the middle of it is
+// where the pick bites - but getting to the rock is now your problem too.
+class MineGame extends SideScroll {
   constructor(o = {}) {
-    super(o);
+    super(Object.assign({
+      base: 'bronk', startX: QUARRY.boss + 80, ground: GY,
+      goal: QUARRY.end + 600,                 // never reached: the box ends this
+      speed: 215, camYFrac: 0.82, jump: true,
+      title: o.title || 'THE SHIFT',
+      hint: Input.touch ? 'WALK TO A FACE  -  TAP TO SWING' : 'A / D TO WALK  -  SPACE TO SWING AT A FACE',
+      paint: (camX, t) => World.quarry(t, { mined: this.boxed }, camX),
+    }, o));
     this.need = o.need ?? 3;
-    this.mined = 0;
-    this.crack = 0;                       // how far into the current crystal, 0..1
-    this.swing = -1;                      // -1 idle, otherwise 0..1 through the swing
+    this.mined = 0;                       // crystals out of the rock
+    this.boxed = 0;                       // crystals in the box
+    this.carry = 0;                       // crystals in your arms
+    this.crack = 0;                       // how far into the current face, 0..1
+    this.swing = -1; this.struck = false;
     this.mark = 0; this.markDir = 1;
-    this.shake = 0; this.flyers = [];
-    this.camX = QUARRY.face - 250; this.camY = GY - VH * 0.82;
-    this.hero = new Actor({ base: 'bronk', x: 0, y: GY, scale: 1 });
-    this.heroX = QUARRY.gems[0].x - 80;
-    this.o.hint = o.hint || (Input.touch ? 'TAP WHEN THE MARKER IS IN THE GREEN' : 'SPACE WHEN THE MARKER IS IN THE GREEN');
+    this.flyers = [];
+    this.cleared = [false, false, false];
+    this.said = new Set(); this.bark = null; this.barkT = 0;
+    this.prompt = null;
+    this.idle = 0;                        // how long since you last did anything
   }
-  get gem() { return QUARRY.gems[Math.min(this.mined, QUARRY.gems.length - 1)]; }
-  get band() { return 0.30 - this.mined * 0.05; }      // the green gets meaner
+  // which face you are standing at, or -1
+  get atFace() {
+    for (let i = 0; i < QUARRY.gems.length; i++)
+      if (!this.cleared[i] && Math.abs(this.x - (QUARRY.gems[i].x - 60)) < 72) return i;
+    return -1;
+  }
+  get atBox() { return this.carry > 0 && Math.abs(this.x - (QUARRY.box - 70)) < 74; }
+  get band() { return 0.30 - this.boxed * 0.05; }      // the green gets meaner
+  // where the shift wants you to be next: the nearest uncut face, or the box
+  get aimX() {
+    const next = this.cleared.findIndex(c => !c);
+    return next < 0 ? QUARRY.box - 70 : QUARRY.gems[next].x - 60;
+  }
   step(dt) {
-    // the marker sweeps, faster with every crystal
-    if (this.swing < 0) {
-      this.mark += this.markDir * dt * (1.25 + this.mined * 0.28);
-      if (this.mark > 1) { this.mark = 1; this.markDir = -1; }
-      if (this.mark < 0) { this.mark = 0; this.markDir = 1; }
-    }
-    // walk to the crystal you are working on
-    this.heroX = damp(this.heroX, this.gem.x - 78, 4, dt);
-    this.hero.x = this.heroX; this.hero.y = GY;
-    this.hero.play(this.swing >= 0 ? 'idle' : 'idle');
-    this.hero.update(dt);
-    this.shake = Math.max(0, this.shake - dt * 3);
-    for (const f of this.flyers) { f.t += dt * 1.5; }
-    this.flyers = this.flyers.filter(f => f.t < 1);
-
-    let hit = Input.pressed('Space', 'Enter', 'KeyE') || Input.clicks.length > 0;
+    const face = this.atFace;
+    // if you put the stick down, he gets on with it himself. a quarry shift
+    // does not stop because the man operating it has wandered off.
+    const busy = Input.isDown('KeyD', 'KeyA', 'ArrowRight', 'ArrowLeft', 'Space', 'KeyW', 'ArrowUp')
+      || Input.clicks.length > 0 || (Input.touch && Input.touches.size > 0);
+    this.idle = busy ? 0 : this.idle + dt;
+    const autop = this.idle > 6;
+    // ------------------------------------------------------- swinging a pick
     if (this.swing >= 0) {
       this.swing += dt * 4.4;
-      if (this.swing > 0.44 && !this.struck) { this.struck = true; this.strike(); }
+      if (this.swing > 0.44 && !this.struck) { this.struck = true; this.strike(face < 0 ? this.lastFace : face); }
       if (this.swing >= 1) { this.swing = -1; this.struck = false; }
-      hit = false;
+      this.vx = 0;
+      this.hero.update(dt); this.hero.x = this.x; this.hero.y = this.ground;
+      this.camX = damp(this.camX, this.x - VW * 0.34, 5, dt);
+      this.camY = damp(this.camY, this.ground - VH * 0.82, 4, dt);
+    } else {
+      super.step(dt);
+      // the marker only sweeps while you are stood at a face
+      if (face >= 0) {
+        this.mark += this.markDir * dt * (1.25 + this.boxed * 0.28);
+        if (this.mark > 1) { this.mark = 1; this.markDir = -1; }
+        if (this.mark < 0) { this.mark = 0; this.markDir = 1; }
+      }
     }
-    if (hit) { this.swing = 0; this.struck = false; AudioSys.sfx('whoosh', { vol: 0.4 }); }
-    if (this.mined >= this.need && !this.done) this.finish({ win: true, mined: this.mined });
+    // ----------------------------------------------------------- the prompt
+    this.prompt = face >= 0 ? `SWING AT FACE ${face + 1}` : this.atBox ? `PUT ${this.carry} IN THE BOX` : null;
+    if (autop && this.swing < 0) {                     // the autopilot
+      const d = this.aimX - this.x;
+      if (Math.abs(d) > 8) { this.x += Math.sign(d) * Math.min(Math.abs(d), 170 * dt); this.hero.facing = Math.sign(d); this.hero.play('walk', { fps: 10 }); }
+      if (face >= 0 && Math.abs(this.mark - 0.5) < this.band / 2) { this.swing = 0; this.struck = false; this.lastFace = face; AudioSys.sfx('whoosh', { vol: 0.4 }); }
+      else if (this.atBox) this.deposit();
+    }
+    // ------------------------------------------------------------- the input
+    const act = Input.pressed('Space', 'Enter', 'KeyE')
+      || (Input.clicks.length > 0 && (!Input.touch || Input.clicks.some(c => c.y > H * 0.42)));
+    if (act && this.swing < 0) {
+      if (face >= 0) { this.swing = 0; this.struck = false; this.lastFace = face; AudioSys.sfx('whoosh', { vol: 0.4 }); }
+      else if (this.atBox) this.deposit();
+    }
+    // -------------------------------------------------------- what people say
+    for (const f of World.FOLK) {
+      if (this.said.has(f.name) || Math.abs(this.x - f.x) > 70) continue;
+      this.said.add(f.name);
+      this.bark = f; this.barkT = 3.4;
+      AudioSys.sfx('select', { vol: 0.3 });
+    }
+    this.barkT = Math.max(0, this.barkT - dt);
+    for (const fl of this.flyers) fl.t += dt * 1.6;
+    this.flyers = this.flyers.filter(fl => fl.t < 1);
+    if (this.boxed >= this.need && !this.done) this.finish({ win: true, mined: this.boxed });
   }
-  strike() {
+  strike(i) {
+    if (i == null || i < 0) return;
     const good = Math.abs(this.mark - 0.5) < this.band / 2;
-    const g = this.gem;
+    const g = QUARRY.gems[i];
     this.crack += good ? 0.42 : 0.17;
-    this.shake = good ? 1 : 0.5;
     Juice.shake(good ? 9 : 4, 0.16);
     AudioSys.sfx(good ? 'bighit' : 'thud', { vol: good ? 0.9 : 0.5 });
-    const sx = (g.x - this.camX) * VIEW, sy = (g.y - this.camY) * VIEW;
-    Particles.spawn(sx, sy, { n: good ? 14 : 6, color: ['#bdbccd', '#7a6d8a', '#574a66'], speed: 210, spread: 6.28, life: 0.7, size: 4, sizeEnd: 0, gravity: 420, world: false });
+    const sx = this.sx(g.x), sy = this.sy(g.y);
+    Particles.spawn(sx, sy, { n: good ? 16 : 7, color: ['#bdbccd', '#7a6d8a', '#574a66'], speed: 230, spread: 6.28, life: 0.7, size: 4, sizeEnd: 0, gravity: 420, world: false });
     if (good) {
       Juice.pow(sx, sy, { r: 46, spikes: 9, col: '#ffe98a' });
       Popups.add(sx, sy - 40, 'CRACK!', '#ffe98a', { world: false, scale: 1.6, life: 0.9 });
     } else Popups.add(sx, sy - 34, 'chip', '#9391a6', { world: false, scale: 1.1, life: 0.8 });
     if (this.crack >= 1) {
       this.crack = 0;
-      this.flyers.push({ t: 0, from: { x: g.x, y: g.y }, kind: [2, 1, 0][this.mined % 3] });
-      this.mined++;
+      this.cleared[i] = true;
+      this.mined++; this.carry++;
       AudioSys.sfx('pickup'); AudioSys.sfx('gold');
       Juice.flash('#ffe98a', 0.3, 3);
-      Particles.sparkle(sx, sy, 22, ['#ffe98a', '#ffffff']);
-      Popups.add(W / 2, 150, `${this.mined} / ${this.need}`, '#a8e878', { world: false, scale: 2.4, life: 1.4 });
+      Particles.sparkle(sx, sy, 24, ['#ffe98a', '#ffffff']);
+      Popups.add(W / 2, 150, `CRYSTAL  ${this.mined} / ${this.need}`, '#a8e878', { world: false, scale: 2.2, life: 1.4 });
+      Popups.add(sx, sy - 70, this.carry < this.need ? 'FIND THE NEXT FACE' : 'GET IT TO THE BOX', '#ffe98a', { world: false, scale: 1.2, life: 2.2 });
     }
+  }
+  deposit() {
+    for (let k = 0; k < this.carry; k++)
+      this.flyers.push({ t: -k * 0.18, from: { x: this.x, y: this.ground - 60 }, kind: [2, 1, 0][(this.boxed + k) % 3] });
+    this.boxed += this.carry; this.carry = 0;
+    AudioSys.sfx('gold'); Juice.punch(0.05); Juice.shake(5, 0.2);
+    Popups.add(this.sx(QUARRY.box), this.sy(GY - 130), `${this.boxed} / ${this.need}`, '#ffe98a', { world: false, scale: 2.0, life: 1.4 });
   }
   draw() {
     Gfx.clear('#120c16');
-    const sh = Math.sin(Time.t * 40) * this.shake * 2;
-    this.stage(this.camX + sh, this.camY, (cx) => {
-      World.quarry(this.t, { mined: this.mined }, cx);
+    this.stage(this.camX, this.camY, () => {
+      if (this.o.paint) this.o.paint(this.camX, this.t, this);
       // the man, and the tool
-      this.hero.draw();
+      this.hero.x = this.x; this.hero.y = this.ground; this.hero.z = this.z; this.hero.draw();
       const sw = this.swing < 0 ? 0 : this.swing;
       const rot = this.swing < 0
         ? -1.05 + Math.sin(this.t * 2) * 0.06
         : (sw < 0.44 ? lerp(-2.5, 0.95, Ease.inQuad(sw / 0.44)) : lerp(0.95, -1.05, (sw - 0.44) / 0.56));
-      World.pickaxe(this.hero.x + 16, GY - 50, rot, 0.62);
-      // a crystal on its way to the box
+      World.pickaxe(this.x + 16 * this.hero.facing, this.ground - 50 - this.z, rot, 0.62);
+      // what he is carrying
+      for (let k = 0; k < this.carry; k++)
+        World.oreLump(this.x + 17 * this.hero.facing, this.ground - 40 - this.z - k * 12, 1.0, [2, 1, 0][k % 3]);
+      // a crystal on its way into the box
       for (const f of this.flyers) {
+        if (f.t < 0) continue;
         const k = Ease.outQuad(f.t);
         const fx = lerp(f.from.x, QUARRY.box, k);
         const fy = lerp(f.from.y, GY - 62, k) - Math.sin(k * Math.PI) * 90;
         World.oreLump(fx, fy, 1.5, f.kind);
         Gfx.glow(fx, fy - 6, 40, '#ffe98a', 0.4 * (1 - f.t));
       }
+      // an arrow on the ground pointing at whatever you should do next
+      const aim = this.aimX;
+      if (Math.abs(aim - this.x) > 120) {
+        const d = Math.sign(aim - this.x), ax = this.x + d * 74, ay = GY - 8 + Math.sin(this.t * 5) * 3;
+        for (let k = 0; k < 3; k++) Gfx.rectA(ax + d * k * 9, ay - k * 2, 7, 4 + k * 3, '#ffe98a', 0.5 - k * 0.12);
+      }
     });
-    this.drawBar();
-    this.drawFrame(this.o.title || 'THE SHIFT', `${this.mined} / ${this.need} CRYSTAL`, this.mined / this.need);
+    if (this.barkT > 0 && this.bark) this.drawBark();
+    if (this.atFace >= 0) this.drawBar();
+    else if (this.prompt) this.drawPrompt();
+    this.drawFrame(this.o.title || 'THE SHIFT', `${this.boxed} / ${this.need} IN THE BOX`, this.boxed / this.need);
+  }
+  // somebody talking at you as you go past, in their own slab
+  drawBark() {
+    const f = this.bark, k = clamp(this.barkT / 0.3, 0, 1);
+    const w = 420, x = W / 2 - w / 2, y = 74;
+    Gfx.ctx.globalAlpha = k;
+    UI.slab(x, y, w, 62, { r: 5 });
+    Gfx.text(f.name, x + 16, y + 12, { color: SKIN.red, align: 'left', scale: 1.2 });
+    Gfx.text(f.line, x + 16, y + 34, { color: SKIN.text, align: 'left', scale: 1.0 });
+    Gfx.ctx.globalAlpha = 1;
+  }
+  drawPrompt() {
+    const w = 300, x = W / 2 - w / 2, y = H - 104;
+    UI.slab(x, y, w, 44, { r: 5 });
+    Gfx.text(this.prompt, W / 2, y + 14, { color: SKIN.text, align: 'center', scale: 1.4 });
+    Gfx.text(Input.touch ? 'TAP' : 'SPACE', W / 2, y + 32, { color: SKIN.faceDark, align: 'center', scale: 0.9 });
   }
   // the swing bar: a green window, a sweeping marker, and how cracked the
-  // crystal is underneath it
+  // face is underneath it
   drawBar() {
     const w = 420, x = W / 2 - w / 2, y = H - 104;
     Gfx.rectA(x - 14, y - 12, w + 28, 84, '#120c16', 0.72);
@@ -574,6 +693,6 @@ class MineGame extends MiniGame {
     Gfx.rect(mx - 2, y - 4, 4, 38, this.swing >= 0 ? '#ffe98a' : '#ef6a5e');
     Gfx.text('CRACK', x, y + 40, { color: '#d6cfe0', align: 'left', scale: 1 });
     Gfx.bar(x + 58, y + 40, w - 58, 8, this.crack, '#b177e6');
-    Gfx.text(this.o.hint || '', W / 2, y + 56, { color: '#9391a6', align: 'center', scale: 1 });
+    Gfx.text(Input.touch ? 'TAP IN THE GREEN' : 'SPACE IN THE GREEN', W / 2, y + 56, { color: '#9391a6', align: 'center', scale: 1 });
   }
 }

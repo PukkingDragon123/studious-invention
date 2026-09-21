@@ -37,7 +37,10 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   // a prowler notices you and gives chase
   await ev(() => { Game.startVillage(); }); await page.waitForTimeout(1600);
   r = await ev(() => {
-    const s = Game.scene, p = s.zone.entities.find(e => e.constructor.name === 'Prowler');
+    const s = Game.scene;
+    // a dodo runs away instead of chasing, so pick something that hunts
+    const ps = s.zone.entities.filter(e => e.constructor.name === 'Prowler');
+    const p = ps.find(e => !e.b.flees) || ps[0];
     // drop both of them on a known-clear tile so the walk to contact is unobstructed
     let sx = 0, sy = 0;
     outer: for (let y = 3; y < s.zone.h - 3; y++) for (let x = 3; x < s.zone.w - 10; x++) {
@@ -52,9 +55,10 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
     return p.state;
   });
   await page.waitForTimeout(800);
-  const seen = () => ev(() => { const s = Game.scene; if (!s.zone) return 'scene:' + s.constructor.name; const p = s.zone.entities.find(e => e.constructor.name === 'Prowler'); return p ? p.state : 'gone'; });
+  const seen = () => ev(() => { const s = Game.scene; if (!s.zone) return 'scene:' + s.constructor.name; const ps = s.zone.entities.filter(e => e.constructor.name === 'Prowler'); const p = ps.find(e => !e.b.flees) || ps[0]; return p ? p.state : 'gone'; });
   r = await seen();
-  for (let i = 0; i < 8 && r === 'patrol'; i++) { await page.waitForTimeout(400); r = await seen(); }
+  // patrol -> wary (the suspicion meter fills) -> chase
+  for (let i = 0; i < 16 && (r === 'patrol' || r === 'wary'); i++) { await page.waitForTimeout(400); r = await seen(); }
   ok('a prowler spots you and chases', r === 'chase', 'state=' + r);
   await shot('village_chase');
   // it has to walk to you. poll instead of guessing how long that takes.
