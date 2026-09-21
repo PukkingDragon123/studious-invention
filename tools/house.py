@@ -163,24 +163,58 @@ def bed(g):
     g.rect(W - 28, H - 32, W - 7, H - 32, HIDE[4])
     for i in range(11): g.px(W - 27 + i * 2, H - 22, HIDE[0])     # its hanging hem
 
-# table: a thick slab on two carved log trestles
+# table: a thick slab on two lashed log trestles, with the day's mess on it
 def table(g):
     W, H = g.w, g.h
-    for x in (12, W - 20):
-        logbeam(g, x, 16, x + 8, H - 3, WOOD, horiz=False)
-        g.rect(x - 3, H - 5, x + 11, H - 3, WOOD[1])
-    logbeam(g, 18, H - 16, W - 19, H - 12, WOOD)                 # stretcher
-    slab(g, 2, 8, W - 3, 17, ROCK)                               # the top
-    for i in range(3):                                            # a bowl and two shells laid out
-        pass
-    g.rect(2, 8, W - 3, 9, ROCK[4])
+    TOP, THK = 12, 11
+    # --- two trestles, each a pair of splayed logs with a cord lashing
+    for bx in (16, W - 26):
+        logbeam(g, bx, TOP + THK - 2, bx + 8, H - 4, WOOD, horiz=False)
+        logbeam(g, bx + 1, TOP + THK - 2, bx + 9, H - 12, WOOD, horiz=False, rings=False)
+        g.rect(bx - 4, H - 5, bx + 13, H - 3, WOOD[1])           # the foot
+        g.rect(bx - 4, H - 5, bx + 13, H - 5, WOOD[3])
+        for k in range(3):                                        # the cord that holds it together
+            g.rect(bx - 1, TOP + THK + 1 + k * 3, bx + 10, TOP + THK + 2 + k * 3, HIDE[1])
+            g.rect(bx - 1, TOP + THK + 1 + k * 3, bx + 10, TOP + THK + 1 + k * 3, HIDE[3])
+    logbeam(g, 22, H - 18, W - 23, H - 13, WOOD)                  # the stretcher
+    # --- the top: thick cut stone with a chewed front edge
+    slab(g, 2, TOP, W - 3, TOP + THK, ROCK)
+    g.rect(2, TOP, W - 3, TOP + 1, ROCK[4])                       # the lit face
+    g.rect(2, TOP + THK, W - 3, TOP + THK, ROCK[0])
+    for i in range(0, W - 8, 7):                                  # tool marks along the edge
+        g.px(4 + i, TOP + THK - 1, ROCK[1])
+        g.px(5 + i, TOP + THK - 2, ROCK[3])
+    for i in range(0, W - 10, 17):                                # chips out of the front
+        g.px(6 + i, TOP + THK, ROCK[1]); g.px(7 + i, TOP + THK, ROCK[1])
+    # --- and what is on it, because an empty table is a plank
+    claypot(g, 30, TOP, 17, 12, CLAY)                             # the big bowl
+    for i in range(5):                                            # something in the bowl
+        g.px(25 + i * 2, TOP - 9 + (i % 2), 'x')
+    claypot(g, 52, TOP, 10, 7, CLAY, band=False)                  # a little cup
+    for i, x in enumerate((W - 46, W - 34)):                      # two shells
+        g.ellipse(x, TOP - 3, 6, 4.4, BONE[2])
+        g.ellipse(x, TOP - 3, 4.6, 3.2, BONE[3])
+        for k in range(5): g.line(x, TOP - 7, x - 4 + k * 2, TOP - 1, BONE[1])
+    g.rect(W - 24, TOP - 4, W - 8, TOP - 2, WOOD[1])              # a flint knife: handle
+    g.rect(W - 24, TOP - 4, W - 14, TOP - 4, WOOD[3])
+    for k in range(5):                                            # and its blade
+        g.rect(W - 9 + k * 0.6, TOP - 6 + k, W - 5 + k, TOP - 5 + k, ROCK[3] if k % 2 else ROCK[2])
+    g.ellipse(70, TOP - 4, 9, 3.4, BONE[1])                       # a bone, put down mid-meal
+    g.ellipse(70, TOP - 5, 8, 2.4, BONE[2])
+    g.disc(62, TOP - 5, 2.6, BONE[2]); g.disc(78, TOP - 5, 2.6, BONE[2])
+    g.disc(61.4, TOP - 6, 1.4, BONE[3]); g.disc(77.4, TOP - 6, 1.4, BONE[3])
 
 def stool(g):
     W, H = g.w, g.h
-    for x in (5, W - 10):
-        logbeam(g, x, 12, x + 5, H - 2, WOOD, horiz=False)
-    slab(g, 1, 5, W - 2, 12, ROCK)
-    furpile(g, W / 2, 6, W * 0.36, 3, FUR, 5, 2)
+    for x in (5, W - 10):                                         # three legs, splayed
+        logbeam(g, x, 13, x + 5, H - 2, WOOD, horiz=False)
+        g.rect(x - 1, H - 3, x + 6, H - 2, WOOD[1])
+    logbeam(g, W // 2 - 2, 14, W // 2 + 3, H - 6, WOOD, horiz=False, rings=False)
+    for k in range(2):                                            # lashings
+        g.rect(4, 15 + k * 3, W - 5, 16 + k * 3, HIDE[1])
+        g.rect(4, 15 + k * 3, W - 5, 15 + k * 3, HIDE[3])
+    slab(g, 1, 6, W - 2, 13, ROCK)
+    furpile(g, W / 2, 7, W * 0.38, 3.4, FUR, 5, 2)
 
 def shelf(g):
     W, H = g.w, g.h

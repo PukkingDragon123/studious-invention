@@ -495,12 +495,26 @@ def fur(g, m, spec, pose):
         x = cx - w * 1.1 + i
         if (i * 7) % 4: continue
         for k in range(2): g.px(x, top + 1 + ((i * 5) % max(2, int(bot - top - 3))) + k, FUR['dark'])
-    # a belt at the waist
+    # lit strands, so the hide has a grain and not just a stain
+    for i in range(int(w * 2.0)):
+        x = cx - w * 1.0 + i
+        if (i * 3) % 7: continue
+        for k in range(2, int(bot - top) - 1, 2): g.px(x, top + k, FUR['hi'])
+    # the hem, in ink, so the kilt ends instead of fading
+    for i in range(int(w * 2.5)):
+        x = cx - w * 1.25 + i
+        d = 3 + ((i * 5) % 4) + (3 if i % 5 == 0 else 0)
+        g.px(x, bot + d, FUR['line'])
+    # a belt of cord at the waist, stitched, with a bone toggle on it
     for i in range(int(w * 1.9)):
-        g.px(cx - w * 0.95 + i, top, FUR['dark'])
-        g.px(cx - w * 0.95 + i, top + 1, FUR['mid'])
-    g.ellipse(cx + w * 0.1, top + 0.5, 2.6, 2.0, BONE['base'])
-    g.px(cx + w * 0.1 - 1, top - 0.5, BONE['hi'])
+        x = cx - w * 0.95 + i
+        g.px(x, top - 1, FUR['line'])
+        g.px(x, top, FUR['dark'])
+        g.px(x, top + 1, FUR['mid'] if i % 4 else FUR['line'])
+        g.px(x, top + 2, FUR['line'] if i % 4 == 2 else FUR['dark'])
+    g.ellipse(cx + w * 0.1, top + 0.5, 3.0, 2.4, BONE['mid'])
+    g.ellipse(cx + w * 0.1, top + 0.3, 2.2, 1.6, BONE['base'])
+    g.px(cx + w * 0.1 - 1, top - 0.7, BONE['hi'])
     if spec.get('strap'):
         sx = cx - shoW * 0.42
         for i in range(int(m['shoY']), int(top) + 1):
@@ -513,23 +527,30 @@ def fur(g, m, spec, pose):
     rim(g, FUR, m['cx'])
 
 def necklace(g, m, spec):
-    """a cord of teeth, not a row of dots"""
-    cx, shoY = m['cx'], m['shoY']
+    """A cord with three teeth on it, not a handful of freckles. The cord is a
+    solid dark arc so it reads as one object, and the teeth hang off the
+    bottom of it big enough to be teeth at 1x."""
+    cx, shoY, shoW = m['cx'], m['shoY'], m['shoW']
     y0 = shoY + 2
-    n = 9
-    for i in range(n):
-        t = i / (n - 1)
-        x = cx + (t - 0.5) * m['shoW'] * 0.66
-        y = y0 + math.sin(t * math.pi) * 3.0
-        g.px(x, y - 1, SKIN['dark'])
-        if i % 2 == 0:
-            for k in range(3):                                    # a tooth, tapering
-                wdt = 2 - (k > 1)
-                for w in range(wdt): g.px(x - wdt / 2 + w, y + k, BONE['hi'] if k == 0 else BONE['base'])
-        else:
-            g.px(x, y, BONE['mid'])
-    g.ellipse(cx, y0 + 6, 1.8, 2.6, BONE['base'])
-    g.px(cx - 1, y0 + 5, BONE['hi'])
+    span = shoW * 0.40
+    # the cord, two pixels thick where it is nearest the camera
+    for i in range(int(span * 2) + 1):
+        t = i / max(1, int(span * 2))
+        x = cx + (t - 0.5) * span * 2
+        y = y0 + math.sin(t * math.pi) * 3.2
+        g.px(x, y, SKIN['line'])
+        if 0.18 < t < 0.82: g.px(x, y + 1, SKIN['dark'])
+    # three teeth, the middle one longest
+    for (t, ln) in ((0.28, 3), (0.5, 5), (0.72, 3)):
+        x = cx + (t - 0.5) * span * 2
+        y = y0 + math.sin(t * math.pi) * 3.2 + 2
+        for k in range(ln):
+            wdt = 2 if k < ln - 1 else 1
+            for w in range(wdt):
+                g.px(x - wdt / 2 + w + 0.5, y + k, BONE['base'] if k else BONE['hi'])
+        g.px(x - 1, y, BONE['hi'])
+        g.px(x + 1, y + ln - 1, BONE['mid'])
+
 
 # --- cast --------------------------------------------------------------------
 ADULT = dict(w=52, h=76, headR=13, headY=19, waistY=50, shoW=29, hipW=20,
@@ -559,10 +580,96 @@ CAST = {
                     lip='W', lipHi='X', blush='X', hairBone=True),
 }
 
+def detail(g, m, spec, pose):
+    """The pass that makes a figure look drawn rather than assembled. The light
+    is up and to the left and it never moves: a lit band down the near-left of
+    every form, solid shadow under the pecs, the belly and the jaw, a hard ink
+    crease where two forms meet, and the dirt of somebody who works in a hole
+    in the ground. Everything here has to read at 1x, which is the only test
+    that matters."""
+    cx, shoY, waistY = m['cx'], m['shoY'], m['waistY']
+    hipW, shoW, footY, hipY = m['hipW'], m['shoW'], m['footY'], m['hipY']
+    headY, headR = m['headY'], m['headR']
+    INK, DK, MID, HI = SKIN['line'], SKIN['dark'], SKIN['mid'], SKIN['hi']
+    fat = spec.get('build') == 'fat'
+    female = spec.get('female', False)
+    H, W = len(g.g), len(g.g[0])
+    fam = {SKIN['base'], SKIN['mid'], SKIN['dark'], SKIN['hi'], SKIN['line']}
+
+    def skin_at(x, y):
+        x, y = int(x), int(y)
+        return 0 <= x < W and 0 <= y < H and g.g[y][x] in fam
+
+    def put(x, y, c):
+        if skin_at(x, y): g.px(int(x), int(y), c)
+
+    # --- the light: one lit pixel inside the left edge of every run of skin,
+    # which is what turns a silhouette into a body
+    for y in range(max(0, int(headY - headR)), min(H, int(footY) + 1)):
+        run = None
+        for x in range(W + 1):
+            solid = x < W and g.g[y][x] in fam
+            if solid and run is None: run = x
+            elif not solid and run is not None:
+                if x - run >= 4 and g.g[y][run] == SKIN['base']:
+                    g.px(run, y, HI)
+                    if x - run >= 9 and y % 3: g.px(run + 1, y, HI)
+                run = None
+
+    # --- solid shadow, not a line. Under each pec, under the belly, under
+    # the jaw, and in the hollow of the collarbone.
+    if fat:
+        for i in range(int(hipW * 0.78)):                       # the shelf of the belly
+            x = cx - hipW * 0.39 + i
+            d = math.sin(i / max(1, hipW * 0.78) * math.pi)
+            for k in range(1 + int(d * 2)):
+                put(x, waistY - 11 + k, MID)
+            put(x, waistY - 12, INK)
+    elif not female:
+        for side in (-1, 1):
+            for i in range(7):
+                a = i / 6 * math.pi
+                bx = cx + side * (1.4 + math.sin(a) * shoW * 0.21)
+                by = shoY + 9 + i * 0.45
+                put(bx, by, INK)
+                for k in range(1, 3): put(bx, by - k, MID)
+    for i in range(int(headR * 1.3)):                           # under the jaw
+        put(cx - headR * 0.65 + i, headY + headR * 1.02, INK)
+        put(cx - headR * 0.65 + i, headY + headR * 1.02 + 1, MID)
+    for side in (-1, 1):                                        # the armpit
+        for k in range(3): put(cx + side * (shoW * 0.42), shoY + 5 + k, INK)
+    for k in range(4): put(cx, hipY + k, INK)                   # where the legs part
+
+    # --- lit caps on everything pointing at the sky
+    for side in (-1, 1):
+        for i in range(4): put(cx + side * (shoW * 0.24 + i * 0.7), shoY + 1 + i * 0.3, HI)
+    kneeY = (hipY + footY) / 2 + 1
+    for side in (-1, 1):
+        kx = cx + side * hipW * 0.36 + math.sin(pose.get('legL' if side < 0 else 'legR', 0)) * 5
+        for i in range(3): put(kx - 2 + i * 0.7, kneeY - 2, HI if side > 0 else MID)
+        for i in range(3): put(kx - 1 + i, kneeY + 2, INK)                    # the kneecap line
+    for i in range(3): put(cx - headR * 0.2 + i, headY - headR * 0.62, HI)    # the brow ridge
+
+    # --- the dirt of the job, on the legs where it lands
+    if spec.get('grime', True):
+        seed = int(spec.get('headR', 12) * 7)
+        for i in range(8):
+            gx = cx + ((i * 37 + seed) % 21) - 10
+            gy = kneeY + ((i * 53 + seed) % max(3, int(footY - kneeY - 1)))
+            put(gx, gy, DK)
+
+    # --- war paint, for the ones who bother
+    for (px2, py2, wd, col) in spec.get('paint', []):
+        for i in range(wd):
+            put(cx + px2 + i, shoY + py2, col)
+            put(cx + px2 + i, shoY + py2 + 1, col)
+
+
 def build(name, pose):
     spec = CAST[name]
     g, m = figure(spec, pose)
     anatomy(g, m, spec, pose)
+    detail(g, m, spec, pose)
     hands(g, m, spec, pose)
     fur(g, m, spec, pose)
     hair(g, m, spec, pose)

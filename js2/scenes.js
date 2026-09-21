@@ -386,7 +386,7 @@ class PauseOverlay {
 // leave it alone, and you can drag it with the wheel or a finger.
 class CreditsOverlay {
   constructor(onClose) {
-    this.onClose = onClose; this.y = -140; this.t = 0; this.drag = null;
+    this.onClose = onClose; this.y = 150; this.t = 0; this.drag = null;
     this.lines = [
       { t: 'ONGA BONGA', s: 2.6, c: SKIN.red, gap: 10 },
       { t: 'a stone age rock opera', s: 1.2, c: SKIN.textDim, gap: 30 },
@@ -421,7 +421,7 @@ class CreditsOverlay {
   update(dt) {
     this.t += dt;
     if (Input.pressed('Escape')) this.close();
-    if (this.t > 0.6 && !this.drag) this.y += dt * 34;
+    if (this.t > 0.6 && !this.drag) this.y += dt * 40;
     if (Input.wheel) this.y += Input.wheel * 26;            // it reads itself
     // a finger anywhere in the panel scrolls it
     if (Input.down) {
@@ -429,8 +429,8 @@ class CreditsOverlay {
       this.y = this.drag.at - (Input.my - this.drag.y);
     } else this.drag = null;
     const total = this.height();
-    if (this.y > total) this.y = -260;                            // it loops
-    if (this.y < -300) this.y = -300;
+    if (this.y > total + 120) this.y = -180;                      // it loops
+    if (this.y < -220) this.y = -220;
   }
   height() { return this.lines.reduce((a, l) => a + Math.round(18 * (l.s || 1.1)) + (l.gap || 6), 0); }
   draw() {

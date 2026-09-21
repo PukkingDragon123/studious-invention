@@ -529,10 +529,37 @@ const World = {
       if (y == null) continue;
       const i = Math.abs((x / 34) | 0);
       for (let k = 0; k < 3; k++) {
-        const by = y + 44 + k * 62 + jitter(x + k * 7, 26);
+        if ((i + k * 3) % 4 === 0) continue;               // not every slot is filled
+        const by = y + 36 + k * 62 + jitter(x + k * 7, 48);
         if (by > GY - 14) continue;
-        Gfx.round(x + jitter(x + k, 22), by, 26 + (i % 3) * 10, 13 + (k % 2) * 6, 6, k % 2 ? back : backLit);
-        Gfx.round(x + jitter(x + k, 22) + 2, by, 20 + (i % 3) * 8, 4, 2, night ? '#574a66' : '#7a6d8a');
+        const bx = x + jitter(x + k, 30) - 8, bw = 20 + (i % 4) * 11, bh = 11 + ((i + k) % 3) * 6;
+        // each boss of rock gets an ink shadow under it and a lit top, so the
+        // wall has relief instead of a rash of lozenges
+        Gfx.round(bx - 1, by + 2, bw + 2, bh, 6, '#120c16');
+        Gfx.round(bx, by, bw, bh, 6, k % 2 ? back : backLit);
+        Gfx.round(bx + 2, by, bw - 4, 4, 2, night ? '#574a66' : '#7a6d8a');
+        Gfx.rectA(bx + 3, by + bh - 3, bw - 8, 2, '#120c16', 0.4);
+        for (let m = 0; m < 3; m++)                       // pitting
+          Gfx.rectA(bx + 4 + ((m * 11 + i) % Math.max(1, bw - 8)), by + 4 + (m % 2) * 4, 2, 2, '#120c16', 0.3);
+      }
+    }
+    // strata running through the whole chamber, and two long cracks
+    for (let b = 0; b < 5; b++) {
+      const by = GY - 40 - b * 46;
+      for (let x = d.x - d.rx; x < d.x + d.rx; x += 9) {
+        const y = World.caveRoof(d, x);
+        if (y == null || by < y + 26) continue;
+        Gfx.rectA(x, by + Math.sin(x * 0.013 + b) * 4, 9, 2, '#120c16', 0.22);
+        Gfx.rectA(x, by + Math.sin(x * 0.013 + b) * 4 + 2, 9, 1, night ? '#574a66' : '#7a6d8a', 0.18);
+      }
+    }
+    for (const c of [-0.42, 0.26]) {
+      let cx2 = d.x + d.rx * c, cy2 = World.caveRoof(d, cx2);
+      if (cy2 == null) cy2 = GY - 200;
+      for (let k = 0; k < 26; k++) {
+        const yy = cy2 + 20 + k * 7;
+        if (yy > GY - 10) break;
+        Gfx.rectA(cx2 + Math.sin(k * 0.9) * 5, yy, 2 + (k % 3), 6, '#120c16', 0.3);
       }
     }
     // a warm wash off the floor, because there is a fire in here somewhere
@@ -704,9 +731,16 @@ const World = {
     }
     for (const tx of [HOME.arch - 96, HOME.arch + 96]) {
       Gfx.rect(tx - 4, 318, 8, 46, '#5c3a20');
+      Gfx.rect(tx - 4, 318, 3, 46, '#85562f');
+      Gfx.rect(tx + 4, 318, 1, 46, '#120c16');
       Gfx.round(tx - 9, 308, 18, 14, 6, '#3a2415');
+      Gfx.round(tx - 7, 309, 14, 4, 2, '#5c3a20');
+      for (const i of [0, 2, 1])
+        World.flame(tx + (i - 1) * 4, 310, (i === 1 ? 28 : 18) + Math.abs(Math.sin(t * 6.4 + i + tx)) * 12,
+          i === 1 ? 9 : 6, Math.sin(t * 4.4 + i * 2) * 3,
+          ['#e06a1b', '#ffa832', '#ffe98a', '#9c3510'], i * 2.1 + tx);
       if (chance(0.5)) Particles.fire(tx, 306, 1);
-      Gfx.glow(tx, 302, 130, '#ff9a20', 0.22 + Math.sin(t * 7 + tx) * 0.04);
+      Gfx.glow(tx, 296, 150, '#ff9a20', 0.24 + Math.sin(t * 7 + tx) * 0.04);
     }
   },
 
