@@ -431,36 +431,107 @@ class Critter extends Entity {
   draw() { this.actor.draw(); }
 }
 
+// What each species is like to walk past. Nothing in this valley behaves the
+// same way twice: a dodo bolts, a boar picks a line and commits to it, compies
+// scream for their friends, and a pterodactyl is above you so a bush is no
+// help at all.
+const BEAST = {
+  compy:   { speed: 74, sight: 132, cone: 0.80, threat: 1, calls: true },
+  dodo:    { speed: 44, sight: 210, cone: 0.50, threat: 1, flees: true },
+  boar:    { speed: 60, sight: 158, cone: 0.42, threat: 2, charges: true },
+  lizard:  { speed: 50, sight: 176, cone: 0.66, threat: 2 },
+  raptor:  { speed: 80, sight: 196, cone: 0.72, threat: 3, calls: true },
+  ptero:   { speed: 70, sight: 240, cone: 0.90, threat: 2, seesHidden: true },
+  tarblob: { speed: 30, sight: 120, cone: 1.10, threat: 2 },
+  stego:   { speed: 38, sight: 140, cone: 0.46, threat: 3 },
+  tricera: { speed: 56, sight: 166, cone: 0.50, threat: 3, charges: true },
+  brute:   { speed: 54, sight: 180, cone: 0.58, threat: 3 },
+  trex:    { speed: 66, sight: 250, cone: 0.66, threat: 4, seesHidden: true },
+};
+
 class Prowler extends Entity {
   constructor(x, y, kind, act, elite) {
     super(x, y);
     this.kind = kind; this.elite = !!elite; this.act = act;
+    const b = BEAST[kind] || BEAST.lizard;
+    this.b = b;
     this.actor = new Actor({ base: kind, x, y, scale: elite ? 1.15 : 1 });
     this.state = 'patrol'; this.leg = 0; this.wait = 0; this.alert = 0; this.lost = 0;
-    this.dir = { x: 1, y: 0 }; this.speed = elite ? 62 : 52; this.r = 20;
-    this.sight = elite ? 210 : 170; this.prompt = null;
+    this.dir = { x: 1, y: 0 }; this.r = 20;
+    this.speed = b.speed * (elite ? 1.18 : 1);
+    this.sight = b.sight * (elite ? 1.2 : 1);
+    this.cone = b.cone;
+    this.threat = b.threat + (elite ? 1 : 0);
+    this.suspicion = 0;                    // fills while it half-sees you
+    this.charge = 0;                       // a boar committing to a line
+    this.prompt = null;
+  }
+  // Can you hit it from here without it knowing? Behind it, or out of sight,
+  // and it has not spotted you.
+  ambushable(V) {
+    if (this.state === 'chase' || this.charge > 0) return false;
+    const dx = V.player.x - this.x, dy = V.player.y - this.y, d = Math.hypot(dx, dy);
+    if (d > 62) return false;
+    const behind = Math.abs(wrapAngle(Math.atan2(dy, dx) - Math.atan2(this.dir.y, this.dir.x))) > 1.5;
+    return behind || V.hidden;
   }
   update(dt, V) {
     const p = V.player;
     const dx = p.x - this.x, dy = p.y - this.y, d = Math.hypot(dx, dy);
     const facing = Math.atan2(this.dir.y, this.dir.x);
     const toP = Math.atan2(dy, dx);
-    const inCone = Math.abs(wrapAngle(toP - facing)) < 0.62 && d < this.sight;
-    const heard = d < (p.sprinting ? 128 : 58);
-    const canSee = (inCone || heard) && !(V.hidden && d > 42);
-    if (this.state !== 'chase' && canSee) {
-      this.state = 'chase'; this.alert = 1; this.lost = 0;
-      Emotes.show(this.actor, '!'); AudioSys.sfx('detect');
+    const inCone = Math.abs(wrapAngle(toP - facing)) < this.cone && d < this.sight;
+    const heard = d < (p.sprinting ? 138 : 56);
+    const bushed = V.hidden && !this.b.seesHidden;
+    const canSee = (inCone || heard) && !(bushed && d > 42) && V.dodgeT <= 0;
+    // it does not snap awake: seeing you fills a meter, and losing you empties it
+    if (this.state !== 'chase') {
+      const gain = canSee ? (inCone ? 1.9 - clamp(d / this.sight, 0, 1) : 1.2) : -1.1;
+      this.suspicion = clamp(this.suspicion + gain * dt, 0, 1);
+      if (this.suspicion > 0.02 && this.state === 'patrol') { this.state = 'wary'; this.wait = 0; }
+      if (this.suspicion <= 0 && this.state === 'wary') { this.state = 'patrol'; }
+      if (this.suspicion >= 1) {
+        this.alarm(V);
+        if (this.b.calls) for (const e of V.zone.entities)
+          if (e instanceof Prowler && e !== this && dist(e.x, e.y, this.x, this.y) < 300) e.alarm(V, true);
+      }
     }
-    if (this.state === 'chase') {
-      if (!canSee) { this.lost += dt; if (this.lost > 2.6) { this.state = 'patrol'; Emotes.show(this.actor, '?'); AudioSys.sfx('hide'); } }
+    if (this.state === 'flee') {                     // a dodo does not fight you
+      const nx = -dx / (d || 1), ny = -dy / (d || 1);
+      this.dir = { x: nx, y: ny };
+      this.tryMove(nx * this.speed * 1.7 * dt, ny * this.speed * 1.7 * dt, V);
+      this.actor.play('walk', { fps: 16 });
+      this.lost += dt;
+      if (this.lost > 3.4 || d > 340) { this.state = 'patrol'; this.suspicion = 0; this.lost = 0; }
+    } else if (this.charge > 0) {                    // a boar picks a line and commits
+      this.charge -= dt;
+      this.tryMove(this.dir.x * this.speed * 2.6 * dt, this.dir.y * this.speed * 2.6 * dt, V);
+      this.actor.play('walk', { fps: 20 });
+      if (chance(dt * 30)) Particles.dust(this.x, this.y + 8, 1);
+      if (d < 30 && !V.locked) V.startBattle(this);
+      if (this.charge <= 0) { this.wait = 1.2; this.state = 'wary'; this.suspicion = 0.6; }
+    } else if (this.state === 'chase') {
+      if (!canSee) { this.lost += dt; if (this.lost > 2.6) { this.state = 'patrol'; this.suspicion = 0; Emotes.show(this.actor, '?'); AudioSys.sfx('hide'); } }
       else this.lost = 0;
+      if (this.b.charges && d < 220 && Math.abs(wrapAngle(toP - facing)) < 0.5 && chance(dt * 0.9)) {
+        this.charge = 1.3; this.dir = { x: dx / (d || 1), y: dy / (d || 1) };
+        AudioSys.sfx('roar', { pitch: 70, vol: 0.7, len: 0.6 });
+        Emotes.show(this.actor, 'anger', 1.0);
+        return;
+      }
       const sp = this.speed * 1.5;
       const nx = dx / (d || 1), ny = dy / (d || 1);
       this.dir = { x: nx, y: ny };
       this.tryMove(nx * sp * dt, ny * sp * dt, V);
       this.actor.play('walk', { fps: 14 });
       if (d < 30 && !V.locked) V.startBattle(this);
+    } else if (this.state === 'wary') {
+      // it stops, and turns towards whatever it thinks it heard
+      this.actor.play('idle');
+      const want = Math.atan2(dy, dx);
+      const cur = Math.atan2(this.dir.y, this.dir.x);
+      const na = cur + clamp(wrapAngle(want - cur), -2.2 * dt, 2.2 * dt);
+      this.dir = { x: Math.cos(na), y: Math.sin(na) };
     } else {
       if (this.wait > 0) { this.wait -= dt; this.actor.play('idle'); }
       else if (this.route) {
@@ -478,6 +549,15 @@ class Prowler extends Entity {
     this.actor.x = this.x; this.actor.y = this.y;
     this.actor.update(dt);
     this.alert = Math.max(0, this.alert - dt * 0.5);
+  }
+  alarm(V, second) {
+    if (this.state === 'chase' || this.state === 'flee') return;
+    this.suspicion = 1;
+    if (this.b.flees) { this.state = 'flee'; this.lost = 0; Emotes.show(this.actor, '!'); AudioSys.sfx('gasp'); return; }
+    this.state = 'chase'; this.alert = 1; this.lost = 0;
+    Emotes.show(this.actor, '!');
+    AudioSys.sfx(second ? 'horn' : 'detect', { vol: second ? 0.5 : 1 });
+    if (this.b.calls && !second) Popups.add(this.x, this.y - 46, 'IT CALLED!', '#ef6a5e', { scale: 1.2 });
   }
   tryMove(dx, dy, V) {
     const z = V.zone;
@@ -500,16 +580,30 @@ class Prowler extends Entity {
     const ctx = Gfx.ctx;
     const a = Math.atan2(this.dir.y, this.dir.x);
     ctx.save();
-    ctx.globalAlpha = this.state === 'chase' ? 0.20 : 0.10;
-    ctx.fillStyle = this.state === 'chase' ? '#ef6a5e' : '#ffe98a';
+    ctx.globalAlpha = this.state === 'chase' || this.charge > 0 ? 0.22 : this.state === 'wary' ? 0.16 : 0.09;
+    ctx.fillStyle = this.state === 'chase' || this.charge > 0 ? '#ef6a5e' : this.state === 'wary' ? '#ffa832' : '#ffe98a';
     ctx.beginPath(); ctx.moveTo(this.x, this.y - 10);
-    ctx.arc(this.x, this.y - 10, this.sight, a - 0.62, a + 0.62); ctx.closePath(); ctx.fill();
+    ctx.arc(this.x, this.y - 10, this.sight, a - this.cone, a + this.cone); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
+  // Every beast wears a little slate over its head: how dangerous it is, and
+  // whether it has any idea you are there.
   draw() {
     this.actor.draw();
-    if (this.elite) Gfx.text('ELITE', this.x, this.actor.top - 14, { color: '#ffa832', align: 'center', outline: true });
-    if (this.state === 'chase') Gfx.text('!', this.x, this.actor.top - 26, { color: '#ef6a5e', align: 'center', scale: 2, outline: true });
+    const bw = 20 + this.threat * 9, bx = this.x - bw / 2, by = this.actor.top - 24;
+    const col = this.state === 'chase' || this.charge > 0 ? SKIN.red
+      : this.state === 'flee' ? '#3570c0'
+        : this.state === 'wary' ? SKIN.gold : SKIN.faceMid;
+    Gfx.round(bx - 2, by - 2, bw + 4, 18, 3, SKIN.ink);
+    Gfx.round(bx, by, bw, 14, 2, col);
+    Gfx.rect(bx + 1, by + 1, bw - 2, 2, SKIN.faceHi);
+    for (let i = 0; i < this.threat; i++)                        // how bad it is
+      Gfx.sprite('icon_skull', bx + 8 + i * 9, by + 7, { anchor: 'c', scale: 0.62 });
+    const mark = this.state === 'chase' || this.charge > 0 ? '!' : this.state === 'flee' ? '>' : this.state === 'wary' ? '?' : '';
+    if (mark) Gfx.text(mark, bx + bw - 6, by + 2, { color: SKIN.ink, align: 'center', scale: 1.3 });
+    if (this.state === 'wary')                                   // and how close it is to sure
+      Gfx.bar(bx, by + 15, bw, 3, this.suspicion, SKIN.goldLit, { bg: SKIN.ink });
+    if (this.elite) Gfx.text('ELITE', this.x, by - 14, { color: '#ffa832', align: 'center', outline: true });
   }
 }
 
@@ -520,7 +614,7 @@ class VillageScene {
     this.zone = Game.run.zone && Game.run.zone.act === this.act ? Game.run.zone : new Zone(this.act, Game.run.seed);
     Game.run.zone = this.zone;
     this.cam = new Camera();
-    this.cam.zoom = this.cam.tzoom = VIEW * 0.75;
+    this.cam.zoom = this.cam.tzoom = VIEW * 0.62;
     this.cam.setBounds(0, 0, this.zone.w * TILE, this.zone.h * TILE);
     this.t = 0; this.locked = false; this.hidden = false; this.co = null;
     this.prompt = null; this.intro = 2.2;
@@ -638,9 +732,17 @@ class VillageScene {
       const d = dist2(o.x, o.y, p.x, p.y);
       if (d < 44 * 44 && d < bestD) { bestD = d; best = { loot: o, prompt: 'SEARCH', x: o.x, y: o.y, interact: this.lootGen(o) }; }
     }
+    // creeping up behind something beats anything else you could be doing
+    this.sneakTarget = null;
+    for (const e of this.zone.entities) {
+      if (!(e instanceof Prowler) || !e.ambushable(this)) continue;
+      const d = dist2(e.x, e.y, p.x, p.y);
+      if (d < 62 * 62) { this.sneakTarget = e; best = { prompt: 'SNEAK ATTACK', x: e.x, y: e.y, sneak: e }; break; }
+    }
     this.prompt = best;
-    if (best && (Input.pressed('KeyE', 'Space', 'Enter') || this.interactTapped)) {
+    if (best && (Input.pressed('KeyE', 'Enter') || this.interactTapped)) {
       this.interactTapped = false;
+      if (best.sneak) { this.startBattle(best.sneak, 'ambush'); return; }
       this.locked = true;
       this.co = Co.run(function* (V) { yield* best.interact(V); V.locked = false; }(this), this);
     }
@@ -648,7 +750,7 @@ class VillageScene {
     this.updateAmbience(dt);
     // camera: look a little ahead of the player, and pull back when sprinting
     this.cam.lead = 0.18;
-    this.cam.zoomTo(VIEW * (p.sprinting ? 0.68 : 0.75));
+    this.cam.zoomTo(VIEW * (p.sprinting ? 0.56 : 0.62));
     this.cam.update(dt);
     if (Input.pressed('Escape')) Game.pause();
     if (Input.pressed('KeyM')) this.showMap = !this.showMap;
@@ -704,11 +806,20 @@ class VillageScene {
     this.stickPos = null;
     return out;
   }
-  startBattle(prowler) {
+  startBattle(prowler, advantage) {
     if (this.locked) return;
     this.locked = true;
-    AudioSys.sfx('roar', { pitch: 90, vol: 0.8, len: 0.7 });
-    Game.enterBattle(prowler, this.act);
+    // how the fight opens depends entirely on who saw whom
+    const adv = advantage || (prowler.state === 'chase' || prowler.charge > 0 ? 'ambushed' : 'even');
+    if (adv === 'ambush') {
+      AudioSys.sfx('bighit'); Juice.stop(0.1); Juice.shake(12, 0.4);
+      Juice.pow(W / 2, H / 2 - 40, { r: 74, spikes: 12, col: '#ffe98a', word: 'AMBUSH!' });
+      Particles.spawn(prowler.x, prowler.y - 16, { n: 18, color: ['#ffe98a', '#ffffff', '#c4b89a'], speed: 190, spread: 6.28, life: 0.7, size: 4, sizeEnd: 0, gravity: 260 });
+    } else if (adv === 'ambushed') {
+      AudioSys.sfx('roar', { pitch: 90, vol: 0.8, len: 0.7 });
+      Juice.flash('#7d1d2b', 0.35, 4);
+    } else AudioSys.sfx('roar', { pitch: 90, vol: 0.7, len: 0.6 });
+    Game.enterBattle(prowler, this.act, adv);
   }
   *lootGen(o) {
     o.taken = true;
@@ -781,8 +892,9 @@ class VillageScene {
   }
   drawHud() {
     const run = Game.run;
-    // ---- vitals, framed, bottom left
-    const x = 14, y = H - 82;
+    // ---- vitals. On a touch screen the bottom-left corner belongs to the
+    // stick, so they move up under the relics instead.
+    const x = 14, y = Input.touch ? 130 : H - 82;
     UI.slab(x - 8, y - 8, 272, 76, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
     Gfx.sprite('icon_heart', x, y + 2, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2, scale: 1.2 });
     Gfx.round(x + 30, y + 2, 220, 22, 2, SKIN.ink);
@@ -800,24 +912,9 @@ class VillageScene {
     // ---- relics, in gold slots
     let rx = 14;
     for (const id of run.relics) { UI.slot(rx, 10, 32, {}); Relics.drawIcon(id, rx + 6, 16); rx += 36; }
-    // objective compass
+    // ---- which way the gate is, as an arrow on the objective panel rather
+    // than a disc in the corner where your thumb goes
     const goal = this.zone.entities.find(e => e instanceof ZoneGoal);
-    if (goal) {
-      const dx = goal.x - this.player.x, dy = goal.y - this.player.y;
-      const a = Math.atan2(dy, dx), d = Math.hypot(dx, dy);
-      const cx = W - 60, cy = H - 60;
-      Gfx.circle(cx, cy, 35, SKIN.ink); Gfx.circle(cx, cy, 33, SKIN.goldDark);
-      Gfx.circle(cx, cy, 30, SKIN.gold); Gfx.circle(cx, cy, 27, '#241c2e');
-      Gfx.ring(cx, cy, 29, SKIN.goldLit, 1);
-      const ctx = Gfx.ctx;
-      ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
-      ctx.fillStyle = '#ffa832';
-      ctx.beginPath(); ctx.moveTo(17, 0); ctx.lineTo(1, -8); ctx.lineTo(4, 0); ctx.lineTo(1, 8); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#7a6d8a';
-      ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-1, -6); ctx.lineTo(-4, 0); ctx.lineTo(-1, 6); ctx.closePath(); ctx.fill();
-      ctx.restore();
-      Gfx.text(`${Math.round(d / 32)}`, cx, cy + 36, { color: '#d6cfe0', align: 'center', scale: 1.3, outline: true });
-    }
     // the objective: three kills makes a trail the raptor will follow
     {
       const r = Game.run, ready = r.bait >= r.baitNeed, bx = 24, by = 58;
@@ -832,8 +929,20 @@ class VillageScene {
         Gfx.sprite('icon_skull', gx + 11, by + 30, { anchor: 'c', scale: 1.4, alpha: got ? 1 : 0.22 });
         if (got) Gfx.sprite('icon_check', gx + 19, by + 34, { anchor: 'c', scale: 1 });
       }
-      Gfx.text(ready ? 'head for the gate' : `${r.bait} / ${r.baitNeed} beasts down`,
-        bx + 108, by + 24, { color: SKIN.text, scale: 1.2 });
+      Gfx.text(ready ? 'to the gate' : `${r.bait} / ${r.baitNeed} down`,
+        bx + 108, by + 26, { color: SKIN.text, scale: 1.2 });
+      if (goal) {
+        const dx = goal.x - this.player.x, dy = goal.y - this.player.y;
+        const ang = Math.atan2(dy, dx), dist = Math.hypot(dx, dy);
+        const cx = bx + 232, cy = by + 6, ctx = Gfx.ctx;
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+        ctx.fillStyle = SKIN.ink;
+        ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(-8, -9); ctx.lineTo(-3, 0); ctx.lineTo(-8, 9); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = SKIN.gold;
+        ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -7); ctx.lineTo(-2, 0); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        Gfx.text(`${Math.round(dist / 32)}m`, cx, cy + 14, { color: SKIN.text, align: 'center', scale: 1 });
+      }
     }
     if (this.hidden) Gfx.text('HIDDEN', W / 2, 62, { color: '#86e8d2', align: 'center', scale: 1.6, outline: true, outlineWidth: 2 });
     // zone banner on arrival
@@ -847,23 +956,45 @@ class VillageScene {
       Gfx.ctx.globalAlpha = 1;
     }
     if (this.showMap) this.drawMinimap();
-    if (Input.touch) this.drawTouchControls();
-    else Gfx.text('WASD move   SHIFT run   SPACE dodge   E interact   M map', W / 2, H - 20, { color: '#9391a6', align: 'center', scale: 1.2, outline: true });
+    this.drawPad();
+    if (!Input.touch) Gfx.text('WASD move   SHIFT run   SPACE dodge   E interact   M map',
+      (W - 140) / 2, H - 18, { color: '#9391a6', align: 'center', scale: 1.1, outline: true });
     UI.iconButton(W - 46, 10, 36, 32, 'icon_menu', () => Game.pause(), { tip: 'Menu (Esc)', scale: 1.2 });
   }
-  drawTouchControls() {
-    const base = { x: 110, y: H - 110 };
-    Gfx.ctx.globalAlpha = 0.34; Gfx.circle(base.x, base.y, 62, '#120c16'); Gfx.ctx.globalAlpha = 0.55;
-    Gfx.ring(base.x, base.y, 62, '#a79bb4', 2);
-    const k = this.stickPos || base;
-    Gfx.ctx.globalAlpha = 0.8; Gfx.circle(k.x, k.y, 26, '#5c3a20'); Gfx.ring(k.x, k.y, 26, '#ffe98a', 2);
-    Gfx.ctx.globalAlpha = 1;
-    UI.button(W - 130, H - 150, 112, 46, this.prompt ? this.prompt.prompt : 'ACT', () => { this.interactTapped = true; }, { disabled: !this.prompt, scale: 1.2 });
-    UI.button(W - 130, H - 94, 112, 46, 'RUN', () => { }, { fill: this.sprintHeld ? '#85562f' : '#3b3048', scale: 1.2 });
-    if (Input.down && UI.hovered(W - 130, H - 94, 112, 46)) this.sprintHeld = true;
-    if (!Input.down) this.sprintHeld = false;
-    UI.button(W - 130, H - 38, 112, 32, 'DODGE', () => { this.dodgeTap = true; },
-      { fill: this.dodgeCool > 0 ? '#3b3048' : '#4b2070', disabled: this.dodgeCool > 0, scale: 1.1 });
+  // The pad. On a touch screen it is a real stick in the bottom-left and a
+  // column of buttons in the bottom-right; with a mouse the buttons are still
+  // there and still work, they are just smaller and the stick is not drawn.
+  drawPad() {
+    const touch = Input.touch;
+    if (touch) {
+      const base = { x: 108, y: H - 104 };
+      const ctx = Gfx.ctx;
+      ctx.globalAlpha = 0.30; Gfx.circle(base.x, base.y, 66, '#120c16'); ctx.globalAlpha = 1;
+      Gfx.ring(base.x, base.y, 66, SKIN.ink, 3);
+      Gfx.ring(base.x, base.y, 63, SKIN.faceMid, 2);
+      for (let i = 0; i < 4; i++) {                       // four notches, so it reads as a stick
+        const a = i * Math.PI / 2;
+        Gfx.rectA(base.x + Math.cos(a) * 52 - 3, base.y + Math.sin(a) * 52 - 3, 7, 7, SKIN.faceLit, 0.7);
+      }
+      const k = this.stickPos || base;
+      Gfx.circle(k.x, k.y, 29, SKIN.ink);
+      Gfx.circle(k.x, k.y, 26, SKIN.btnDark);
+      Gfx.circle(k.x, k.y, 23, this.stickPos ? SKIN.btn : SKIN.btnFace);
+      Gfx.circle(k.x - 6, k.y - 8, 8, SKIN.btnLit);
+      Gfx.ring(k.x, k.y, 24, SKIN.gold, 2);
+    }
+    // ---- the buttons, bottom right, biggest one nearest the thumb
+    const bw = touch ? 124 : 104, bh = touch ? 52 : 40, bx = W - bw - 16;
+    let by = H - bh - 22;
+    UI.wbutton(bx, by, bw, bh, this.prompt ? this.prompt.prompt : 'ACT',
+      () => { this.interactTapped = true; }, { disabled: !this.prompt, scale: touch ? 1.3 : 1.1, key: 'act' });
+    by -= bh + 8;
+    UI.wbutton(bx, by, bw, bh, 'DODGE', () => { this.dodgeTap = true; },
+      { disabled: this.dodgeCool > 0, scale: touch ? 1.3 : 1.1, key: 'dodge' });
+    by -= bh + 8;
+    const runHov = UI.wbutton(bx, by, bw, bh, 'RUN', () => { },
+      { scale: touch ? 1.3 : 1.1, key: 'run', danger: this.sprintHeld });
+    this.sprintHeld = !!(Input.down && runHov);
   }
   click() { }
 }

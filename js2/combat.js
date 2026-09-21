@@ -60,6 +60,7 @@ const Backdrops = {
 class Combat {
   constructor(ids, o = {}) {
     this.ids = ids; this.kind = o.kind || 'normal'; this.act = o.act || (Game.run ? Game.run.act : 1);
+    this.advantage = o.advantage || 'even';       // how the fight opened, out in the valley
     this.run = Game.run;
     this.rng = new RNG((this.run ? this.run.seed : 1) + (this.run ? this.run.fights * 977 : 0) + 31);
     this.enemies = []; this.hand = []; this.drawPile = []; this.discard = []; this.exhaust = [];
@@ -80,6 +81,17 @@ class Combat {
     for (const id of this.ids) this.spawn(id, true);
     this.layout();
     this.hype = this.run.startHype || 0;
+    // who got the jump on whom, out in the grass, decides how turn one goes
+    if (this.advantage === 'ambush') {
+      for (const e of this.enemies) e.st.vuln = (e.st.vuln || 0) + 2;
+      this.energy = this.maxEnergy + 1;
+      this.hype += 15;
+      this.flags.ambush = true;
+    } else if (this.advantage === 'ambushed') {
+      this.player.st.weak = (this.player.st.weak || 0) + 1;
+      for (const e of this.enemies) e.st.str = (e.st.str || 0) + 1;
+      this.flags.ambushed = true;
+    }
     const boss = this.enemies.some(e => e.def.boss);
     AudioSys.play(boss ? 'blaze' : this.kind === 'elite' ? 'battle3' : `battle${Math.min(3, this.act)}`, { intensity: this.kind === 'normal' ? 1 : 2, fade: 0.35 });
     Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
@@ -121,7 +133,17 @@ class Combat {
     AudioSys.sfx('roar', lead.def.roar || {});
     Juice.shake(lead.def.boss ? 14 : 7, 0.5);
     lead.actor.squash(0.2);
-    this.banner = { text: lead.name, sub: lead.def.boss ? 'THE BURNING ONE' : lead.def.elite ? 'ELITE' : `${this.enemies.length} BEAST${this.enemies.length > 1 ? 'S' : ''}`, t: 0, life: lead.def.boss ? 2.4 : 1.5 };
+    const sub = this.advantage === 'ambush' ? 'YOU GOT THE JUMP ON IT'
+      : this.advantage === 'ambushed' ? 'IT SAW YOU COMING'
+        : lead.def.boss ? 'THE BURNING ONE' : lead.def.elite ? 'ELITE'
+          : `${this.enemies.length} BEAST${this.enemies.length > 1 ? 'S' : ''}`;
+    this.banner = { text: lead.name, sub, t: 0, life: lead.def.boss ? 2.4 : 1.5 };
+    if (this.advantage === 'ambush') {
+      Popups.add(W / 2, 168, '+1 ENERGY   ENEMIES VULNERABLE', '#a8e878', { world: false, scale: 1.4, life: 2.4 });
+      Juice.flash('#ffe98a', 0.3, 3);
+    } else if (this.advantage === 'ambushed') {
+      Popups.add(W / 2, 168, 'YOU ARE WEAKENED   IT IS STRONGER', '#ef6a5e', { world: false, scale: 1.4, life: 2.4 });
+    }
     this.cam.zoomTo(1.35);
     yield lead.def.boss ? 1.5 : 0.85;
     this.cam.zoomTo(1); this.cam.lookAt(W / 2, 288);

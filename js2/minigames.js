@@ -71,7 +71,7 @@ class SideScroll extends MiniGame {
     this.goal = o.goal ?? 1700;
     this.ground = o.ground ?? GY;
     this.camX = this.x - VW * 0.34;
-    this.camY = this.ground - VH * 0.74;
+    this.camY = this.ground - VH * (o.camYFrac ?? 0.74);
     this.runSpeed = o.speed ?? 250;
     this.auto = o.auto ?? 0;                       // constant forward push
     this.hero = new Actor({ base: o.base || 'bronk', x: 0, y: this.ground, scale: o.scale || 1 });
@@ -180,7 +180,7 @@ class SideScroll extends MiniGame {
     // --- the camera leads a little in the direction of travel
     Juice.lines((Math.abs(this.vx) - 90) / 240);
     this.camX = damp(this.camX, this.x - VW * 0.34 + clamp(this.vx, -140, 140) * 0.45, 5, dt);
-    this.camY = damp(this.camY, this.ground - VH * 0.74 - Math.abs(this.vx) * 0.02, 4, dt);
+    this.camY = damp(this.camY, this.ground - VH * (this.o.camYFrac ?? 0.74) - Math.abs(this.vx) * 0.02, 4, dt);
     // --- someone chasing, someone running away
     if (this.pursuer) {
       const p = this.pursuer; p.t += dt;
@@ -395,6 +395,75 @@ class DriveCard extends MiniGame {
   }
 }
 
+// ---------------------------------------------------------------- DRIVEGAME -
+// The commute, driven. Same legs as every other stage in the game, except the
+// legs are a car: you hold a direction, you dodge what is in the road, and the
+// valley goes past in seven layers. Two moods, and they are not the same road.
+//   morning - shells on the verge, traffic waving, nobody in a hurry
+//   evening - the sky on fire, everyone going the other way, something behind
+class DriveGame extends SideScroll {
+  constructor(o = {}) {
+    const ev = !!o.scared;
+    const goal = o.goal ?? (ev ? 2300 : 2000);
+    // the things in the road. morning: a rock, a crossing dodo, a dropped pot.
+    // evening: the wreckage of everybody who left before you did.
+    const obs = [];
+    const n = ev ? 7 : 5;
+    for (let i = 0; i < n; i++) obs.push({
+      x: 360 + i * ((goal - 500) / n) + (i % 2) * 70,
+      spr: ev ? ['prop_rock', 'prop_barrel', 'prop_bones'][i % 3] : ['prop_rock', 'prop_pot', 'prop_barrel'][i % 3],
+      scale: ev ? 1.2 : 1, w: 40, h: 34,
+    });
+    const shells = [];
+    if (!ev) for (let i = 0; i < 4; i++) shells.push({ x: 520 + i * 380, y: GY - 40, spr: 'relic_shell', scale: 0.9, label: '+1' });
+    super(Object.assign({
+      base: 'bronk', vehicle: 'car', vehicleScale: 1.05, jump: true, camYFrac: 0.80,
+      ground: GY + 6, goal,
+      speed: ev ? 430 : 300, auto: ev ? 250 : 95, accelMul: ev ? 1.5 : 1,
+      obstacles: obs, pickups: shells,
+      catchTime: 3.2, leash: 980,
+      pursuer: ev ? { spr: 'trex_walk', x: -520, scale: 1.25, speed: 250 } : null,
+      pursuerRamp: ev ? 120 : 0,
+      title: ev ? 'DRIVING HOME' : 'DRIVING TO WORK',
+      sub: ev ? 'faster. faster. faster.' : 'same as every day',
+      hint: Input.touch ? 'HOLD RIGHT TO DRIVE  -  TAP HIGH TO HOP' : 'D TO DRIVE  -  SPACE TO HOP THE ROCKS',
+      paint: (camX, t) => World.road(t, { scared: ev }, camX),
+    }, o));
+    this.ev = ev;
+    this.horn = 0; this.debris = 0;
+    this.maxT = o.maxT ?? 30;                      // it is a commute, not a career
+  }
+  step(dt) {
+    super.step(dt);
+    if (this.t > this.maxT && !this.done) this.finish({ win: true, got: this.got, x: this.x });
+    // grit off the wheels, and a lot more of it when he is not being careful
+    const fast = Math.abs(this.vx) > 140;
+    this.debris -= dt;
+    if (fast && this.debris <= 0) {
+      this.debris = this.ev ? 0.03 : 0.07;
+      Particles.spawn(this.sx(this.x - 42), this.sy(this.ground) - 2, {
+        n: 1, color: this.ev ? ['#7d1d2b', '#3a2415', '#e06a1b'] : ['#d8a86b', '#85562f', '#5c3a20'],
+        speed: 140, angle: Math.PI, spread: 0.9, gravity: 260, life: 0.6, size: 3, sizeEnd: 0,
+      });
+    }
+    if (this.ev) {
+      if (chance(dt * 2.4)) Juice.shake(2, 0.1);
+      // ash coming past the windscreen the wrong way
+      if (chance(dt * 26)) Particles.spawn(rnd(W * 0.6, W), rnd(0, H * 0.7), {
+        n: 1, color: ['#e06a1b', '#ffa832', '#574a66'], speed: 320, angle: Math.PI, spread: 0.3,
+        gravity: 40, life: 1.0, size: 3, sizeEnd: 1, world: false,
+      });
+    } else {
+      this.horn -= dt;
+      if (this.horn <= 0 && chance(dt * 0.6)) {
+        this.horn = 2.4;
+        AudioSys.sfx('honk', { vol: 0.4 });
+        Popups.add(this.sx(this.x), this.sy(this.ground - 90), pick(['BEEP', '~', 'MORNIN']), '#ffe98a',
+          { world: false, scale: 1.2, life: 1.2 });
+      }
+    }
+  }
+}
 // ----------------------------------------------------------------- MINEGAME -
 // The shift. Three crystals out of the face and into the box, and the foreman
 // gives you one shell for the lot. Hitting rock is a timing problem: a marker

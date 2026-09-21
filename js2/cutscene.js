@@ -341,9 +341,10 @@ function* introScript(S) {
   yield 0.6;
 
   // ==================================================== 7. THE COMMUTE
-  // Nobody wants to play the drive to work. It is a loading screen.
+  // A black card to get him out of the yard, and then the valley, driven.
   AudioSys.play('drive', { fade: 0.4 });
-  yield* S.mini(new DriveCard({ dur: 4.4 }));
+  yield* S.mini(new DriveCard({ dur: 1.7 }));
+  yield* S.mini(new DriveGame());
 
   // ==================================================== 8. THE SHIFT
   S.hide('dodo', 'mam', 'blaze', 'vela', 'kida', 'kidb');    // none of them came to work
@@ -441,7 +442,8 @@ function* introScript(S) {
   bronk.visible = false; trex.visible = false;
 
   // ============================================ 8b. THE DRIVE HOME
-  yield* S.mini(new DriveCard({ scared: true, dur: 4.6 }));
+  yield* S.mini(new DriveCard({ scared: true, dur: 1.5 }));
+  yield* S.mini(new DriveGame({ scared: true }));
 
   // =============================================== 9. HOME, AT DUSK
   yield* S.cut('home', { dusk: true, fire: 0, eggGone: true, carGone: true }, [HOME.door + 20, 318], 0.8);

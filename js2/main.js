@@ -66,7 +66,7 @@ const Game = {
   },
   clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } },
   // ------------------------------------------------------------------ routing
-  enterBattle(prowler, act) {
+  enterBattle(prowler, act, advantage) {
     const r = this.run; r.fights++;
     const rng = new RNG(r.seed + r.fights * 7 + act * 101);
     const kind = prowler.elite ? 'elite' : (prowler.kind === 'compy' || prowler.kind === 'dodo') ? 'easy' : 'normal';
@@ -79,7 +79,7 @@ const Game = {
     }
     this.pendingProwler = prowler;
     this.save();
-    this.goWith('claw', () => new Combat(ids, { kind: prowler.elite ? 'elite' : 'normal', act }), 0.18);
+    this.goWith('claw', () => new Combat(ids, { kind: prowler.elite ? 'elite' : 'normal', act, advantage }), 0.18);
   },
   enterFight(ids, kind) { this.run.fights++; this.goWith('claw', () => new Combat(ids, { kind: kind || 'normal', act: this.run.act }), 0.18); },
   enterBoss() { this.run.fights++; this.pendingProwler = null; this.bossFight = true; this.save(); this.goWith('claw', () => new Combat(['blaze'], { kind: 'boss', act: this.run.act }), 0.3); },

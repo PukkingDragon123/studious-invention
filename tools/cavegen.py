@@ -643,44 +643,74 @@ def sleep_frames(name):
     BREATH = (0.0, 1.3, 2.2, 1.0)
     for f, lift in enumerate(BREATH):
         twitch = 1 if f == 2 else 0
-        W, H = 72, 34
+        W, H = 80, 36
         g = Grid(W, H)
         GY2 = H - 3
         hr = spec['headR']
-        hx, hy = 13, GY2 - hr - 1
+        hx, hy = 13, GY2 - hr - 2
         # --- the far arm, flung out flat on the floor behind him
-        capsule(g, 25, GY2 - 3, 40, GY2 - 1, 2.6, SKIN['dark'])
-        g.disc(42, GY2 - 1, 3.0, SKIN['dark'])
-        # --- body: chest, belly, thighs, feet, laid along the ground
-        g.ellipse(34, GY2 - 8 - lift, 15, 9 + lift, SKIN['base'])          # the belly
-        g.ellipse(22, GY2 - 6 - lift * 0.4, 8, 6 + lift * 0.3, SKIN['base'])   # chest
-        g.ellipse(50, GY2 - 5, 9, 5, SKIN['base'])                          # thighs
-        g.ellipse(59, GY2 - 5 - twitch, 6, 4, SKIN['base'])                 # shins
-        g.ellipse(65, GY2 - 6 - twitch * 2, 3.4, 4.6, SKIN['base'])         # feet, toes up
-        if twitch:                                                          # a toe, curling
-            g.px(67, GY2 - 11, SKIN['hi']); g.px(68, GY2 - 10, SKIN['hi'])
-        capsule(g, 24, GY2 - 12, 34, GY2 - 14 - lift, 3.0, SKIN['base'])    # arm across
-        g.disc(36, GY2 - 14 - lift, 3.4, SKIN['base'])                      # hand on the belly
-        # --- head
+        capsule(g, 27, GY2 - 3, 44, GY2 - 1, 2.6, SKIN['dark'])
+        g.disc(46, GY2 - 1, 3.2, SKIN['dark'])
+        # --- the body, laid out along the ground: chest, belly, hip, knee,
+        # shin, foot. Each one a separate lump, or it reads as a sausage.
+        g.ellipse(25, GY2 - 7 - lift * 0.5, 9, 7 + lift * 0.4, SKIN['base'])       # chest
+        g.ellipse(38, GY2 - 8 - lift, 13, 9 + lift, SKIN['base'])                  # belly
+        g.ellipse(50, GY2 - 6, 9, 6, SKIN['base'])                                 # hip
+        g.ellipse(61, GY2 - 9 - twitch, 7.5, 8, SKIN['base'])                      # the knee, up in the air
+        g.ellipse(69, GY2 - 4 - twitch, 6, 4, SKIN['base'])                        # shin
+        g.ellipse(75, GY2 - 6 - twitch * 2, 3.6, 5.0, SKIN['base'])                # foot, toes up
+        if twitch:
+            g.px(77, GY2 - 12, SKIN['hi']); g.px(78, GY2 - 11, SKIN['hi'])
+        # --- head and neck
         g.ellipse(hx, hy, hr, hr * 1.02, SKIN['base'])
         g.ellipse(hx + 1, hy + hr * 0.45, hr * 0.8, hr * 0.5, SKIN['base'])
-        capsule(g, hx + hr * 0.7, hy + hr * 0.5, 18, GY2 - 9, hr * 0.42, SKIN['base'])
+        capsule(g, hx + hr * 0.7, hy + hr * 0.5, 21, GY2 - 10, hr * 0.42, SKIN['base'])
         sil_shade(g, SKIN, 999, edge_dark=True)          # shade by row, light from above-left
         rim(g, SKIN, 999)
-        # --- fur pulled over the middle, rising and falling with him
+        # --- the hide, over the middle only: the chest, the knees and the feet
+        # all stay outside it, or the whole figure reads as one sausage
         gf = Grid(W, H)
-        for x in range(24, 50):
-            t = (x - 24) / 26
-            h2 = 11 + math.sin(t * math.pi) * 4 + lift
+        for x in range(32, 57):
+            t = (x - 32) / 25
+            h2 = 9 + math.sin(t * math.pi) * 5 + lift
             for k in range(int(h2)):
                 gf.px(x, GY2 - k, FUR['base'])
-        for x in range(24, 50):
-            d = 1 + ((x * 5) % 3)
-            for k in range(d): gf.px(x, GY2 - int(11 + math.sin((x - 24) / 26 * math.pi) * 4 + lift) - k, FUR['base'])
+        for x in range(32, 57):
+            base = int(9 + math.sin((x - 32) / 25 * math.pi) * 5 + lift)
+            for k in range(1 + ((x * 5) % 3)): gf.px(x, GY2 - base - k, FUR['mid'])
         sil_shade(gf, FUR, 999, edge_dark=False)
         for y in range(H):
             for x in range(W):
                 if gf.get(x, y) != '.': g.px(x, y, gf.get(x, y))
+        for x in range(32, 57):                               # tufts along the top edge
+            base = int(9 + math.sin((x - 32) / 25 * math.pi) * 5 + lift)
+            top = GY2 - base - (1 + ((x * 5) % 3))
+            g.px(x, top - 1, FUR['dark'])
+            if x % 4 == 0:
+                for k in range(1 + (x % 2)): g.px(x, top - 2 - k, FUR['mid'])
+        for k in range(int(10 + lift)):                       # it hangs off the sides
+            g.px(31, GY2 - k, FUR['dark'])
+            g.px(57, GY2 - k, FUR['dark'])
+        for x in range(33, 56, 4):                            # and the nap of it
+            b2 = int(9 + math.sin((x - 32) / 25 * math.pi) * 5 + lift)
+            for k in range(2, b2 - 1, 3): g.px(x + (k % 2), GY2 - k, FUR['dark'])
+        # --- the near arm, lying over the hide with the hand on his chest
+        ga = Grid(W, H)
+        capsule(ga, 25, GY2 - 12, 37, GY2 - 16 - lift, 3.4, SKIN['base'])
+        ga.disc(39, GY2 - 16 - lift, 3.8, SKIN['base'])
+        sil_shade(ga, SKIN, 999, edge_dark=True)
+        for p in ga.cells() if hasattr(ga, 'cells') else []: pass
+        for y in range(H):
+            for x in range(W):
+                if ga.get(x, y) != '.':
+                    if (ga.get(x, y - 1) == '.' and y > 0): g.px(x, y - 1, '0')
+                    g.px(x, y, ga.get(x, y))
+        for y in range(H):
+            for x in range(W):
+                if ga.get(x, y) != '.' and ga.get(x, y + 1) == '.': g.px(x, y + 1, '0')
+        for (px2, py2) in ((27, GY2 - 13), (32, GY2 - 15), (36, GY2 - 17)):
+            g.px(px2, py2 - int(lift * 0.5), SKIN['line'])
+        g.disc(40, GY2 - 17 - lift, 1.8, SKIN['hi'])
         # --- face: one heavy shut eye, a dash brow, and a snoring cavern
         hcol = spec.get('hair', 'f'); hlit = spec.get('hair2', 'g'); hdark = spec.get('hair3', '0')
         for i in range(4):                                                    # brow
@@ -709,6 +739,6 @@ def sleep_frames(name):
         for (ox, oy, r2) in ((0.44, -0.62, 0.18), (1.02, -0.44, 0.16)):
             g.disc(hx + ox * hr, hy + oy * hr, r2 * hr, hdark)
         # --- necklace
-        for i in range(5): g.px(20 + i, GY2 - 12 - int(lift * 0.5) + abs(i - 2), BONE['hi'] if i % 2 else BONE['base'])
+        for i in range(6): g.px(21 + i, GY2 - 13 - int(lift * 0.5) + abs(i - 2), BONE['hi'] if i % 2 else BONE['base'])
         out.append([''.join(r) for r in g.g])
     return out

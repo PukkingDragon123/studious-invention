@@ -29,7 +29,7 @@ def rex_foot(cv, W, s, ax, ay, tx, gy_row, ramp, back=12.0, lift=0.0):
     return f
 
 def rex_head(cv, s, HX, jaw, rng, scar=True):
-    JX = rot_xf(HX, -jaw * 0.80, 92.0, 33.5)
+    JX = rot_xf(HX, jaw * 0.66, 90.5, 30.6)     # positive: the tip drops
     skull = [(88, 33), (88.5, 23), (91, 15.6), (96, 10.4), (102.5, 7.8), (109, 8.4),
              (113.6, 11.6), (115.0, 15.8), (118.4, 16.6), (122.2, 19.4), (124.6, 23.4),
              (124.4, 28.4), (121.6, 31.4), (116, 32.6), (107, 33.4), (98, 33.8), (91, 34.0)]
@@ -52,19 +52,26 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
                                 (123.6, 32.0), (124.6, 36.4), (119, 40.4), (109, 42.4),
                                 (98, 42.0), (90.4, 38.4)]])
     if jaw > 0.03:
-        cav = poly([HX(90, 29), HX(124, 29.8), HX(125.6, 31.6),
-                    JX(124.6, 32.4), JX(92, 35.6)])
-        cav |= poly([HX(90, 30), HX(102, 32.5), JX(102, 35.0), JX(90, 35.5)])
+        cav = poly([HX(88.5, 27.5), HX(124, 29.8), HX(125.6, 31.6),
+                    JX(124.6, 32.4), JX(90, 36.5)])
+        cav |= poly([HX(88.5, 28.5), HX(102, 32.5), JX(102, 35.0), JX(88.5, 36.0)])
+        cav |= disc(*HX(91.0, 31.0), 5.0 * s)
         shade(cv, cav, ['D', 'D', 'E', 'y'], grad=False)
         thr = ell(*HX(95.5, 32.2), 6.0 * s, 4.4 * s) & cav
         shade(cv, thr, ['D', 'D', 'E', 'F'], grad=False)
-        tg = limb([(JX(97, 35.4)[0], JX(97, 35.4)[1], 3.6 * s),
-                   (JX(107, 34.6)[0], JX(107, 34.6)[1], 3.2 * s),
-                   (JX(116, 34.2)[0], JX(116, 34.2)[1], 2.2 * s),
-                   (JX(121, 34.0)[0], JX(121, 34.0)[1], 1.2 * s)], 8)
+        tg = limb([(JX(95, 35.6)[0], JX(95, 35.6)[1], 4.6 * s),
+                   (JX(104, 34.8)[0], JX(104, 34.8)[1], 4.2 * s),
+                   (JX(113, 34.3)[0], JX(113, 34.3)[1], 3.2 * s),
+                   (JX(120, 34.0)[0], JX(120, 34.0)[1], 1.6 * s)], 8)
         shade(cv, tg & dilate(cav, 2), ['U', 'V', 'W', 'X'], grad=False)
     shade(cv, jw, REX, bias=-2, grad=True)
     for p in edge_of(jw, (0, 1)): cv.setif(p[0], p[1], 't', 'uvwx')
+    # the hinge: a plug of cheek muscle across the joint, drawn over both jaws
+    hinge = disc(*HX(90.8, 30.4), 5.6 * s)
+    hinge |= poly([HX(87.2, 23.0), HX(93.6, 27.6), JX(93.2, 33.6), JX(87.2, 34.5)])
+    shade(cv, hinge, REX, bias=-1.4, grad=True)
+    for p in edge_of(hinge, (1, 1)): cv.setif(p[0], p[1], 't', 'uvwx')
+    for p in edge_of(hinge, (-1, -1)): cv.setif(p[0], p[1], 'x', 'tuv')
     # gums + teeth (visible even closed)
     for p in polyline(PL(HX, [(93, 31.6), (122, 30.6)]), 0.6 * s, 6): cv.setif(p[0], p[1], 'D', 'tuvwx')
     UT = ((96, 2.2), (100.5, 1.4), (105, 0.0), (109.5, 3.0), (114, 1.8), (118.5, 2.6), (122, 1.2))
@@ -84,7 +91,7 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
             mx = (LT[i][0] + LT[i + 1][0]) / 2
             for dy in (0.0, 1.0, 2.0, 3.0): cv.setif(*JX(mx, 33.4 - dy), 'D', '!@#$')
     # two bars daubed across the snout, in the same ochre as the flank
-    for (bx0, bx1) in ((110.6, 113.2), (116.4, 118.6)):
+    for (bx0, bx1) in ((103.4, 106.0), (110.2, 112.4)):
         bar = poly(PL(HX, [(bx0, 12.5), (bx1, 12.5), (bx1 - 0.8, 25.5), (bx0 - 0.8, 25.5)])) & sk
         flat(cv, bar, 'z')
         bar2 = poly(PL(HX, [(bx0 + 0.6, 13.4), (bx1 - 0.5, 13.4), (bx1 - 1.3, 24.6), (bx0 - 0.2, 24.6)])) & sk
@@ -251,9 +258,9 @@ def add_trex(add):
     ], rex)
     add('trex_roar', 128, 104, [
         dict(seed=21, bob=-0.8, nearleg=(78.0, 71.0, 63.0, 88.0, 94.0, 0.0),
-             farleg=(58.0, 73.0, 43.0, 88.0, 68.0, 0.0), jaw=1.0, head_rot=0.20,
-             head_dy=3.0, head_dx=-2.0, arm=-1.4, tail_curl=-2.0, tail_dy=-1.4),
+             farleg=(58.0, 73.0, 43.0, 88.0, 68.0, 0.0), jaw=0.92, head_rot=-0.13,
+             head_dy=2.0, head_dx=-1.0, arm=-1.4, tail_curl=-2.0, tail_dy=-1.4),
         dict(seed=22, bob=-1.8, nearleg=(78.0, 71.0, 63.0, 88.0, 94.0, 0.0),
-             farleg=(58.0, 73.0, 43.0, 88.0, 68.0, 0.0), jaw=1.16, head_rot=0.26,
-             head_dy=4.4, head_dx=-3.2, arm=-1.8, tail_curl=-2.8, tail_dy=-2.2),
+             farleg=(58.0, 73.0, 43.0, 88.0, 68.0, 0.0), jaw=1.08, head_rot=-0.19,
+             head_dy=3.0, head_dx=-1.8, arm=-1.8, tail_curl=-2.8, tail_dy=-2.2),
     ], rex)
