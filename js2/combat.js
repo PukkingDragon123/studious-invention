@@ -8,6 +8,7 @@ const STAGE_Y = 430;
 const ACTOR_SCALE = 2;
 
 const Backdrops = {
+  TORCHES: [84, 880],
   // three parallax layers plus haze, so the stage has depth behind the fight
   draw(act, t, cam) {
     const px = (cam ? cam.x - W / 2 : 0);
@@ -52,6 +53,20 @@ const Backdrops = {
       Gfx.rectA(x, y, 6 + (i % 4) * 4, 2, i % 3 ? '#000000' : '#ffffff', 0.055);
     }
     for (let i = 0; i < 14; i++) Gfx.sprite(act === 3 ? 'prop_rock' : 'prop_bush', -500 + i * 160 - px * 0.7, 350, { anchor: 'bc', alpha: 0.5, tint: '#120c16', tintAmount: 0.3 });
+    // two torches marking the edge of the fighting ground: this is a stage
+    for (const tx of Backdrops.TORCHES) {
+      Gfx.shadow(tx, 344, 30, 0.3);
+      Gfx.rect(tx - 5, 262, 10, 84, '#241109');
+      Gfx.rect(tx - 4, 262, 8, 84, '#5c3a20');
+      Gfx.rect(tx - 4, 262, 3, 84, '#85562f');
+      for (let k = 0; k < 3; k++) Gfx.rect(tx - 6, 280 + k * 20, 12, 3, '#3a2415');
+      Gfx.round(tx - 11, 250, 22, 16, 5, '#241c2e');
+      Gfx.round(tx - 9, 251, 18, 5, 2, '#574a66');
+      for (const i of [0, 2, 1])
+        World.flame(tx + (i - 1) * 4, 254, (i === 1 ? 30 : 20) + Math.abs(Math.sin(t * 6.3 + i + tx)) * 12, i === 1 ? 10 : 6,
+          Math.sin(t * 4.1 + i * 2) * 3, ['#e06a1b', '#ffa832', '#ffe98a', '#9c3510'], i + tx);
+      if (chance(0.3)) Particles.fire(tx + rnd(-4, 4), 236, 1);
+    }
     if (act === 3) for (let i = 0; i < 3; i++) if (chance(0.35)) Particles.spawn(cam ? cam.x + rnd(-W / 2, W / 2) : rnd(0, W), 460, { n: 1, color: ['#e06a1b', '#ffa832', '#574a66'], speed: 24, gravity: -36, life: 3.4, size: 3, sizeEnd: 0 });
     if (act === 2) for (let i = 0; i < 2; i++) if (chance(0.25)) Particles.spawn(cam ? cam.x + rnd(-W / 2, W / 2) : rnd(0, W), rnd(100, 300), { n: 1, color: ['#a8e878', '#6cc95c'], speed: 8, vx: 12, gravity: -4, life: 4, size: 2 });
   }
@@ -458,8 +473,42 @@ class Combat {
     AudioSys.play('blaze', { restart: true, intensity: 2, fade: 0.2 });
   }
   // ------------------------------------------------------------------ update
+  // where card i of the hand sits on screen, for the coach to point at
+  handRect(i) {
+    const n = this.hand.length; if (!n) return null;
+    const spacing = Math.min(CARD_W + 8, 560 / Math.max(1, n)), total = spacing * (n - 1) + CARD_W;
+    const x0 = W / 2 - total / 2, y = H - CARD_H - 20;
+    if (i === undefined) return { x: x0, y, w: total, h: CARD_H };
+    return { x: x0 + i * spacing, y, w: i === n - 1 ? CARD_W : spacing, h: CARD_H };
+  }
+  // The first fight of a run stops and shows you what everything is.
+  coachSteps() {
+    const riffI = this.hand.findIndex(c => c.def.riff);
+    const wallI = this.hand.findIndex(c => c.v.block != null && c.def.type === 'skill');
+    const e = this.alive()[0];
+    const intentRect = () => {
+      if (!e) return null;
+      const a = e.actor, top = a.y - Gfx.spr(a.sprite).h * a.scale - 30;
+      const p = this.cam.toScreen(a.x, top);
+      return { x: p.x - 44, y: p.y - 4, w: 88, h: 34 };
+    };
+    return [
+      { title: 'YOUR HAND', rect: () => this.handRect(), text: 'Every turn you draw five riffs. Click one to play it. On a phone, tap once to look at it and again to play it.' },
+      { title: 'ENERGY', rect: { x: 28, y: H - 160, w: 84, h: 84 }, text: 'Every card costs energy - the number in its top corner. You get 3 a turn, and what you do not spend is gone.' },
+      riffI >= 0 && { title: 'RIFF CARDS', rect: () => this.handRect(riffI), text: 'The ♪ cards are riffs. Play one and it cuts to the note field: hit each arrow as it reaches the line. Better timing, bigger hit.' },
+      e && { title: 'INTENT', rect: intentRect, text: 'Every beast shows what it will do on its turn. A fang and a number is an attack for that much. Plan around it.' },
+      wallI >= 0 && { title: 'BLOCK', rect: () => this.handRect(wallI), text: 'Stone Wall gives BLOCK. Block soaks damage until your next turn, then it crumbles. Block up when a big hit is coming.' },
+      { title: 'HYPE', rect: { x: 10, y: 92, w: 40, h: 276 }, text: 'Landed notes fill the Hype column. At full, ENCORE plays a free solo that hits every beast for every note you land.' },
+      this.run.relics.length && { title: 'RELICS', rect: { x: 12, y: 4, w: this.run.relics.length * 36, h: 36 }, text: 'Relics are charms that work all run without being played. Point at one to read it. More drop from elites and bosses.' },
+      { title: 'END TURN', rect: { x: W - 190, y: H - 80, w: 180, h: 58 }, text: 'Out of energy? End the turn and the beasts act. Beat all of them to win the fight - and every beast you put down is raptor bait.' },
+    ];
+  }
   update(dt) {
     this.t += dt;
+    if (!this.coached && this.t > 2.2 && !this.banner && this.phase === 'player' && !this.busy && this.handSlide < 0.03 && this.hand.length && this.hand.every(c => !(c.dealT > 0)) && Game.run && !(Game.run.tips || {}).combat) {
+      this.coached = true;
+      Game.overlay = new Coach(this.coachSteps(), () => { (Game.run.tips = Game.run.tips || {}).combat = true; Game.save(); });
+    }
     if (this.riff) { this.riff.update(dt); this.bronk.play(this.riff.chanting ? 'sing' : 'play'); }
     this.bronk.update(dt);
     for (const e of this.enemies) {

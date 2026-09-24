@@ -221,14 +221,28 @@ class ActStory {
     }
   }
   draw() {
-    Gfx.bands(0, 0, W, 360, ['#281040', '#4b2070', '#7d1d2b', '#9c3510', '#e06a1b']);
-    Gfx.rect(0, 340, W, H - 340, '#2e2b38');
-    for (let i = 0; i < 6; i++) Gfx.sprite('prop_deadtree', 60 + i * 180, 350, { anchor: 'bc', tint: '#120c16', tintAmount: 0.6 });
+    // the camp again, at night: the rescued one by the fire, the raptor at
+    // the edge of the light where it always is
+    if (!this.cam) { this.cam = new Camera(); this.cam.zoom = this.cam.tzoom = VIEW; this.cam.lookAt(CAMP.fire + 20, 394, true); }
+    this.cam.ox = Math.sin(this.t * 0.37) * 1.4; this.cam.oy = Math.sin(this.t * 0.29 + 2) * 1;
+    Gfx.clear('#05040c');
+    this.cam.apply(Gfx.ctx);
+    const camX = this.cam.x - W / (2 * this.cam.zoom);
+    World.camp(this.t, {}, camX);
     const sprs = { pebble: 'kid_a_idle', roxy: 'kid_b_idle' };
-    Gfx.sprite('bronk_idle', 250, 440, { anchor: 'bc', scale: 1.4, frame: Math.floor(this.t * 2) % 2 });
-    Gfx.sprite(sprs[this.data.rescued], 340, 440, { anchor: 'bc', scale: 1.4, frame: Math.floor(this.t * 3) % 2 });
-    Gfx.sprite('blaze_idle', 760, 444, { anchor: 'bc', scale: 1.3, frame: Math.floor(this.t * 6) % 2, flip: true });
-    for (let i = 0; i < 2; i++) if (chance(0.4)) Particles.fire(760 + rnd(-30, 30), 390, 1);
+    Gfx.shadow(CAMP.fire - 120, GY + 2, 40, 0.3);
+    Gfx.sprite('bronk_idle', CAMP.fire - 120, GY + 2, { anchor: 'bc', frame: Math.floor(this.t * 2) % 2 });
+    Gfx.shadow(CAMP.fire - 76, GY + 2, 28, 0.3);
+    Gfx.sprite(sprs[this.data.rescued], CAMP.fire - 76, GY + 2, { anchor: 'bc', frame: Math.floor(this.t * 3) % 2 });
+    Gfx.sprite('blaze_idle', CAMP.fire + 190, GY + 4, { anchor: 'bc', frame: Math.floor(this.t * 6) % 2, flip: true });
+    if (chance(0.4)) Particles.fire(CAMP.fire + 190 + rnd(-20, 20), GY - 50, 1);
+    Particles.draw(Gfx.ctx, true);
+    if (Settings.lighting !== false) {
+      SetLight.run('camp', this.t, {}, camX);
+      Light.begin(0); Light.point(CAMP.fire + 190, GY - 40, 160, { color: '#e06a1b', glow: 0.16, flicker: 0.1 }); Light.end();
+    }
+    this.cam.restore(Gfx.ctx);
+    if (Settings.lighting !== false) { SetLight.post('camp', {}); Film.grain(); }
     Particles.draw(Gfx.ctx, false);
     const line = this.data.lines[this.i];
     Gfx.panel(60, H - 150, W - 120, 120, { fill: '#1a1424' });
@@ -459,6 +473,81 @@ class CreditsOverlay {
   }
 }
 
+// ------------------------------------------------------------------- COACH
+// A coach mark: the screen goes dim except for one spot, an arrow points at
+// it and a slab says what it is. It is an overlay, so whatever is behind it
+// is frozen until you have read it. Steps: { rect | rect(), title, text }.
+class Coach {
+  constructor(steps, onDone) { this.steps = steps.filter(Boolean); this.i = 0; this.t = 0; this.onDone = onDone; }
+  update(dt) {
+    this.t += dt;
+    if (Input.pressed('Space', 'Enter', 'KeyE', 'ArrowRight')) this.next();
+    if (Input.pressed('Escape')) this.finish();
+  }
+  next() {
+    AudioSys.sfx('select');
+    this.i++; this.t = 0;
+    if (this.i >= this.steps.length) this.finish();
+  }
+  finish() { Game.overlay = null; AudioSys.sfx('unlock'); if (this.onDone) this.onDone(); }
+  draw() {
+    const s = this.steps[this.i]; if (!s) return;
+    let r = typeof s.rect === 'function' ? s.rect() : s.rect;
+    // nothing to point at (or it is off the screen): a centred slab, no hole
+    if (r && (r.x + r.w < 0 || r.x > W || r.y + r.h < 0 || r.y > H)) r = null;
+    if (!r) r = { x: W / 2 - 1, y: H / 2 + 120, w: 2, h: 2, none: true };
+    const pad = 8, k = Ease.outCubic(clamp(this.t * 4, 0, 1));
+    const rx = r.x - pad, ry = r.y - pad, rw = r.w + pad * 2, rh = r.h + pad * 2;
+    const ctx = Gfx.ctx;
+    // the dim, with a hole where the thing is
+    ctx.save();
+    ctx.fillStyle = `rgba(10,6,14,${0.72 * k})`;
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.moveTo(rx + 6, ry); ctx.lineTo(rx + rw - 6, ry); ctx.lineTo(rx + rw, ry + 6); ctx.lineTo(rx + rw, ry + rh - 6);
+    ctx.lineTo(rx + rw - 6, ry + rh); ctx.lineTo(rx + 6, ry + rh); ctx.lineTo(rx, ry + rh - 6); ctx.lineTo(rx, ry + 6); ctx.closePath();
+    ctx.fill('evenodd');
+    ctx.restore();
+    // a gold frame round it, breathing
+    const pulse = 0.5 + Math.sin(this.t * 5) * 0.5;
+    if (!r.none) {
+      Gfx.outlineRound(rx - 2, ry - 2, rw + 4, rh + 4, 6, SKIN.ink);
+      Gfx.outlineRound(rx, ry, rw, rh, 5, pulse > 0.5 ? SKIN.goldLit : SKIN.gold);
+    }
+    // the slab: on the side of the screen the thing is not on
+    const bw = 380, bh = 146;
+    const cy = ry + rh / 2, cx = rx + rw / 2;
+    let bx = clamp(cx - bw / 2, 16, W - bw - 16);
+    let by = cy > H * 0.52 ? ry - bh - 34 : ry + rh + 34;
+    by = clamp(by, 16, H - bh - 16);
+    if (by < ry + rh && by + bh > ry) {                        // it would cover the thing: go sideways
+      by = clamp(cy - bh / 2, 16, H - bh - 16);
+      bx = cx > W / 2 ? rx - bw - 30 : rx + rw + 30;
+      bx = clamp(bx, 16, W - bw - 16);
+    }
+    by += (1 - k) * 16;
+    // an arrow from the slab to the thing
+    const ax = clamp(cx, bx + 24, bx + bw - 24), ay = by < ry ? by + bh : by;
+    const tx = clamp(ax, rx, rx + rw), ty = by < ry ? ry - 4 : ry + rh + 4;
+    if (!r.none && Math.abs(ty - ay) > 8) {
+      const n = Math.max(2, Math.floor(Math.abs(ty - ay) / 8));
+      for (let j = 0; j < n; j++) {
+        const u = j / n, px = lerp(ax, tx, u), py = lerp(ay, ty, u);
+        if ((j + Math.floor(this.t * 8)) % 2) Gfx.rect(px - 2, py - 2, 4, 4, SKIN.goldLit);
+      }
+      const dir = ty > ay ? 1 : -1;
+      for (let j = 0; j < 6; j++) Gfx.rect(tx - 6 + j, ty - dir * (6 - j), 12 - j * 2, 2, SKIN.goldLit);
+    }
+    UI.slab(bx, by, bw, bh, { r: 5, shadow: true });
+    Gfx.text(s.title, bx + 18, by + 16, { color: SKIN.faceHi, scale: 1.7 });
+    Gfx.text(s.title, bx + 18, by + 15, { color: SKIN.red, scale: 1.7 });
+    Gfx.textWrap(s.text, bx + 18, by + 44, bw - 36, { color: SKIN.text, scale: 1.1, lineHeight: 15, onLight: true });
+    Gfx.text(`${this.i + 1} / ${this.steps.length}`, bx + 18, by + bh - 26, { color: SKIN.textDim, scale: 1.1 });
+    UI.wbutton(bx + bw - 124, by + bh - 44, 108, 34, this.i === this.steps.length - 1 ? 'GOT IT' : 'NEXT', () => this.next(), { scale: 1.2 });
+    UI.button(bx + bw - 210, by + bh - 40, 76, 28, 'SKIP', () => this.finish(), { fill: SKIN.faceMid, scale: 1 });
+  }
+}
+
 class HowToOverlay {
   constructor(onClose) { this.page = 0; this.onClose = onClose; }
   update() { if (Input.pressed('Escape')) this.close(); }
@@ -468,13 +557,26 @@ class HowToOverlay {
     const r = UI.window(60, 30, W - 120, H - 60, 'HOW TO PLAY', { onClose: () => this.close() });
     const pages = [
       ['{y}THE STORY{/}', 'A flaming raptor named BLAZE spent six years chained in your kitchen as the family stove. This morning he snapped the chain and took your wife and children. You are not fast. You are not fit. You are, however, extremely loud.', '',
-        '{y}THE VALLEY{/}', 'Walk the ruins with the arrows or WASD. SHIFT runs, and running burns the stamina you do not have. Rest at campfires. Hide in bushes. Beasts patrol with a cone of vision: stay out of it, or answer for it.'],
-      ['{y}A FIGHT{/}', 'Three energy a turn, five cards. {b}Block{/} soaks damage until your next turn. Beasts show what they are about to do above their heads.', '',
-        '{y}A RIFF{/}', 'Cards marked ♪ cut to a close-up and hand you the note field. Arrows rise to the receptors: hit them with the {p}LEFT{/} {c}DOWN{/} {g}UP{/} {r}RIGHT{/} arrow keys, D F J K, or the four pads on a touch screen.', '',
-        '{c}SICK{/} timing hits hardest, GOOD is fine, a MISS costs you the crowd. The bar at the top is the crowd: lose it and your riff lands soft.'],
-      ['{y}CALL AND ANSWER{/}', 'Some riffs are duels. The beast plays a phrase on the left, then you answer it on the right. Watch its lane, then play it back.', '',
-        '{y}HYPE{/}', 'Landed notes and rally cards fill the Hype column. At full, {p}ENCORE{/} unleashes a free solo that hits every beast on the field for every note you land.', '',
-        '{y}THE MAMMOTH{/}', 'The shop walks. A mammoth loaded with other people\'s belongings wanders every zone. Find it, trade shells, move on.'],
+        '{y}THE VALLEY{/}', 'Walk with WASD, the arrows or the stick. SHIFT runs, and running burns stamina. Rest at campfires to heal. Hide in bushes. Every zone is split by two walls, and each wall has one gate in it.'],
+      ['{y}THE GATES{/}', 'The first gate is held by a {r}GATE GUARD{/}. It stands in the gateway, it is awake, and it cannot be crept past - you have to fight it.', '',
+        'The second is a {y}STONE GATE{/}: two plates in a ringed clearing off the road, and two boulders. Walk into a boulder to push it one tile. You can only push, never pull. A stone that reaches its plate drops in and stays. Cornered one? The stone with the circle on it resets them.', '',
+        'Past both walls: put down three beasts to make {r}RAPTOR BAIT{/}, then take the last gate.'],
+      ['{y}BEASTS{/}', 'Every beast wears a slate: skulls for how dangerous it is, {y}?{/} when it half-sees you, {r}!{/} when it has. Its cone shows where it is looking. Each kind behaves differently: dodos bolt, boars charge, compies call their friends, and a pterodactyl can see you in a bush.', '',
+        '{y}SNEAK ATTACK{/}', 'Get behind one without being seen and press ACT: you start the fight with an extra energy and every beast {o}Vulnerable{/}. Get caught, and they start it on you.'],
+      ['{y}A FIGHT{/}', 'You get {b}3 energy{/} a turn and draw five cards. Each card costs the number in its corner. When you are done, END TURN and the beasts act.', '',
+        '{y}INTENT{/}', 'The icon over a beast is what it will do next: a fang and a number is an attack for that much. Read it before you spend your energy.', '',
+        '{y}BLOCK{/}', 'Cards like Stone Wall give {b}Block{/}. Block soaks damage until the start of your next turn, then it crumbles.'],
+      ['{y}RIFF CARDS{/}', 'Cards marked ♪ are riffs. Play one and it cuts to the note field: hit each arrow as it reaches the line with the {p}LEFT{/} {c}DOWN{/} {g}UP{/} {r}RIGHT{/} arrows, D F J K, or the four pads on a phone.', '',
+        '{c}SICK{/} timing hits hardest, GOOD is fine, a MISS costs the crowd. Some riffs are duels: the beast plays a phrase, then you play it back.', '',
+        '{y}HYPE{/}', 'Landed notes fill the Hype column. At full, {p}ENCORE{/} plays a free solo that hits every beast for every note you land.'],
+      ['{y}RELICS{/}', 'Relics are charms that work for the whole run without being played - more energy, a heal after fights, wider timing windows. They sit in the gold slots at the top. Point at one to read it. You start with the Bone Pick; elites and bosses drop more.', '',
+        '{y}UPGRADES{/}', 'Rest at a campfire and you can {g}practice{/} instead: one riff gets permanently better, shown with a +.'],
+      ['{y}GEMS AND THE ALTAR{/}', 'Crystal outcrops grow all over the valley - two in every section. Walk up and press ACT to dig one out.', '',
+        'Take the gems to the {p}ALTAR{/} in the village square. Three gems press one enchantment into a card for the rest of the run:', '',
+        '{r}FLINT{/}  +3 damage      {b}GRANITE{/}  +4 block', '{g}FEATHER{/}  costs 1 less      {y}AMBER{/}  draws a card when played', '',
+        'One gem to a card. The gem shows in the bottom of the stone.'],
+      ['{y}THE MAMMOTH{/}', 'The shop walks. A mammoth loaded with other people\'s belongings wanders every zone, turning up and packing up on its own schedule. Find it, trade shells for riffs and relics, or pay it to eat a card you do not want.', '',
+        '{y}FOG{/}', 'Purple fog marks something strange: a choice, a trade, a fight or a gift. You never know which until you walk in.'],
     ];
     let y = r.y + 10;
     for (const line of pages[this.page]) {

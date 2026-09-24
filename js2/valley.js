@@ -63,7 +63,8 @@ Zone.prototype.buildPuzzles = function () {
   for (const e of this.entities) {
     if (!(e instanceof Prowler) || !e.route) continue;
     const s = this.sectionOf(Math.floor(e.x / TILE));
-    const mine = this.pois.filter(p => this.sectionOf(p.x) === s);
+    // never on the spot you arrive at: you get to look around first
+    const mine = this.pois.filter((p, i) => i > 0 && this.sectionOf(p.x) === s && Math.hypot(p.x - this.start.x, p.y - this.start.y) > 14);
     if (mine.length) {
       const a = r.pick(mine), b = r.pick(mine);
       e.x = e.actor.x = a.x * TILE + 16; e.y = e.actor.y = a.y * TILE + 16;

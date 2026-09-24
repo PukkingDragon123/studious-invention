@@ -9,6 +9,9 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   page.on('console', m => { if (m.type() === 'error' && !m.text().includes('404')) errs.push(m.text().split('\n')[0]); });
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
   await page.goto('http://127.0.0.1:8765/index.html'); await page.waitForTimeout(500);
+  // the walkthroughs freeze the scene until read; these tests have read them
+  await page.waitForFunction(() => typeof Game !== 'undefined' && Game.newRun);
+  await page.evaluate(() => { const nr = Game.newRun; Game.newRun = function () { nr.call(Game); Game.run.tips = { valley: true, combat: true, gems: true, altar: true, push: true }; }; });
   const map = async () => page.evaluate(() => { const r = document.getElementById('game').getBoundingClientRect(); return { x: r.x, y: r.y, sx: r.width / 960, sy: r.height / 540 }; });
   const m = await map();
   const tap = async (cx, cy) => page.touchscreen.tap(m.x + cx * m.sx, m.y + cy * m.sy);

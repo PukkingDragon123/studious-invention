@@ -67,6 +67,18 @@ class CutsceneScene {
   }
   // Move the camera without changing how big anything is.
   *pan(x, y, hold = 0) { this.cam.lookAt(x, y); if (hold) yield hold; else yield 0; }
+  // A slow, eased camera move over a fixed time - the establishing shot, the
+  // push down a corridor. pan() is for reframing; this is for moving.
+  *glide(x, y, dur = 3, ease = Ease.inOutQuad) {
+    const x0 = this.cam.x, y0 = this.cam.y;
+    let t = 0;
+    while (t < dur) {
+      t += Time.dt;
+      const k = ease(clamp(t / dur, 0, 1));
+      this.cam.lookAt(lerp(x0, x, k), lerp(y0, y, k), true);
+      yield 0;
+    }
+  }
   *snap(x, y) { this.cam.lookAt(x, y, true); yield 0; }
   *walk(key, x, y, speed) {
     const a = this.actors[key]; a.play('walk');
@@ -104,6 +116,13 @@ class CutsceneScene {
     this.flash = Math.max(0, this.flash - dt * 2.6);
     this.cam.zoom = this.cam.tzoom = VIEW * this.zoomMul;   // one scale, unless a beat says otherwise
     this.cam.update(dt);
+    // the camera is held, not tripod-mounted: it breathes a pixel or two
+    if (!(this.cam.shakeT > 0)) {
+      this.cam.ox = Math.sin(this.t * 0.37) * 1.6 + Math.sin(this.t * 0.83 + 1) * 0.7;
+      this.cam.oy = Math.sin(this.t * 0.29 + 2) * 1.1;
+    }
+    // bars top and bottom while it is a film; off while you are playing
+    Juice.letterbox(!Game.mini && !this.riffGame && !this.o.noBars);
     for (const k in this.actors) this.actors[k].update(dt);
     if (this.riffGame) this.riffGame.update(dt);
     Dialogue.update();
@@ -129,9 +148,9 @@ class CutsceneScene {
     Emotes.draw();
     Floaters.draw();
     if (this.overlay) this.overlay(true);
-    if (Settings.lighting !== false) SetLight.run(this.set, this.t, this.setOpt, this.camX());
+    if (Settings.lighting !== false) SetLight.run(this.set, this.t, this.setOpt, this.camX(), this.lights);
     this.cam.restore(Gfx.ctx);
-    if (Settings.lighting !== false) SetLight.post(this.set, this.setOpt);
+    if (Settings.lighting !== false) { SetLight.post(this.set, this.setOpt); Film.grain(); }
     Particles.draw(Gfx.ctx, false);
     FX.draw(false);
     Popups.draw(false);
@@ -141,13 +160,30 @@ class CutsceneScene {
     if (this.hud) this.hud();
     Dialogue.draw();
     if (this.title) {
+      // the title, carved into a slab that rises into the shot and sinks out
       const k = this.title.t / this.title.life;
-      const a = k < 0.12 ? k / 0.12 : k > 0.82 ? (1 - k) / 0.18 : 1;
-      Gfx.ctx.globalAlpha = clamp(a, 0, 1);
-      Gfx.rectA(0, H / 2 - 70, W, 140, '#120c16', 0.8);
-      const slide = Ease.outCubic(clamp(k * 5, 0, 1));
-      Gfx.text(this.title.text, W / 2 - (1 - slide) * 30, H / 2 - 34, { color: '#ffe98a', align: 'center', scale: 3.4, outline: true, outlineWidth: 2 });
-      if (this.title.sub) Gfx.text(this.title.sub, W / 2 + (1 - slide) * 30, H / 2 + 14, { color: '#d6cfe0', align: 'center', scale: 1.4 });
+      const a = clamp(k < 0.14 ? k / 0.14 : k > 0.8 ? (1 - k) / 0.2 : 1, 0, 1);
+      const rise = (1 - Ease.outBack(clamp(k / 0.2, 0, 1))) * 50;
+      const tw = Math.max(420, Gfx.measure(this.title.text, 4.2) + 90), th = this.title.sub ? 132 : 104;
+      const tx = W / 2 - tw / 2, ty = H / 2 - th / 2 - 30 + rise;
+      Gfx.ctx.globalAlpha = a;
+      Gfx.glow(W / 2, ty + th / 2, 300, '#ffa832', 0.14);
+      UI.slab(tx, ty, tw, th, { r: 6, shadow: true });
+      const carve = (txt, y, sc, col) => {
+        Gfx.text(txt, W / 2, y + 3, { color: SKIN.faceHi, align: 'center', scale: sc });
+        Gfx.text(txt, W / 2 + 1, y + 1, { color: '#3a2415', align: 'center', scale: sc });
+        Gfx.text(txt, W / 2, y, { color: col, align: 'center', scale: sc });
+      };
+      carve(this.title.text, ty + 22, 4.2, '#9c3510');
+      if (this.title.sub) carve(this.title.sub, ty + th - 36, 1.4, '#3a2415');
+      // a glint crossing the carving
+      const gx = tx + ((this.title.t * 0.6) % 1.4) * tw;
+      Gfx.ctx.save();
+      Gfx.ctx.beginPath(); Gfx.ctx.rect(tx + 6, ty + 6, tw - 12, th - 12); Gfx.ctx.clip();
+      Gfx.ctx.globalAlpha = a * 0.3;
+      Gfx.ctx.fillStyle = '#fffaea';
+      Gfx.ctx.beginPath(); Gfx.ctx.moveTo(gx, ty + 8); Gfx.ctx.lineTo(gx + 16, ty + 8); Gfx.ctx.lineTo(gx - 14, ty + th - 8); Gfx.ctx.lineTo(gx - 30, ty + th - 8); Gfx.ctx.fill();
+      Gfx.ctx.restore();
       Gfx.ctx.globalAlpha = 1;
     }
     if (this.flash > 0.01) Gfx.rectA(0, 0, W, H, '#ffffff', clamp(this.flash, 0, 1) * 0.85);
@@ -173,7 +209,8 @@ function* introScript(S) {
   // making a noise you could quarry against.
   S.set = 'home'; S.setOpt = { night: true, fire: 0 };
   S.zoomMul = 1;
-  S.cam.lookAt(HOME.bed + 34, 330, true);
+  // it opens outside, under the stars, and drifts in through the door
+  S.cam.lookAt(HOME.door + 260, 312, true);
   AudioSys.play('home', { fade: 1.6 });
   const bronk = S.add('bronk', { base: 'bronk', x: HOME.bed + 6, y: GY, scale: 1, facing: 1 });
   bronk.play('sleep');
@@ -194,9 +231,11 @@ function* introScript(S) {
       Gfx.ctx.globalAlpha = 1;
     }
   };
-  yield 0.9;
-  yield* S.titleCard('ONGA BONGA', 'a stone age rock saga', 2.8);
-  yield 0.5;
+  yield 0.8;
+  Co.run(S.glide(HOME.bed + 34, 330, 6.4), S);
+  yield 0.6;
+  yield* S.titleCard('ONGA BONGA', 'a stone age rock saga', 3.6);
+  yield 2.4;
   AudioSys.sfx('rumble', { vol: 0.3, len: 1.2 });
   yield* S.say('BRONK', 'mnnghhh... hnnkkk... mnnn...', { at: bronk });
   yield 0.3;
@@ -409,6 +448,7 @@ function* introScript(S) {
   Juice.shake(20, 1.4); Juice.flash('#ffffff', 0.4, 4);
   const trex = S.add('trex', { base: 'trex', x: QUARRY.box - 380, y: GY, scale: 1.1, facing: 1 });
   trex.play('roar');
+  S.lights = () => { if (trex.visible) Light.point(trex.x + 30, GY - 90, 300, { color: '#ef6a5e', flicker: 0.12, glow: 0.18, power: 0.8 }); };
   yield* S.pan(QUARRY.box - 280, 310, 0.6);
   Emotes.show(bronk, '!', 1.4);
   yield 0.8;
@@ -551,6 +591,11 @@ function* introScript(S) {
     ctx.fillStyle = g; ctx.fillRect(beamX - w / 2, -320, w, GY + 320);
     ctx.globalAlpha = 1;
     Gfx.glow(beamX, GY - 60, 140 * beam, '#ffe98a', 0.5 * beam);
+  };
+  S.lights = () => {
+    if (beam <= 0) return;
+    Light.ray(beamX, -320, Math.PI / 2, GY + 330, 24 + beam * 40, 60 + beam * 70, { color: '#ffe98a', alpha: 0.22 * Math.min(1, beam), clear: 0.95 });
+    Light.point(beamX, GY - 60, 260 * Math.min(1, beam), { color: '#ffe98a', glow: 0.28, core: 0.2 });
   };
   AudioSys.sfx('thunder');
   Co.run(function* () { for (let i = 0; i < 60; i++) { beam = Math.min(1.6, beam + Time.dt * 5); yield 0; } }());

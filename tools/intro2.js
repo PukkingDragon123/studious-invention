@@ -8,6 +8,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
   page.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE: ' + m.text().split('\n')[0]); });
   await page.goto('http://127.0.0.1:8765/index.html'); await page.waitForTimeout(600);
+  // the walkthroughs freeze the scene until read; these tests have read them
+  await page.waitForFunction(() => typeof Game !== 'undefined' && Game.newRun);
+  await page.evaluate(() => { const nr = Game.newRun; Game.newRun = function () { nr.call(Game); Game.run.tips = { valley: true, combat: true, gems: true, altar: true, push: true }; }; });
   await page.mouse.click(480, 270); await page.waitForTimeout(600);
   await page.evaluate(() => { Game.newRun(); Game.go(new CutsceneScene(introScript, {})); });
   // hammer inputs so every mini-game resolves, and log the beat we are on

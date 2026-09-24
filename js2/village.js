@@ -640,6 +640,12 @@ class VillageScene {
     Dialogue.update();
     if (Dialogue.active || Game.overlay) { this.cam.update(dt); return; }
     const run = Game.run;
+    // the first time in the valley, it shows you round
+    if (this.intro <= 0 && !this.coached && !(run.tips || {}).valley) {
+      this.coached = true;
+      Game.overlay = new Coach(this.coachSteps(), () => { (run.tips = run.tips || {}).valley = true; Game.save(); });
+      return;
+    }
     const p = this.player;
     let ix = 0, iy = 0;
     if (!this.locked) {
@@ -776,6 +782,53 @@ class VillageScene {
     if (Input.pressed('Escape')) Game.pause();
     if (Input.pressed('KeyM')) this.showMap = !this.showMap;
   }
+  tileDetail(z, x, y) {
+    const t = z.tiles[z.idx(x, y)], px = x * TILE, py = y * TILE;
+    const h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
+    const soft = t.includes('grass') || t.includes('moss');
+    const hard = t === z.def.path || t.includes('stone') || t.includes('rubble');
+    // where this tile meets a different kind of ground below or to the right
+    // compare kinds of ground, not tile names: two grasses are one field
+    const kind = n => n.includes('grass') || n.includes('moss') ? 1 : (n === z.def.path || n.includes('stone') || n.includes('rubble')) ? 2 : n.includes('dirt') || n.includes('ash') || n.includes('sand') ? 3 : 4;
+    const k0 = kind(t);
+    const kb = z.inside(x, y + 1) ? kind(z.tiles[z.idx(x, y + 1)]) : k0;
+    const kr = z.inside(x + 1, y) ? kind(z.tiles[z.idx(x + 1, y)]) : k0;
+    if (kb !== k0 && soft) {                                 // a grass bank over the road
+      Gfx.rectA(px, py + TILE - 3, TILE, 3, '#120c16', 0.45);
+      for (let k = 0; k < 4; k++) Gfx.rect(px + 3 + k * 8 + (h >> k) % 3, py + TILE - 5, 2, 3, '#3f9a45');
+    } else if (kb !== k0) Gfx.rectA(px, py + TILE - 2, TILE, 2, '#120c16', 0.3);
+    if (kr !== k0) Gfx.rectA(px + TILE - 2, py, 2, TILE, '#120c16', 0.26);
+    if (soft) {
+      if (h % 7 === 0) {                                     // a tuft
+        const tx = px + 6 + (h >> 3) % 20, ty = py + 10 + (h >> 7) % 16;
+        Gfx.rect(tx, ty - 5, 2, 6, '#14331e'); Gfx.rect(tx + 3, ty - 7, 2, 8, '#27632f'); Gfx.rect(tx + 6, ty - 4, 2, 5, '#14331e');
+        Gfx.rect(tx + 3, ty - 7, 1, 3, '#6cc95c');
+      } else if (h % 23 === 0) {                             // a flower
+        const tx = px + 8 + (h >> 4) % 16, ty = py + 8 + (h >> 8) % 16;
+        const col = ['#ffe98a', '#ef6a5e', '#e8dfc6', '#b177e6'][(h >> 5) % 4];
+        Gfx.rect(tx, ty + 2, 1, 4, '#27632f');
+        Gfx.rect(tx - 1, ty, 3, 3, '#120c16'); Gfx.rect(tx, ty + 1, 1, 1, col); Gfx.rect(tx - 1, ty, 1, 1, col); Gfx.rect(tx + 1, ty, 1, 1, col);
+      }
+    } else if (hard && h % 6 === 0) {                        // a pebble with its own shadow
+      const tx = px + 4 + (h >> 3) % 22, ty = py + 6 + (h >> 6) % 20;
+      Gfx.rect(tx, ty + 2, 6, 2, 'rgba(18,12,22,0.4)');
+      Gfx.rect(tx, ty, 5, 3, '#7a6d8a'); Gfx.rect(tx + 1, ty, 2, 1, '#9391a6');
+    }
+  }
+  coachSteps() {
+    const p = this.player, cam = this.cam;
+    const at = (x, y, w, h) => { const a = cam.toScreen(x - w / 2, y - h), b = cam.toScreen(x + w / 2, y); return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y }; };
+    const beast = this.zone.entities.filter(e => e instanceof Prowler).sort((a, b) => dist2(a.x, a.y, p.x, p.y) - dist2(b.x, b.y, p.x, p.y))[0];
+    return [
+      { title: 'BRONK', rect: () => at(p.x, p.y + 4, 56, 84), text: Input.touch
+        ? 'That is you. Push the stick to walk, hold RUN to run - running costs stamina, the green bar.'
+        : 'That is you. WASD or the arrows to walk, SHIFT to run - running costs stamina, the green bar. M shows the map.' },
+      { title: 'WHAT IS IN YOUR WAY', rect: { x: 10, y: 46, w: 272, h: 62 }, text: 'This panel names the next problem, and the arrow on it points at it. The valley is split by walls: first a guarded gate, then a stone puzzle, then the raptor.' },
+      beast && { title: 'BEASTS', rect: () => at(beast.x, beast.actor.top + 4, 70, 34), text: 'Every beast wears a slate: skulls for how dangerous it is, ? when it half-sees you, ! when it has. Creep up BEHIND one for a SNEAK ATTACK and start the fight ahead.' },
+      { title: 'GEMS AND SHELLS', rect: { x: W - 266, y: 6, w: 212, h: 40 }, text: 'Shells buy things from the wandering mammoth. GEMS come out of crystal outcrops - three of them at the altar in the square enchant a card for the whole run.' },
+      { title: Input.touch ? 'BUTTONS' : 'RUN, DODGE, ACT', rect: { x: W - 146, y: H - 200, w: 136, h: 186 }, text: 'DODGE rolls you out of sight for a moment. ACT talks, digs, rests at fires and opens things - the label says what it will do.' },
+    ];
+  }
   updateAmbience(dt) {
     const p = this.player;
     // motes of pollen or ash drifting through the shot
@@ -867,6 +920,9 @@ class VillageScene {
       const t = z.tiles[z.idx(x, y)];
       Gfx.sprite(t, x * TILE, y * TILE, { anchor: 'tl', frame: anim });
     }
+    // the ground gets its detail and its edges: an ink lip wherever one kind of
+    // ground meets another, and tufts, flowers and pebbles scattered by hash
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) this.tileDetail(z, x, y);
     // vision cones under everything
     for (const e of z.entities) if (e instanceof Prowler) e.drawCone();
     // y-sorted scenery + entities + player

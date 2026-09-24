@@ -184,10 +184,11 @@ const Light = {
 // set here is all it takes for every stage that paints it to be lit.
 // ---------------------------------------------------------------------------
 const SetLight = {
-  run(set, t, o = {}, camX = 0) {
+  run(set, t, o = {}, camX = 0, extra = null) {
     const f = SetLight[set];
     if (typeof f !== 'function' || set === 'run' || set === 'post') return;
     f(t, o, camX);
+    if (extra) extra();                 // whatever the scene itself is shining
     Light.end();
   },
   post(set, o = {}) {
@@ -215,6 +216,8 @@ const SetLight = {
         { color: night ? '#6aa9ee' : '#ffe08a', alpha: night ? 0.06 : 0.12, clear: night ? 0.3 : 0.62 });
       Light.point(d.x, GY - 6, 120, { color: night ? '#3570c0' : '#ffe08a', power: night ? 0.3 : 0.55, glow: 0.05 });
     }
+    // moonlight, or morning, pooled on the bed so the sleeper reads
+    Light.point(HOME.bed + 20, GY - 30, 130, { color: night ? '#6aa9ee' : '#a8d8ff', power: night ? 0.5 : 0.6, glow: 0.06 });
     // the fissure over the bed throws morning across the sleeping hollow
     Light.ray(HOME.bed + 44, 250, 0.95, 230, 18, 120,
       { color: night ? '#6aa9ee' : '#a8d8ff', alpha: night ? 0.06 : 0.12, clear: 0.5 });
@@ -331,6 +334,7 @@ function lightCombat(C) {
   Light.begin(Math.min(0.5, L.ambient + 0.16), L.dark);
   Light.point(C.bronk.x, C.bronk.y - 50, 230, { color: '#ffe08a', power: 0.9, glow: 0.10, core: 0.2 });
   for (const e of C.enemies) if (e.alive) Light.point(e.actor.x, e.actor.y - 50, 200, { color: '#ffd6a0', power: 0.85, glow: 0.05 });
+  for (const tx of Backdrops.TORCHES) Light.point(tx, 250, 200, { color: '#ffa832', flicker: 0.1, glow: 0.18 });
   Light.box(-2000, -2000, 4000, 250, { power: 0.8, feather: 1 });
   Light.end();
 }
@@ -339,3 +343,20 @@ function gradeCombat(C) {
   Light.grade(L.grade, L.a * 0.8);
   Light.vignette(L.vig * 0.9);
 }
+
+// Film: the last touches that make a cutscene a shot and not a screenshot.
+const Film = {
+  // a sparse, crawling grain - a few hundred specks, light and dark
+  grain(a = 0.05) {
+    const c = Gfx.ctx, seed = Math.floor(Time.t * 24);
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
+    for (let i = 0; i < 260; i++) {
+      const h = Math.sin((i + seed * 131) * 12.9898) * 43758.5453, u = h - Math.floor(h);
+      const h2 = Math.sin((i * 7 + seed * 17) * 78.233) * 12543.1234, v = h2 - Math.floor(h2);
+      c.globalAlpha = a * (0.5 + (i % 3) * 0.3);
+      c.fillStyle = i % 2 ? '#fffaea' : '#000000';
+      c.fillRect(Math.floor(u * W), Math.floor(v * H), 2, 2);
+    }
+    c.restore();
+  },
+};

@@ -9,6 +9,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   page.on('console', m => { const t = m.text().split('\n')[0]; if (m.type() === 'error') errs.push(t); else if (m.type() === 'warning') warns.add(t); });
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message + ' | ' + (e.stack || '').split('\n')[1]));
   await page.goto('http://127.0.0.1:8765/index.html');
+  // the walkthroughs freeze the scene until read; these tests have read them
+  await page.waitForFunction(() => typeof Game !== 'undefined' && Game.newRun);
+  await page.evaluate(() => { const nr = Game.newRun; Game.newRun = function () { nr.call(Game); Game.run.tips = { valley: true, combat: true, gems: true, altar: true, push: true }; }; });
   await page.waitForTimeout(700);
   await page.screenshot({ path: `${OUT}/01_boot.png` });
   await page.mouse.click(640, 360); await page.waitForTimeout(900);

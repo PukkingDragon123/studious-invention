@@ -8,6 +8,9 @@ const OUT = '/tmp/claude-0/-home-user-studious-invention/b07c031c-846e-582c-baca
   page.on('console', m => { if (m.type() === 'error') { const t = m.text().split('\n')[0]; if (!t.includes('404')) errs.push(t); } });
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message + ' | ' + (e.stack || '').split('\n')[1]));
   await page.goto('http://127.0.0.1:8765/index.html'); await page.waitForTimeout(500);
+  // the walkthroughs freeze the scene until read; these tests have read them
+  await page.waitForFunction(() => typeof Game !== 'undefined' && Game.newRun);
+  await page.evaluate(() => { const nr = Game.newRun; Game.newRun = function () { nr.call(Game); Game.run.tips = { valley: true, combat: true, gems: true, altar: true, push: true }; }; });
   await page.mouse.click(640, 360); await page.waitForTimeout(500);
   const fails = [];
   const ok = (n, cond, info = '') => { console.log((cond ? 'PASS ' : 'FAIL ') + n + (info ? '  ' + info : '')); if (!cond) fails.push(n); };
