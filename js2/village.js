@@ -124,6 +124,7 @@ class Zone {
       this.addProp(x * TILE + 16, y * TILE + 24, r.chance(0.5) ? 'prop_pot' : 'prop_barrel', { loot: true });
     }
     this.buildEntities();
+    this.buildPuzzles();              // walls, gates, the plate clearing, gems, the altar
   }
   carvePath(a, b) {
     let x = a.x, y = a.y; const d = this.def; let guard = 0;
@@ -691,6 +692,26 @@ class VillageScene {
     p.x = clamp(p.x, TILE * 2, this.zone.w * TILE - TILE * 2);
     p.y = clamp(p.y, TILE * 2 + 10, this.zone.h * TILE - TILE * 2);
     if (Math.abs(p.vx) > 12) p.facing = p.vx > 0 ? 1 : -1;
+    // ---- shoving a boulder: lean on it for a moment and it rolls one tile.
+    // Only ever in a straight line, which is the whole puzzle.
+    let pushing = false;
+    if (!rolling && mag > 0.5) {
+      const dir = Math.abs(ix) > Math.abs(iy) ? { x: Math.sign(ix), y: 0 } : { x: 0, y: Math.sign(iy) };
+      const ptx = Math.floor(p.x / TILE), pty = Math.floor((p.y - 6) / TILE);
+      const b = this.zone.entities.find(e => e instanceof Boulder && e.moveT >= 1 && e.tx === ptx + dir.x && e.ty === pty + dir.y);
+      if (b && dist(p.x, p.y, b.x, b.y) < 42) {
+        pushing = true;
+        this.pushT = (this.pushT || 0) + dt;
+        if (this.pushT > 0.2) {
+          this.pushT = 0;
+          if (b.push(dir.x, dir.y, this) && !(Game.run.tips && Game.run.tips.push)) {
+            (Game.run.tips = Game.run.tips || {}).push = true;
+            Popups.add(p.x, p.y - 70, 'PUSH!', '#ffe98a', { scale: 1.3 });
+          }
+        }
+      }
+    }
+    if (!pushing) this.pushT = 0;
     // stamina: moving costs, standing still slowly recovers
     if (spd > 20) run.stamina = clamp(run.stamina - dt * (p.sprinting ? 17 : 4.2), 0, run.maxStamina);
     else run.stamina = clamp(run.stamina + dt * 7.5, 0, run.maxStamina);
@@ -700,7 +721,7 @@ class VillageScene {
     this.bellyPhase += dt * (4 + spd * 0.045);
     p.update(dt);
     // the belly rides on top of the clip's own bounce, never instead of it
-    const wob = Math.sin(this.bellyPhase), amp = 0.055 + spd * 0.0005;
+    const wob = Math.sin(this.bellyPhase), amp = 0.010 + spd * 0.00008;
     p.sx *= 1 + wob * amp + (tired ? 0.02 : 0);
     p.sy *= 1 - wob * amp;
     // footfalls kick up dust
@@ -710,7 +731,7 @@ class VillageScene {
         this.footT = 1;
         Particles.dust(p.x - p.facing * 6, p.y, 3);
         AudioSys.sfx(this.zone.def.base[0].includes('grass') ? 'step_grass' : 'step');
-        Juice.shake(p.sprinting ? 1.1 : 0.5, 0.06);
+        if (p.sprinting) Juice.shake(0.6, 0.05);
       }
     }
     // hiding
@@ -859,7 +880,14 @@ class VillageScene {
         if (this.hidden) Gfx.ctx.globalAlpha = 0.55;
         this.player.draw();
         Gfx.ctx.globalAlpha = 1;
+        if (this.swing) {                              // digging at a gem
+          this.swing.t += Time.dt;
+          const k = (this.swing.t * 2.6) % 1;
+          const rot = k < 0.45 ? lerp(-2.4, 0.9, Ease.inQuad(k / 0.45)) : lerp(0.9, -2.4, (k - 0.45) / 0.55);
+          World.pickaxe(this.player.x + 14 * this.player.facing, this.player.y - 40, rot * this.player.facing, 0.55);
+        }
       } else if (d.e) d.e.draw();
+      else if (d.o.draw) d.o.draw(d.o, this.t);
       else {
         const o = d.o;
         const sway = Math.sin(this.t * 1.4 + o.sway) * (Gfx.spr(o.spr).h > 50 ? 0.012 : 0);
@@ -872,6 +900,7 @@ class VillageScene {
       Gfx.sprite('ptero_fly', b.x + i * 34, b.y + i * 16, { anchor: 'c', scale: 0.6, frame: Math.floor(b.t * 7 + i), flip: b.dir < 0, tint: '#120c16', tintAmount: 0.45, alpha: 0.75 });
     Particles.draw(Gfx.ctx, true);
     FX.draw(true);
+    if (Settings.lighting !== false) lightValley(this);
     Popups.draw(true);
     Floaters.draw();
     Emotes.draw();
@@ -886,7 +915,7 @@ class VillageScene {
       Gfx.text(label, p.x, y, { color: '#ffe98a', align: 'center' });
     }
     this.cam.restore(Gfx.ctx);
-    Gfx.vignette(0.55);
+    if (Settings.lighting !== false) gradeValley(this); else Gfx.vignette(0.55);
     this.drawHud();
     Dialogue.draw();
   }
@@ -905,34 +934,52 @@ class VillageScene {
     Gfx.round(x + 30, y + 32, 220, 20, 2, SKIN.ink);
     Gfx.bar(x + 32, y + 34, 216, 16, st, st > 0.3 ? '#6cc95c' : '#ffa832', { bg: '#14331e' });
     if (st <= 0.02) Gfx.text('WINDED!', x + 140, y + 35, { color: '#ef6a5e', align: 'center', scale: 1.3, outline: true });
-    // ---- shells
+    // ---- shells, and the gems for the altar
     UI.slab(W - 158, 8, 112, 36, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
     Gfx.sprite('icon_coin', W - 148, 16, { anchor: 'tl', scale: 1.2 });
     Gfx.text(String(run.gold), W - 118, 18, { color: SKIN.ink, scale: 1.4 });
+    UI.slab(W - 262, 8, 96, 36, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
+    {
+      const gx = W - 244, gy = 26, ctx = Gfx.ctx;
+      Gfx.glow(gx, gy, 18, '#b177e6', 0.3 + Math.sin(this.t * 3) * 0.1);
+      ctx.fillStyle = '#120c16'; ctx.beginPath(); ctx.moveTo(gx, gy - 11); ctx.lineTo(gx + 8, gy); ctx.lineTo(gx, gy + 11); ctx.lineTo(gx - 8, gy); ctx.fill();
+      ctx.fillStyle = '#7c3eb2'; ctx.beginPath(); ctx.moveTo(gx, gy - 9); ctx.lineTo(gx + 6, gy); ctx.lineTo(gx, gy + 9); ctx.lineTo(gx - 6, gy); ctx.fill();
+      ctx.fillStyle = '#b177e6'; ctx.beginPath(); ctx.moveTo(gx, gy - 9); ctx.lineTo(gx - 6, gy); ctx.lineTo(gx, gy); ctx.fill();
+    }
+    Gfx.text(String(run.gems || 0), W - 226, 18, { color: SKIN.ink, scale: 1.4 });
     // ---- relics, in gold slots
     let rx = 14;
     for (const id of run.relics) { UI.slot(rx, 10, 32, {}); Relics.drawIcon(id, rx + 6, 16); rx += 36; }
-    // ---- which way the gate is, as an arrow on the objective panel rather
-    // than a disc in the corner where your thumb goes
-    const goal = this.zone.entities.find(e => e instanceof ZoneGoal);
-    // the objective: three kills makes a trail the raptor will follow
+    // ---- the objective: whatever is actually in your way right now, with an
+    // arrow on the panel pointing at it
     {
-      const r = Game.run, ready = r.bait >= r.baitNeed, bx = 24, by = 58;
+      const r = Game.run, z = this.zone;
+      const g0 = z.walls && z.walls[0].gate, g1 = z.walls && z.walls[1].gate;
+      const goal = z.entities.find(e => e instanceof ZoneGoal);
+      let title, line, target, done = false, pips = null;
+      if (g0 && !g0.opened) {
+        title = 'BREAK THROUGH'; line = 'beat the gate guard'; target = g0.guard && !g0.guard.dead ? g0.guard : g0;
+      } else if (g1 && !g1.opened) {
+        const on = g1.plates.filter(p => p.pressed).length;
+        title = 'THE STONE GATE'; line = `${on} / 2 plates`; target = z.puzzle ? { x: (z.puzzle.ax + 5) * TILE, y: (z.puzzle.ay + 4) * TILE } : g1;
+        pips = { n: 2, got: on, spr: 'icon_check' };
+      } else if (r.bait < r.baitNeed) {
+        title = 'MAKE RAPTOR BAIT'; line = `${r.bait} / ${r.baitNeed} down`; target = goal;
+        pips = { n: r.baitNeed, got: r.bait, spr: 'icon_skull' };
+      } else { title = 'BAIT LAID'; line = 'to the gate'; target = goal; done = true; }
+      const bx = 24, by = 58;
       UI.slab(bx - 14, by - 12, 272, 62, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
-      Gfx.rect(bx - 10, by - 8, 5, 54, ready ? '#6cc95c' : '#c2333c');
-      Gfx.text(ready ? 'BAIT LAID' : 'MAKE RAPTOR BAIT', bx + 2, by - 1,
-        { color: SKIN.faceHi, scale: 1.4 });
-      Gfx.text(ready ? 'BAIT LAID' : 'MAKE RAPTOR BAIT', bx + 2, by - 2,
-        { color: ready ? '#14331e' : SKIN.ink, scale: 1.4 });
-      for (let i = 0; i < r.baitNeed; i++) {
-        const gx = bx + 2 + i * 32, got = i < r.bait;
-        Gfx.sprite('icon_skull', gx + 11, by + 30, { anchor: 'c', scale: 1.4, alpha: got ? 1 : 0.22 });
-        if (got) Gfx.sprite('icon_check', gx + 19, by + 34, { anchor: 'c', scale: 1 });
+      Gfx.rect(bx - 10, by - 8, 5, 54, done ? '#6cc95c' : '#c2333c');
+      Gfx.text(title, bx + 2, by - 1, { color: SKIN.faceHi, scale: 1.4 });
+      Gfx.text(title, bx + 2, by - 2, { color: done ? '#14331e' : SKIN.ink, scale: 1.4 });
+      if (pips) for (let i = 0; i < pips.n; i++) {
+        const gx = bx + 2 + i * 32, got = i < pips.got;
+        Gfx.sprite(pips.spr, gx + 11, by + 30, { anchor: 'c', scale: 1.4, alpha: got ? 1 : 0.22 });
+        if (got && pips.spr === 'icon_skull') Gfx.sprite('icon_check', gx + 19, by + 34, { anchor: 'c', scale: 1 });
       }
-      Gfx.text(ready ? 'to the gate' : `${r.bait} / ${r.baitNeed} down`,
-        bx + 108, by + 26, { color: SKIN.text, scale: 1.2 });
-      if (goal) {
-        const dx = goal.x - this.player.x, dy = goal.y - this.player.y;
+      Gfx.text(line, pips ? bx + 2 + pips.n * 32 + 8 : bx + 2, by + 26, { color: SKIN.text, scale: 1.2 });
+      if (target) {
+        const dx = target.x - this.player.x, dy = target.y - this.player.y;
         const ang = Math.atan2(dy, dx), dist = Math.hypot(dx, dy);
         const cx = bx + 232, cy = by + 6, ctx = Gfx.ctx;
         ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);

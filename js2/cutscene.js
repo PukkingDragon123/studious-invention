@@ -129,7 +129,9 @@ class CutsceneScene {
     Emotes.draw();
     Floaters.draw();
     if (this.overlay) this.overlay(true);
+    if (Settings.lighting !== false) SetLight.run(this.set, this.t, this.setOpt, this.camX());
     this.cam.restore(Gfx.ctx);
+    if (Settings.lighting !== false) SetLight.post(this.set, this.setOpt);
     Particles.draw(Gfx.ctx, false);
     FX.draw(false);
     Popups.draw(false);

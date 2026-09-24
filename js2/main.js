@@ -4,7 +4,7 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
-const Settings = { music: 0.8, sfx: 0.9, noteSpeed: 1.15, difficulty: 'normal', offset: 0, shake: true };
+const Settings = { music: 0.8, sfx: 0.9, noteSpeed: 1.15, difficulty: 'normal', offset: 0, shake: true, lighting: true };
 const SAVE_KEY = 'ongabonga_v2_save', SET_KEY = 'ongabonga_v2_settings';
 
 const Game = {
@@ -38,6 +38,7 @@ const Game = {
       deck, relics: ['bone_pick'], band: [], act: 1, fights: 0, startHype: 0,
       zone: null, pos: null, seenEvents: [], seenFights: [],
       bait: 0, baitNeed: 3, riffsPlayed: 0, campSeen: 0,
+      gems: 0, solved: {}, tips: {},
       stats: { kills: 0, notes: 0, sick: 0, taken: 0 },
     };
     this.go(new CutsceneScene(introScript, { onSkip: () => this.startVillage() }));
@@ -51,6 +52,7 @@ const Game = {
       gold: r.gold, relics: r.relics, band: r.band, act: r.act, fights: r.fights,
       startHype: r.startHype, seenEvents: r.seenEvents, stats: r.stats, pos: r.pos,
       bait: r.bait, baitNeed: r.baitNeed, riffsPlayed: r.riffsPlayed, campSeen: r.campSeen || 0,
+      gems: r.gems || 0, solved: r.solved || {}, tips: r.tips || {},
       deck: r.deck.map(c => Cards.toSave(c)),
     };
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { }
@@ -59,7 +61,7 @@ const Game = {
     try {
       const d = JSON.parse(localStorage.getItem(SAVE_KEY)); if (!d) return this.newRun();
       d.deck = d.deck.map(s => Cards.fromSave(s));
-      d.zone = null;
+      d.zone = null; d.gems = d.gems || 0; d.solved = d.solved || {}; d.tips = d.tips || {};
       this.run = d;
       this.go(new VillageScene(d.act));
     } catch (e) { console.error(e); this.newRun(); }

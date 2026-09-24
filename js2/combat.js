@@ -273,6 +273,7 @@ class Combat {
     let r = null;
     if (card.def.riff) r = yield* this.riffCo(card, target);
     yield* card.def.effect(this, card, target, r);
+    if (card.v.enchDraw) this.drawCards(card.v.enchDraw);           // the amber in it
     if (card.def.type !== 'special') yield* Relics.trigger('onCardPlayed', this, card);
     this.playing = null;
     if (card.def.type === 'power' || card.def.type === 'special') { }
@@ -517,8 +518,10 @@ class Combat {
     for (const it of list) it.f();
     Particles.draw(Gfx.ctx, true);
     FX.draw(true);
+    if (Settings.lighting !== false) lightCombat(this);
     Popups.draw(true);
     this.cam.restore(Gfx.ctx);
+    if (Settings.lighting !== false) gradeCombat(this);
     Particles.draw(Gfx.ctx, false);
     FX.draw(false);
     if (this.riff) this.riff.draw();

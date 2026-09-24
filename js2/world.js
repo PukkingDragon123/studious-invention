@@ -2061,4 +2061,8 @@ const World = {
 
 // A side-scroll painter. The caller (MiniGame.stage) already put the camera in
 // place, so this just paints the stage in world coordinates.
-const Scroll = (name, opt = {}) => (camX, t) => World[name](t, opt, camX);
+const Scroll = (name, opt = {}) => {
+  const f = (camX, t) => World[name](t, opt, camX);
+  f.set = name; f.opt = opt;                 // so a stage knows how to light it
+  return f;
+};

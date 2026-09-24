@@ -3,17 +3,19 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
-// How much every clip bounces. Nothing in this game stands perfectly still:
-// an idle breathes, a walk lifts off the floor and a run leaves it entirely.
+// How much every clip bounces. A little, and no more: a walk should read as
+// weight moving over the feet, not as a man on a pogo stick. The idle only
+// breathes; the walk lifts a pixel or two per footfall; running is where the
+// body finally leaves the ground a bit.
 // bob is pixels of vertical travel; squish is how much the bounce squashes.
 const BOB = {
-  idle: 1.2, walk: 3.4, run: 5.2, dash: 6.0, eat: 2.0, play: 3.6, sing: 3.0,
-  cook: 1.6, cry: 2.4, shock: 2.6, hurt: 0, sleep: 0.3, drive: 1.4,
-  roar: 2.2, boss: 2.6, trader: 1.0, shower: 1.4, fly: 4.0, kick: 4.4,
+  idle: 0.4, walk: 1.1, run: 1.8, dash: 2.2, eat: 1.0, play: 1.6, sing: 1.4,
+  cook: 0.8, cry: 1.2, shock: 1.2, hurt: 0, sleep: 0.25, drive: 0.8,
+  roar: 1.2, boss: 1.4, trader: 0.6, shower: 0.8, fly: 2.6, kick: 2.0,
 };
 const SQUISH = {
-  idle: 0.020, walk: 0.055, run: 0.085, dash: 0.10, play: 0.06, sing: 0.05,
-  eat: 0.04, cry: 0.05, shock: 0.05, roar: 0.045, fly: 0.06, kick: 0.07,
+  idle: 0.008, walk: 0.012, run: 0.02, dash: 0.03, play: 0.02, sing: 0.018,
+  eat: 0.014, cry: 0.016, shock: 0.016, roar: 0.02, fly: 0.03, kick: 0.025,
 };
 
 // Per-character clip table: logical name -> { spr, fps, loop, hold }

@@ -248,6 +248,9 @@ class SideScroll extends MiniGame {
     if (this.caught > (this.o.catchTime ?? 2.2)) this.finish({ win: false, caught: true, got: this.got, x: this.x });
     else if (this.x >= this.goal) this.finish({ win: true, got: this.got, x: this.x });
   }
+  // which set this stage is painted with, so it can be lit like one
+  get lightSet() { return this.o.lightSet || (this.o.paint && this.o.paint.set) || null; }
+  get lightOpt() { return this.o.lightOpt || (this.o.paint && this.o.paint.opt) || {}; }
   // A ledge: a slab of rock with a lit top edge and a little scrub on it, so
   // it reads as something you can stand on from across the screen.
   ledge(p) {
@@ -332,7 +335,9 @@ class SideScroll extends MiniGame {
         }
       }
       if (this.o.goalSpr) Gfx.sprite(this.o.goalSpr, this.goal, this.ground, { anchor: 'bc', scale: this.o.goalScale || 1 });
+      if (this.lightSet && Settings.lighting !== false) SetLight.run(this.lightSet, this.t, this.lightOpt, this.camX);
     });
+    if (this.lightSet && Settings.lighting !== false) SetLight.post(this.lightSet, this.lightOpt);
     this.drawHud();
   }
   drawHud() {
@@ -472,6 +477,7 @@ class DriveGame extends SideScroll {
       sub: ev ? 'faster. faster. faster.' : 'same as every day',
       hint: Input.touch ? 'HOLD GO TO DRIVE  -  HOP OVER THE ROCKS' : 'D TO DRIVE  -  SPACE TO HOP THE ROCKS',
       paint: (camX, t) => World.road(t, { scared: ev }, camX),
+      lightSet: 'road', lightOpt: { scared: ev },
     }, o));
     this.ev = ev;
     this.horn = 0; this.debris = 0;
@@ -523,6 +529,7 @@ class MineGame extends SideScroll {
       title: o.title || 'THE SHIFT',
       hint: Input.touch ? 'WALK TO A FACE  -  TAP TO SWING' : 'A / D TO WALK  -  SPACE TO SWING AT A FACE',
       paint: (camX, t) => World.quarry(t, { mined: this.boxed }, camX),
+      lightSet: 'quarry',
     }, o));
     this.need = o.need ?? 3;
     this.mined = 0;                       // crystals out of the rock
@@ -657,6 +664,7 @@ class MineGame extends SideScroll {
         World.oreLump(fx, fy, 1.5, f.kind);
         Gfx.glow(fx, fy - 6, 40, '#ffe98a', 0.4 * (1 - f.t));
       }
+      if (Settings.lighting !== false) SetLight.run('quarry', this.t, { mined: this.mined }, this.camX);
       // an arrow on the ground pointing at whatever you should do next
       const aim = this.aimX;
       if (Math.abs(aim - this.x) > 120) {
@@ -664,6 +672,7 @@ class MineGame extends SideScroll {
         for (let k = 0; k < 3; k++) Gfx.rectA(ax + d * k * 9, ay - k * 2, 7, 4 + k * 3, '#ffe98a', 0.5 - k * 0.12);
       }
     });
+    if (Settings.lighting !== false) SetLight.post('quarry', {});
     this.pad = Input.touch ? Pad.legs({ jumpLabel: 'JUMP', mainLabel: 'GO', actLabel: 'SWING',
       actOff: this.atFace < 0 && !this.atBox }) : null;
     if (this.barkT > 0 && this.bark) this.drawBark();
