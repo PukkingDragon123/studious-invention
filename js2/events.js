@@ -42,8 +42,8 @@ class MammothShop {
     Gfx.bands(0, 0, W, 340, ['#1d3d72', '#3570c0', '#6aa9ee', '#ffb0cf', '#ffe08a']);
     Gfx.rect(0, 356, W, H - 356, '#5c3a20');
     Gfx.rect(0, 356, W, 6, '#85562f');
-    for (let x = -20; x < W; x += 110) Gfx.sprite('prop_bush', x, 372, { anchor: 'bc', alpha: 0.85 });
-    Gfx.sprite('prop_palm', 380, 366, { anchor: 'bc', alpha: 0.9 });
+    for (let x = -20; x < W; x += 110) Gfx.sprite('v_bush', x, 372, { anchor: 'bc', scale: 0.85, alpha: 0.85 });
+    Gfx.sprite('v_palm', 380, 366, { anchor: 'bc', scale: 0.79, alpha: 0.9 });
     this.mam.draw(); this.bronk.draw();
     Particles.draw(Gfx.ctx, false);
     // speech
@@ -111,7 +111,7 @@ class MammothShop {
 
 // ------------------------------------------------------------- fog encounters
 const FOG_EVENTS = [
-  { id: 'nest', title: 'A NEST IN THE ASH', spr: 'prop_egg', scale: 2,
+  { id: 'nest', title: 'A NEST IN THE ASH', spr: 'v_egg', scale: 2,
     text: 'Three warm eggs sit in a ring of stones. Something big made this nest, and something big will come back to it.',
     choices: [
       { label: 'Take an egg', desc: 'A relic, and possibly a very angry parent.', act: s => { if (!Relics.has('egg')) { Relics.give('egg'); s.result = 'You tuck the egg under your arm. It hums. {y}Warm Egg{/} acquired.'; } else { Game.run.gold += 45; s.result = 'This one is full of amber, not raptor. {y}+45 shells{/}.'; } if (chance(0.45)) { s.fight = ['raptor', 'raptor']; s.result += ' Then the reeds start moving. {r}Two raptors.{/}'; } } },
@@ -124,7 +124,7 @@ const FOG_EVENTS = [
       { label: 'Fish out his pouch', desc: '{y}+25 shells{/}. He will remember.', act: s => { Game.run.gold += 25; s.result = 'You hook the pouch with a branch. He calls you a word the valley has not invented yet. {y}+25 shells{/}.'; } },
       { label: 'Walk on', desc: 'Not your tar.', act: s => { s.result = 'You walk on. The tar burps once behind you.'; } },
     ] },
-  { id: 'painting', title: 'THE PAINTED WALL', spr: 'prop_cave', scale: 1.2,
+  { id: 'painting', title: 'THE PAINTED WALL', spr: 'v_cave', scale: 1.2,
     text: 'Hunters, mammoths, and beneath them a row of ochre marks in fours. Someone wrote music on this wall, long before you.',
     choices: [
       { label: 'Study the marks', desc: '{g}Upgrade{/} a riff.', act: s => { s.picker = { title: 'UPGRADE A RIFF', filter: c => !c.up, use: c => { c.up = true; Cards.refresh(c); s.result = `You copy the old notation until your hands ache. {g}${c.name}{/} is sharper.`; } }; } },
@@ -138,7 +138,7 @@ const FOG_EVENTS = [
       { label: 'Share your food', desc: 'Lose {y}20 shells{/}, gain {g}6 Max HP{/}.', cond: () => Game.run.gold >= 20, act: s => { Game.run.gold -= 20; Game.run.maxHp += 6; Game.run.hp += 6; s.result = 'You hand over the gourd. An old woman presses herbs into your palm. {g}+6 Max HP{/}.'; } },
       { label: 'Move on', desc: 'Time is family.', act: s => { s.result = 'You move on. Behind you, a very small fire is lit anyway.'; } },
     ] },
-  { id: 'stone', title: 'THE SINGING STONE', spr: 'prop_totem', scale: 1.3,
+  { id: 'stone', title: 'THE SINGING STONE', spr: 'v_totem', scale: 1.03,
     text: 'A standing stone hums when the wind crosses it. Put your ear to it and it is almost a chord.',
     choices: [
       { label: 'Tune yourself to it', desc: '{y}Hard riff{/}. A relic if you match it.', act: s => { s.riff = { bars: 1, density: 2, title: 'THE STONE', reward: r => { if (r.acc > 0.6) { if (!Relics.has('totem')) { Relics.give('totem'); return 'The hum settles into your chest. {y}Pocket Totem{/} acquired.'; } Game.run.gold += 60; return 'The stone approves. Shells rattle out of a crack. {y}+60{/}.'; } Game.run.hp = Math.max(1, Game.run.hp - 6); return 'You are flat. The stone is not. Your teeth ring. {r}-6 HP{/}.'; } }; } },

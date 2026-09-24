@@ -254,6 +254,11 @@ class SideScroll extends MiniGame {
   // A ledge: a slab of rock with a lit top edge and a little scrub on it, so
   // it reads as something you can stand on from across the screen.
   ledge(p) {
+    if (p.spr) {                                        // a drawn shelf, top edge at exactly p.h
+      Gfx.shadow(p.x + p.w / 2, this.ground + 2, p.w * 0.8, 0.26);
+      Gfx.sprite(p.spr, p.x + p.w / 2, this.ground - 1, { anchor: 'bc' });
+      return;
+    }
     const y = this.ground - p.h;
     Gfx.shadow(p.x + p.w / 2, this.ground + 2, p.w * 0.8, 0.26);
     Gfx.round(p.x, y, p.w, 26, 7, '#3b3048');
@@ -268,7 +273,7 @@ class SideScroll extends MiniGame {
       Gfx.round(lx - 5, y + 22, 5, p.h - 22, 2, '#574a66');
     }
     if (!p.bare) for (let i = 0; i < 3; i++)
-      Gfx.sprite(i % 2 ? 'prop_fern' : 'prop_mushroom', p.x + 14 + i * (p.w - 28) / 2, y + 2, { anchor: 'bc', scale: 0.55 });
+      Gfx.sprite(i % 2 ? 'v_fern' : 'v_mushroom', p.x + 14 + i * (p.w - 28) / 2, y + 2, { anchor: 'bc', scale: 0.55 });
   }
 
   // world -> screen, for the handful of things (particles, popups) that live
@@ -314,10 +319,9 @@ class SideScroll extends MiniGame {
           const bounce = Math.sin(this.t * 11 + this.x * 0.03) * 3 * clamp(Math.abs(this.vx) / 160, 0.25, 1) - this.z;
           const sc = this.o.vehicleScale || 1;
           Gfx.shadow(this.x, this.ground + 2, 88 * sc * clamp(1 - this.z / 200, 0.5, 1), 0.32);
-          Gfx.sprite(this.o.vehicle, this.x, this.ground + bounce * 0.4,
-            { anchor: 'bc', scale: sc, frame: Math.floor(Math.abs(this.x) / 18), flip: this.hero.facing < 0 });
-          Gfx.sprite('bronk_drive', this.x - 6 * sc * (this.hero.facing < 0 ? -1 : 1), this.ground - 22 * sc + bounce,
-            { anchor: 'bc', scale: sc * 0.78, frame: Math.abs(this.vx) > 180 ? 1 : 0, flip: this.hero.facing < 0 });
+          World.cart(this.x, this.ground + bounce * 0.4, { scale: sc, frame: Math.floor(Math.abs(this.x) / 18), flip: this.hero.facing < 0 },
+            () => Gfx.sprite('bronk_drive', this.x - 6 * sc * (this.hero.facing < 0 ? -1 : 1), this.ground - 22 * sc + bounce,
+              { anchor: 'bc', scale: sc * 0.78, frame: Math.abs(this.vx) > 180 ? 1 : 0, flip: this.hero.facing < 0 }));
           if (Math.abs(this.vx) > 60 && chance(Time.dt * 26)) Particles.dust(this.sx(this.x - 40 * sc * (this.hero.facing || 1)), this.sy(this.ground), 1);
         } else {
           this.hero.x = this.x; this.hero.y = this.ground; this.hero.z = this.z; this.hero.draw();
@@ -325,10 +329,11 @@ class SideScroll extends MiniGame {
       } });
       list.sort((a, b) => a.y - b.y);
       for (const it of list) it.f();
+      if (this.o.paint && this.o.paint.front) this.o.paint.front(this.camX, this.t);
       for (const b of this.obstacles) {
         if (b.smashed || b.x < this.camX - 60 || b.x > this.camX + VW + 60) continue;
         Gfx.shadow(b.x, this.ground + 2, (b.w || 34) + 14, 0.3);
-        Gfx.sprite(b.spr || 'prop_rock', b.x, this.ground + 2, { anchor: 'bc', scale: b.scale || 1, alpha: b.hit ? 0.5 : 1 });
+        Gfx.sprite(b.spr || 'v_rock', b.x, this.ground + 2, { anchor: 'bc', scale: b.scale || 1, alpha: b.hit ? 0.5 : 1 });
         if (!b.hit) {
           const k = 0.5 + Math.sin(Time.t * 7 + b.x) * 0.5;
           Gfx.rectA(b.x - 12, this.ground - (b.h || 38) - 16, 24, 4, '#ffe98a', 0.25 + k * 0.35);
@@ -418,9 +423,9 @@ class DriveCard extends MiniGame {
     for (let i = 0; i < (sc ? 3 : 1); i++) if (chance(0.6))
       Particles.spawn(cx - 60 + rnd(-10, 10), road, { n: 1, color: sc ? ['#7d1d2b', '#3a2415'] : ['#5c3a20', '#3a2415'],
         speed: 60, angle: Math.PI, spread: 1.2, gravity: -20, life: 0.8, size: 3, sizeEnd: 0, world: false });
-    Gfx.sprite('car', cx, road + 2 - bounce * 0.4, { anchor: 'bc', frame: Math.floor(t * 18), rot: sc ? -0.05 : 0 });
-    Gfx.sprite(sc ? 'bronk_shock' : 'bronk_drive', cx - 8, road - 20 - bounce,
-      { anchor: 'bc', scale: 0.85, frame: Math.floor(t * (sc ? 12 : 6)) });
+    World.cart(cx, road + 2 - bounce * 0.4, { frame: Math.floor(t * 18), rot: sc ? -0.05 : 0 },
+      () => Gfx.sprite(sc ? 'bronk_shock' : 'bronk_drive', cx - 8, road - 20 - bounce,
+        { anchor: 'bc', scale: 0.85, frame: Math.floor(t * (sc ? 12 : 6)) }));
     if (!sc && chance(0.05))
       Popups.add(cx + 26, road - 76, '~', '#ffe98a', { world: false, scale: 1.8, life: 1.4, vy: -34, vx: 26 });
     if (sc) {
@@ -460,13 +465,13 @@ class DriveGame extends SideScroll {
     const n = ev ? 7 : 5;
     for (let i = 0; i < n; i++) obs.push({
       x: 360 + i * ((goal - 500) / n) + (i % 2) * 70,
-      spr: ev ? ['prop_rock', 'prop_barrel', 'prop_bones'][i % 3] : ['prop_rock', 'prop_pot', 'prop_barrel'][i % 3],
+      spr: ev ? ['v_rock', 'v_basket', 'v_bones'][i % 3] : ['v_rock', 'v_pot', 'v_basket'][i % 3],
       scale: ev ? 1.2 : 1, w: 40, h: 34,
     });
     const shells = [];
     if (!ev) for (let i = 0; i < 4; i++) shells.push({ x: 520 + i * 380, y: GY - 40, spr: 'relic_shell', scale: 0.9, label: '+1' });
     super(Object.assign({
-      base: 'bronk', vehicle: 'car', vehicleScale: 1.05, jump: true, camYFrac: 0.80,
+      base: 'bronk', vehicle: true, vehicleScale: 1.05, jump: true, camYFrac: 0.80,
       ground: GY + 6, goal,
       speed: ev ? 430 : 300, auto: ev ? 250 : 95, accelMul: ev ? 1.5 : 1,
       obstacles: obs, pickups: shells,

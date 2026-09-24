@@ -210,20 +210,16 @@ const Gfx = {
   // screen that alone was costing fifty thousand calls a frame.
   round(x, y, w, h, r, color) {
     x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
-    r = Math.max(0, Math.round(r));
+    r = Math.max(0, Math.min(Math.round(r), w >> 1, h >> 1));
     const c = this.ctx;
     c.fillStyle = color;
     if (r <= 1) { c.fillRect(x, y, w, h); return; }   // too small to be worth rounding
-    c.fillRect(x + r, y, w - r * 2, h);
+    // every pixel is covered exactly once, so a translucent one has no seams
     c.fillRect(x, y + r, w, h - r * 2);
-    const rr = r * r;
-    for (let d = 0; d <= r; d++) {
-      const dx = Math.floor(Math.sqrt(Math.max(0, rr - d * d))) + 1;
-      const ty = y + r - d, by = y + h - r + d;
-      c.fillRect(x + r - dx + 1, ty, dx, 1);
-      c.fillRect(x + w - r, ty, dx, 1);
-      c.fillRect(x + r - dx + 1, by, dx, 1);
-      c.fillRect(x + w - r, by, dx, 1);
+    for (let j = 0; j < r; j++) {
+      const dy = r - j - 0.5, inset = Math.round(r - Math.sqrt(Math.max(0, r * r - dy * dy)));
+      c.fillRect(x + inset, y + j, w - inset * 2, 1);
+      c.fillRect(x + inset, y + h - 1 - j, w - inset * 2, 1);
     }
   },
   bar(x, y, w, h, frac, fg, o = {}) {

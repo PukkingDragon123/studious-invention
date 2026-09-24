@@ -122,10 +122,10 @@ Zone.prototype.buildPuzzles = function () {
     for (let x = ax - 1; x <= ax + RW; x += 2) for (const y of [ay - 1, ay + RH]) {
       const facingRoad = up ? y === ay + RH : y === ay - 1;
       if (facingRoad && Math.abs(x - door) <= 1) continue;
-      this.addProp(x * TILE + 16, y * TILE + 28, 'prop_rock', { solid: true, footW: 1, footH: 1 });
+      this.addProp(x * TILE + 16, y * TILE + 28, 'v_rock', { solid: true, footW: 1, footH: 1 });
     }
     for (let y = ay + 1; y < ay + RH; y += 2) for (const x of [ax - 1, ax + RW])
-      this.addProp(x * TILE + 16, y * TILE + 28, 'prop_rock', { solid: true, footW: 1, footH: 1 });
+      this.addProp(x * TILE + 16, y * TILE + 28, 'v_rock', { solid: true, footW: 1, footH: 1 });
     this.carvePath({ x: door, y: up ? ay + RH : ay - 1 }, { x: door, y: roadY });
     // the layout: two plates, two stones, each a short honest push away
     const plates = [new Plate(ax + 8, ay + 2), new Plate(ax + 7, ay + 6)];
@@ -250,7 +250,7 @@ class Gate extends Entity {
       Gfx.rect(x - 20, py - 58, 40, 76, '#5c3a20');
       Gfx.rect(x - 20, py - 58, 9, 76, '#85562f');
       Gfx.rect(x + 13, py - 58, 7, 76, '#3a2415');
-      Gfx.sprite('prop_skull', x, py - 58, { anchor: 'bc', scale: 0.55 });
+      Gfx.sprite('v_skull', x, py - 58, { anchor: 'bc', scale: 0.55 });
       if (this.kind === 'guard' || this.opened) {                     // a torch on each
         World.flame(x + side * 2, py - 64, 18 + Math.abs(Math.sin(this.t * 6 + side)) * 8, 6,
           Math.sin(this.t * 4 + side) * 2, ['#e06a1b', '#ffa832', '#ffe98a', '#9c3510'], side * 3);
@@ -442,7 +442,7 @@ class PuzzleSign extends Entity {
     yield* Dialogue.say('', 'Scratched on the post: TWO STONES, TWO PLATES. PUSH, DO NOT PULL. The rock with the circle on it puts them back.', { at: { x: this.x, top: this.y - 60 } });
   }
   draw() {
-    Gfx.sprite('prop_signpost', this.x, this.y + 4, { anchor: 'bc', scale: 1 });
+    Gfx.sprite('v_signpost', this.x, this.y + 4, { anchor: 'bc', scale: 1 });
   }
 }
 

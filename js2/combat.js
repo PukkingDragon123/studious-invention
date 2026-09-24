@@ -34,8 +34,8 @@ const Backdrops = {
     // treeline
     for (let i = 0; i < 12; i++) {
       const x = -400 + i * 190 - px * 0.34;
-      const spr = act === 3 ? 'prop_deadtree' : act === 2 ? (i % 2 ? 'prop_palm' : 'prop_tree') : (i % 3 ? 'prop_tree' : 'prop_palm');
-      Gfx.sprite(spr, x, 302, { anchor: 'bc', alpha: 0.55, tint: '#120c16', tintAmount: 0.35 });
+      const spr = act === 3 ? 'v_deadtree' : act === 2 ? (i % 2 ? 'v_palm' : 'v_tree_jungle') : (i % 3 ? 'v_tree' : 'v_palm');
+      Gfx.sprite(spr, x, 302, { anchor: 'bc', scale: 0.78, alpha: 0.55, tint: '#120c16', tintAmount: 0.35 });
     }
     // the crowd on a bank
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
@@ -53,7 +53,7 @@ const Backdrops = {
       const x = -600 + ((i * 137) % 2400), y = 344 + ((i * 53) % 190);
       Gfx.rectA(x, y, 6 + (i % 4) * 4, 2, i % 3 ? '#000000' : '#ffffff', 0.055);
     }
-    for (let i = 0; i < 14; i++) Gfx.sprite(act === 3 ? 'prop_rock' : 'prop_bush', -500 + i * 160 - px * 0.7, 350, { anchor: 'bc', alpha: 0.5, tint: '#120c16', tintAmount: 0.3 });
+    for (let i = 0; i < 14; i++) Gfx.sprite(act === 3 ? 'v_rock_bare' : 'v_bush', -500 + i * 160 - px * 0.7, 350, { anchor: 'bc', scale: act === 3 ? 0.8 : 0.85, alpha: 0.5, tint: '#120c16', tintAmount: 0.3 });
     // two torches marking the edge of the fighting ground: this is a stage
     for (const tx of Backdrops.TORCHES) {
       Gfx.shadow(tx, 344, 30, 0.3);

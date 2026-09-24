@@ -142,6 +142,8 @@ class CutsceneScene {
     const list = Object.values(this.actors).filter(a => a.visible).map(a => ({ y: a.sortY ?? a.y, a }));
     list.sort((p, q) => p.y - q.y);
     for (const it of list) it.a.draw();
+    const front = World[this.set + 'Front'];
+    if (front) front(this.t, this.setOpt, this.camX());
     Particles.draw(Gfx.ctx, true);
     FX.draw(true);
     Popups.draw(true);
@@ -212,7 +214,8 @@ function* introScript(S) {
   // it opens outside, under the stars, and drifts in through the door
   S.cam.lookAt(HOME.door + 260, 312, true);
   AudioSys.play('home', { fade: 1.6 });
-  const bronk = S.add('bronk', { base: 'bronk', x: HOME.bed + 6, y: GY, scale: 1, facing: 1 });
+  // up on the bed, on the pelt, with his head on the pillow
+  const bronk = S.add('bronk', { base: 'bronk', x: HOME.bed + 6, y: GY - 14, scale: 1, facing: 1 });
   bronk.play('sleep');
   const dodo = S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 58, scale: 0.8, facing: -1 });
   dodo.play('idle');
@@ -226,7 +229,7 @@ function* introScript(S) {
       const a = Math.sin(k * Math.PI) * snore;
       if (a < 0.02) continue;
       Gfx.ctx.globalAlpha = a * 0.9;
-      Gfx.text('Z', bronk.x - 26 + k * 46 + Math.sin(k * 7) * 5, GY - 34 - k * 66,
+      Gfx.text('Z', bronk.x - 26 + k * 46 + Math.sin(k * 7) * 5, GY - 48 - k * 66,
         { color: '#c4b89a', align: 'center', scale: 1.2 + k * 2.2, outline: true, outlineWidth: 2 });
       Gfx.ctx.globalAlpha = 1;
     }
@@ -287,9 +290,9 @@ function* introScript(S) {
     // rock shelves along the cave wall, because a man in a hurry takes the
     // high road through his own kitchen
     platforms: [
-      { x: HOME.drum + 40, w: 118, h: 50, warm: true },
-      { x: HOME.arch - 56, w: 132, h: 70, warm: true },
-      { x: HOME.fossil + 30, w: 122, h: 54, warm: true },
+      { x: HOME.drum + 40, w: 118, h: 50, spr: 'h_ledge_a' },
+      { x: HOME.arch - 56, w: 132, h: 70, spr: 'h_ledge_b' },
+      { x: HOME.fossil + 30, w: 122, h: 54, spr: 'h_ledge_c' },
     ],
     pickups: [
       { x: HOME.drum + 96, y: GY - 82, spr: 'icon_coin', label: '+1 shell' },
@@ -525,12 +528,12 @@ function* introScript(S) {
   yield 0.3;
   // --- the big one: chase the raptor, with the tyrant on your heels
   const chase = yield* S.mini(new SideScroll({
-    vehicle: 'car', vehicleScale: 1, startX: 0, goal: 2200, speed: 320, grip: 5,
+    vehicle: true, vehicleScale: 1, startX: 0, goal: 2200, speed: 320, grip: 5,
     jump: true,
     obstacles: Array.from({ length: 15 }, (_, i) => ({
       x: 240 + i * 132 + (i % 3) * 38,
-      spr: ['prop_deadtree', 'prop_rock', 'prop_bones', 'prop_barrel'][i % 4],
-      scale: i % 4 === 0 ? 0.8 : 1.1, w: 40, h: i % 4 === 0 ? 54 : 36,
+      spr: ['v_deadtree', 'v_rock', 'v_bones', 'v_basket'][i % 4],
+      scale: i % 4 === 0 ? 0.62 : i % 4 === 1 ? 0.88 : 1.1, w: 40, h: i % 4 === 0 ? 54 : 36,
     })),
     paint: Scroll('flight', { embers: true }),
     ahead: { spr: 'blaze_walk', gap: 420, speed: 258, scale: 1, carry: 'vela_cry' },
@@ -544,7 +547,7 @@ function* introScript(S) {
   bronk.x = 380; bronk.y = GY; bronk.facing = 1; bronk.play('hurt');
   S.hide('vela', 'kida', 'kidb', 'blaze');
   trex.visible = true; trex.x = 620; trex.y = GY; trex.facing = -1; trex.play('walk');
-  S.overlay = world => { if (!world) return; Gfx.sprite('car', 336, GY + 2, { anchor: 'bc', frame: 0, rot: 0.12 }); };
+  S.overlay = world => { if (!world) return; World.cart(336, GY + 2, { rot: 0.12 }); };
   AudioSys.sfx('thud'); Juice.shake(10, 0.5);
   for (let i = 0; i < 16; i++) Particles.spawn(336, GY - 40, { n: 1, color: ['#3b3048', '#574a66'], speed: 60, gravity: -40, life: 2.2, size: 6, sizeEnd: 0 });
   Particles.debris(336, GY, 18, ['#3b3048', '#574a66', '#5c3a20', '#85562f']);
@@ -582,7 +585,7 @@ function* introScript(S) {
   let beam = 0;
   S.overlay = world => {
     if (!world) return;
-    Gfx.sprite('car', 336, GY + 2, { anchor: 'bc', frame: 0, rot: 0.12 });
+    World.cart(336, GY + 2, { rot: 0.12 });
     if (beam <= 0) return;
     const ctx = Gfx.ctx, w = 18 + beam * 46;
     ctx.globalAlpha = clamp(beam, 0, 1) * 0.9;
@@ -628,7 +631,7 @@ function* introScript(S) {
   yield 0.4;
   S.overlay = world => {
     if (!world) return;
-    Gfx.sprite('car', 336, GY + 2, { anchor: 'bc', frame: 0, rot: 0.12 });
+    World.cart(336, GY + 2, { rot: 0.12 });
     Gfx.glow(bronk.x + 18, GY - 66, 60, '#ffe98a', 0.35 + Math.sin(Time.t * 6) * 0.08);
     Gfx.sprite('art_bass', bronk.x + 18, GY - 66, { anchor: 'c', scale: 1.1, rot: -0.3 });
   };

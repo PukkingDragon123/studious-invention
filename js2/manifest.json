@@ -440,230 +440,6 @@
   "file": "art_valley",
   "note": "molten lava, animated glow, seamless."
  },
- "wall_stone": {
-  "w": 32,
-  "h": 40,
-  "frames": 1,
-  "note": "a block of village wall seen from the front: stacked stone with mortar lines, darker at the bottom. Tiles horizontally.",
-  "file": "art_world"
- },
- "wall_ruin": {
-  "w": 32,
-  "h": 40,
-  "frames": 1,
-  "note": "the same wall, broken and crumbling, top edge jagged, cracks and missing blocks.",
-  "file": "art_world"
- },
- "prop_rock": {
-  "w": 34,
-  "h": 26,
-  "frames": 1,
-  "note": "a boulder with facets and a mossy top.",
-  "file": "art_world"
- },
- "prop_bush": {
-  "w": 40,
-  "h": 30,
-  "frames": 1,
-  "note": "round leafy bush, layered greens.",
-  "file": "art_world"
- },
- "prop_fern": {
-  "w": 30,
-  "h": 26,
-  "frames": 1,
-  "note": "spray of fern fronds.",
-  "file": "art_world"
- },
- "prop_palm": {
-  "w": 56,
-  "h": 88,
-  "frames": 1,
-  "note": "palm tree: curved trunk with ring texture, fan of fronds, two coconuts.",
-  "file": "art_world"
- },
- "prop_tree": {
-  "w": 68,
-  "h": 92,
-  "frames": 1,
-  "note": "broad jungle tree: thick trunk with roots, dense layered canopy with highlight clumps.",
-  "file": "art_world"
- },
- "prop_deadtree": {
-  "w": 56,
-  "h": 84,
-  "frames": 1,
-  "note": "burnt dead tree, bare forked branches, charred black-grey.",
-  "file": "art_world"
- },
- "prop_bones": {
-  "w": 52,
-  "h": 26,
-  "frames": 1,
-  "note": "a ribcage and scattered bones half-buried in the ground.",
-  "file": "art_world"
- },
- "prop_skull": {
-  "w": 48,
-  "h": 38,
-  "frames": 1,
-  "note": "a huge dinosaur skull resting on the ground, empty eye sockets, teeth.",
-  "file": "art_world"
- },
- "prop_totem": {
-  "w": 34,
-  "h": 76,
-  "frames": 1,
-  "note": "carved tribal totem pole: three stacked painted faces, feathers at the top.",
-  "file": "art_world"
- },
- "prop_hut": {
-  "w": 100,
-  "h": 84,
-  "frames": 1,
-  "note": "stone-age hut: rounded boulder walls, thatched hide roof, dark doorway, smoke hole.",
-  "file": "art_world"
- },
- "prop_hut_ruin": {
-  "w": 100,
-  "h": 84,
-  "frames": 1,
-  "note": "the same hut wrecked: roof collapsed and burnt, walls broken open, scorch marks, smoke stains.",
-  "file": "art_world"
- },
- "prop_cave": {
-  "w": 104,
-  "h": 80,
-  "frames": 1,
-  "note": "cave mouth in a rock face, dark interior fading to black, stalactites.",
-  "file": "art_world"
- },
- "prop_campfire": {
-  "w": 44,
-  "h": 40,
-  "frames": 4,
-  "note": "campfire: ring of stones, logs, animated flame across all 4 frames. Bright and warm.",
-  "file": "art_world"
- },
- "prop_signpost": {
-  "w": 30,
-  "h": 44,
-  "frames": 1,
-  "note": "wooden signpost with a painted bone arrow.",
-  "file": "art_world"
- },
- "prop_barrel": {
-  "w": 30,
-  "h": 34,
-  "frames": 1,
-  "note": "woven basket barrel with a hide lid.",
-  "file": "art_world"
- },
- "prop_pot": {
-  "w": 30,
-  "h": 30,
-  "frames": 1,
-  "note": "round clay pot with a painted tribal band.",
-  "file": "art_world"
- },
- "prop_tar": {
-  "w": 68,
-  "h": 26,
-  "frames": 2,
-  "note": "a bubbling tar pool, two frames of bubbles.",
-  "file": "art_world"
- },
- "prop_mushroom": {
-  "w": 38,
-  "h": 44,
-  "frames": 1,
-  "note": "giant red spotted mushroom.",
-  "file": "art_world"
- },
- "prop_egg": {
-  "w": 30,
-  "h": 34,
-  "frames": 1,
-  "note": "large speckled dinosaur egg in the sand.",
-  "file": "art_world"
- },
- "prop_stage": {
-  "w": 132,
-  "h": 52,
-  "frames": 1,
-  "note": "a rough stone performance stage: slab top on pillars, hide banners.",
-  "file": "art_world"
- },
- "prop_fog": {
-  "w": 64,
-  "h": 64,
-  "frames": 4,
-  "note": "a churning ball of black fog for mystery encounters, with a faint purple glow inside. All four frames differ.",
-  "file": "art_world"
- },
- "car": {
-  "w": 100,
-  "h": 58,
-  "frames": 4,
-  "note": "the FLINTSTONE CAR: wooden frame with a hide canopy on two stone roller wheels, a log bumper, a bone steering stick. Wheels rotate across the 4 frames (spoke positions change).",
-  "file": "art_world"
- },
- "house_floor": {
-  "w": 32,
-  "h": 32,
-  "frames": 1,
-  "note": "interior stone slab floor, seamless.",
-  "file": "art_world"
- },
- "house_wall": {
-  "w": 32,
-  "h": 40,
-  "frames": 1,
-  "note": "interior cave wall with tool marks and a hanging hide, tiles horizontally.",
-  "file": "art_world"
- },
- "house_table": {
-  "w": 132,
-  "h": 54,
-  "frames": 1,
-  "note": "thick stone slab table on carved log trestles",
-  "file": "art_house"
- },
- "house_bed": {
-  "w": 120,
-  "h": 62,
-  "frames": 1,
-  "note": "carved stone bed ledge with a bone headboard and a heap of furs",
-  "file": "art_house"
- },
- "house_shelf": {
-  "w": 110,
-  "h": 48,
-  "frames": 1,
-  "note": "two plank shelves on bracket pegs, with pots and stone tablets",
-  "file": "art_house"
- },
- "stove_pit": {
-  "w": 88,
-  "h": 52,
-  "frames": 1,
-  "note": "the cooking pit the raptor sits in: a stone hearth ring with a grill of bones above it, blackened.",
-  "file": "art_world"
- },
- "shower_frame": {
-  "w": 104,
-  "h": 100,
-  "frames": 1,
-  "note": "the mammoth shower: a stone stall with a hide curtain rail and a wooden platform, open at the front so a mammoth trunk can hang over it.",
-  "file": "art_world"
- },
- "meat_leg": {
-  "w": 40,
-  "h": 36,
-  "frames": 1,
-  "note": "a giant cooked T-rex drumstick: bone handle, glistening dark meat, a bite taken out.",
-  "file": "art_world"
- },
  "icon_heart": {
   "w": 18,
   "h": 16,
@@ -1259,90 +1035,6 @@
   "h": 76,
   "frames": 4
  },
- "house_stool": {
-  "w": 34,
-  "h": 30,
-  "frames": 1,
-  "note": "log-legged stone stool with a fur pad",
-  "file": "art_house"
- },
- "house_basket": {
-  "w": 56,
-  "h": 46,
-  "frames": 1,
-  "note": "woven storage basket with a hide lid",
-  "file": "art_house"
- },
- "house_lamp": {
-  "w": 26,
-  "h": 32,
-  "frames": 1,
-  "note": "hanging stone oil lamp with a live flame",
-  "file": "art_house"
- },
- "house_potrack": {
-  "w": 86,
-  "h": 36,
-  "frames": 1,
-  "note": "three clay pots hung off a bone rail",
-  "file": "art_house"
- },
- "house_hiderack": {
-  "w": 76,
-  "h": 84,
-  "frames": 1,
-  "note": "drying frame with a hide laced into it",
-  "file": "art_house"
- },
- "house_drum": {
-  "w": 52,
-  "h": 48,
-  "frames": 1,
-  "note": "hide drum on log legs",
-  "file": "art_house"
- },
- "house_wallart": {
-  "w": 96,
-  "h": 44,
-  "frames": 1,
-  "note": "framed cave painting: three hunters and one very large animal",
-  "file": "art_house"
- },
- "house_fossil": {
-  "w": 92,
-  "h": 92,
-  "frames": 1,
-  "note": "ammonite fossil cut into a stone plaque",
-  "file": "art_house"
- },
- "house_hearth": {
-  "w": 132,
-  "h": 46,
-  "frames": 1,
-  "note": "ring of blackened hearth stones with a bone spit over it",
-  "file": "art_house"
- },
- "house_waterjar": {
-  "w": 34,
-  "h": 44,
-  "frames": 1,
-  "note": "tall clay water jar with looped handles",
-  "file": "art_house"
- },
- "house_broom": {
-  "w": 18,
-  "h": 46,
-  "frames": 1,
-  "note": "bundle-of-reeds broom",
-  "file": "art_house"
- },
- "house_curtain": {
-  "w": 70,
-  "h": 86,
-  "frames": 1,
-  "note": "hide door curtain hung on a rail",
-  "file": "art_house"
- },
  "v_tree": {
   "w": 88,
   "h": 120,
@@ -1487,6 +1179,265 @@
   "w": 88,
   "h": 120,
   "frames": 2,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "h_bed": {
+  "w": 156,
+  "h": 66,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_drum": {
+  "w": 54,
+  "h": 50,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_rug": {
+  "w": 160,
+  "h": 14,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_perch": {
+  "w": 60,
+  "h": 66,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_table": {
+  "w": 146,
+  "h": 62,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_stool": {
+  "w": 34,
+  "h": 30,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_stool2": {
+  "w": 34,
+  "h": 30,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_hearth": {
+  "w": 132,
+  "h": 50,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_woodpile": {
+  "w": 44,
+  "h": 36,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_lamp": {
+  "w": 24,
+  "h": 26,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_torch": {
+  "w": 16,
+  "h": 50,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_candle": {
+  "w": 14,
+  "h": 20,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_plaque": {
+  "w": 110,
+  "h": 94,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_shower": {
+  "w": 112,
+  "h": 120,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_cart": {
+  "w": 104,
+  "h": 80,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_ledge_a": {
+  "w": 118,
+  "h": 52,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_ledge_b": {
+  "w": 132,
+  "h": 72,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_ledge_c": {
+  "w": 122,
+  "h": 56,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_hearth_front": {
+  "w": 132,
+  "h": 50,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_club": {
+  "w": 22,
+  "h": 40,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_pot": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_skull": {
+  "w": 14,
+  "h": 11,
+  "frames": 1,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "h_cart_front": {
+  "w": 104,
+  "h": 80,
+  "frames": 4,
+  "file": "art_home",
+  "note": "home furniture"
+ },
+ "v_bones": {
+  "w": 52,
+  "h": 26,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_skull": {
+  "w": 48,
+  "h": 38,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_basket": {
+  "w": 30,
+  "h": 34,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_pot": {
+  "w": 30,
+  "h": 30,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_mushroom": {
+  "w": 38,
+  "h": 44,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_egg": {
+  "w": 30,
+  "h": 34,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_signpost": {
+  "w": 30,
+  "h": 44,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_campfire": {
+  "w": 44,
+  "h": 40,
+  "frames": 4,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_cave": {
+  "w": 104,
+  "h": 80,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_stage": {
+  "w": 132,
+  "h": 52,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_fog": {
+  "w": 64,
+  "h": 64,
+  "frames": 4,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_meat": {
+  "w": 40,
+  "h": 36,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_jar": {
+  "w": 34,
+  "h": 44,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_campfire_out": {
+  "w": 44,
+  "h": 40,
+  "frames": 1,
   "file": "art_valley",
   "note": "valley scenery"
  }

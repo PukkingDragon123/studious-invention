@@ -9,7 +9,7 @@ const ZONES = {
   1: {
     name: 'BEDROCK VILLAGE', sub: 'what the fire left behind', music: 'village',
     goal: 'THE VILLAGE GATE', w: 92, h: 66, base: ['tile_grass', 'tile_grass', 'tile_grass3', 'tile_grass4', 'tile_grass2'], rough: 'tile_dirt', path: 'tile_path', plaza: 'tile_stone',
-    scatter: ['v_bush', 'v_fern', 'v_rock', 'v_stump', 'v_flowers', 'v_bush_berry', 'prop_bones'],
+    scatter: ['v_bush', 'v_fern', 'v_rock', 'v_stump', 'v_flowers', 'v_bush_berry', 'v_bones'],
     trees: ['v_tree', 'v_tree_big', 'v_tree_fruit', 'v_tree', 'v_palm'], hide: ['v_bush', 'v_bush_berry'], hut: 'v_hut', ruin: 'v_hut_ruin',
     enemies: ['compy', 'dodo', 'boar'], elite: 'raptor', encounters: 1,
     sky: '#7fb0c8',
@@ -17,7 +17,7 @@ const ZONES = {
   2: {
     name: 'TAR JUNGLE', sub: 'sticky, steaming, full of teeth', music: 'village',
     goal: 'THE TAR GATE', w: 96, h: 70, base: ['tile_moss', 'tile_moss2', 'tile_moss'], rough: 'tile_dirt2', path: 'tile_dirt', plaza: 'tile_rubble',
-    scatter: ['v_fern', 'prop_mushroom', 'v_bush_jungle', 'v_rock', 'v_stump', 'prop_skull'],
+    scatter: ['v_fern', 'v_mushroom', 'v_bush_jungle', 'v_rock', 'v_stump', 'v_skull'],
     trees: ['v_tree_jungle', 'v_palm', 'v_tree_jungle', 'v_pine'], hide: ['v_bush_jungle', 'v_fern'], hut: 'v_hut_ruin', ruin: 'v_hut_ruin',
     enemies: ['raptor', 'ptero', 'tarblob', 'lizard'], elite: 'tricera', encounters: 2,
     sky: '#2f5a38',
@@ -25,7 +25,7 @@ const ZONES = {
   3: {
     name: 'VOLCANO SLOPE', sub: "the raptor's road home", music: 'village',
     goal: 'THE ASH GATE', w: 94, h: 70, base: ['tile_ash', 'tile_ash', 'tile_rubble'], rough: 'tile_rubble', path: 'tile_dirt2', plaza: 'tile_stone',
-    scatter: ['v_rock_bare', 'v_stump', 'prop_bones', 'prop_skull', 'v_rock'],
+    scatter: ['v_rock_bare', 'v_stump', 'v_bones', 'v_skull', 'v_rock'],
     trees: ['v_deadtree', 'v_deadtree', 'v_pine'], hide: ['v_rock_bare'], hut: 'v_hut_ruin', ruin: 'v_hut_ruin',
     enemies: ['lizard', 'brute', 'stego', 'raptor'], elite: 'trex', encounters: 3,
     sky: '#5a2018',
@@ -129,7 +129,7 @@ class Zone {
     for (let i = 0; i < 6; i++) {
       const x = sq.x + r.int(-6, 6), y = sq.y + r.int(-5, 5);
       if (!this.inside(x, y) || this.solid[this.idx(x, y)]) continue;
-      this.addProp(x * TILE + 16, y * TILE + 24, r.chance(0.5) ? 'prop_pot' : 'prop_barrel', { loot: true });
+      this.addProp(x * TILE + 16, y * TILE + 24, r.chance(0.5) ? 'v_pot' : 'v_basket', { loot: true });
     }
     this.buildEntities();
     this.buildPuzzles();              // walls, gates, the plate clearing, gems, the altar
@@ -260,7 +260,7 @@ class Campfire extends Entity {
   update(dt) { this.t += dt; if (chance(dt * 6)) Particles.fire(this.x + rnd(-5, 5), this.y - 18, 1); }
   draw() {
     if (!this.used) { Gfx.ctx.globalAlpha = 0.25 + Math.sin(this.t * 7) * 0.05; Gfx.circle(this.x, this.y - 8, 54, '#e06a1b'); Gfx.ctx.globalAlpha = 1; }
-    Gfx.sprite('prop_campfire', this.x, this.y + 8, { anchor: 'bc', frame: this.used ? 3 : Math.floor(this.t * 9), alpha: this.used ? 0.5 : 1, tint: this.used ? '#3b3048' : null, tintAmount: this.used ? 0.7 : 0 });
+    Gfx.sprite(this.used ? 'v_campfire_out' : 'v_campfire', this.x, this.y + 8, { anchor: 'bc', frame: Math.floor(this.t * 9), alpha: this.used ? 0.7 : 1 });
   }
   *interact(V) {
     if (this.used) { yield* Dialogue.say('', 'Cold ashes. This fire has given all it had.', { at: { x: this.x, top: this.y - 40 } }); return; }
@@ -293,7 +293,7 @@ class FogNode extends Entity {
   constructor(x, y) { super(x, y); this.prompt = 'ENTER'; this.t = rnd(0, 6); }
   update(dt) { this.t += dt; if (chance(dt * 3)) Particles.spawn(this.x + rnd(-24, 24), this.y + rnd(-14, 6), { n: 1, color: ['#4b2070', '#281040', '#7c3eb2'], speed: 14, gravity: -14, life: 1.5, size: 6, sizeEnd: 0 }); }
   draw() {
-    Gfx.sprite('prop_fog', this.x, this.y + 16, { anchor: 'bc', frame: Math.floor(this.t * 6), scale: 1.15 });
+    Gfx.sprite('v_fog', this.x, this.y + 16, { anchor: 'bc', frame: Math.floor(this.t * 6), scale: 1.15 });
     Gfx.text('?', this.x, this.y - 34 + Math.sin(this.t * 3) * 3, { color: '#b177e6', align: 'center', scale: 2.2, outline: true, outlineWidth: 2 });
   }
   *interact(V) { this.dead = true; Game.enterEvent(); }
@@ -381,7 +381,7 @@ class ZoneGoal extends Entity {
     Gfx.round(x - 70, y - 125, 140, 9, 6, '#9391a6');
     // rope binding and trophy skulls
     for (const sx of [-54, 54]) for (let i = 0; i < 4; i++) Gfx.rectA(x + sx - 16, y - 100 + i * 5, 32, 3, '#85562f', 0.8);
-    Gfx.sprite('prop_skull', x, y - 126, { anchor: 'bc', scale: 0.62 });
+    Gfx.sprite('v_skull', x, y - 126, { anchor: 'bc', scale: 0.62 });
     Gfx.sprite('icon_skull', x - 40, y - 108, { anchor: 'c', scale: 1 });
     Gfx.sprite('icon_skull', x + 40, y - 108, { anchor: 'c', scale: 1 });
     // whatever is beyond it, glowing

@@ -43,7 +43,7 @@ function drawTitleWorld(t) {
   if (chance(0.25)) Particles.spawn((hx - 16 + rnd(0, 30) - camX) * VIEW, (hy + 54 - camY) * VIEW,
     { n: 1, color: ['#a8d8ff', '#6aa9ee'], speed: 6, gravity: 240, life: 1.1, size: 2, sizeEnd: 1, world: false });
   for (const [bx, sc] of [[RX - 34, 2.4], [RX + 20, 2.8], [RX + 72, 2.3]])
-    Gfx.sprite('prop_bush', bx, GY + 6, { anchor: 'bc', scale: sc, tint: '#0b0a18', tintAmount: 0.92 });
+    Gfx.sprite('v_bush', bx, GY + 6, { anchor: 'bc', scale: sc * 0.85, tint: '#0b0a18', tintAmount: 0.92 });
 
   // ---- dinner. it does not want to come off the bone, and he is not giving up.
   const chew = Math.sin(t * 1.5);
@@ -60,7 +60,7 @@ function drawTitleWorld(t) {
     Gfx.round(sx2 - th, sy2 - th / 2, th * 2, th, th / 2, '#c4b89a');
     Gfx.round(sx2 - th, sy2 - th / 2, th * 1.4, th * 0.5, th / 3, '#e8dfc6');
   }
-  Gfx.sprite('meat_leg', mx, my, { anchor: 'c', scale: 2.2 + pull * 0.2, rot: -0.5 + pull * 0.5 });
+  Gfx.sprite('v_meat', mx, my, { anchor: 'c', scale: 2.2 + pull * 0.2, rot: -0.5 + pull * 0.5 });
   if (pull > 0.9 && chance(0.4)) Particles.spawn((mx - camX) * VIEW, (my - camY) * VIEW,
     { n: 1, color: ['#ef6a5e', '#c4b89a'], speed: 90, spread: 6.28, life: 0.6, size: 3, sizeEnd: 0, gravity: 300, world: false });
   Particles.draw(Gfx.ctx, true);        // the fire's own sparks live in world space
@@ -142,10 +142,21 @@ function titleStone(t) {
   return { x, y, w, h, cx };
 }
 
+// The cave and the country round it are painted a pixel at a time and take
+// most of a second. While the menu is up nobody minds losing a few
+// milliseconds a frame, so they get painted then, and the first scene of the
+// game opens without a stall.
+function bakeAhead() {
+  if (bakeAhead.done) return;
+  const t0 = performance.now();
+  if (!CaveBake.step(5)) return;
+  while (performance.now() - t0 < 6) if (Vista.step()) { bakeAhead.done = true; return; }
+}
+
 class BootScene {
   constructor() { this.t = 0; }
   enter() { } exit() { }
-  update(dt) { this.t += dt; if (Input.anyPress) { AudioSys.init(); Game.go(new TitleScene()); } }
+  update(dt) { this.t += dt; bakeAhead(); if (Input.anyPress) { AudioSys.init(); Game.go(new TitleScene()); } }
   draw() {
     drawTitleWorld(this.t);
     const st = titleStone(this.t);
@@ -166,6 +177,7 @@ class TitleScene {
   exit() { }
   update(dt) {
     this.t += dt;
+    bakeAhead();
     if (Input.pressed('Enter')) { Game.hasSave() ? Game.continueRun() : Game.newRun(); }
   }
   draw() {
@@ -282,7 +294,7 @@ class EndingScene {
     for (let i = 0; i < 50; i++) { const x = (i * 137) % W, y = (i * 61) % 260; Gfx.rectA(x, y, 2, 2, '#ffffff', 0.4 + 0.4 * Math.sin(this.t * 2 + i)); }
     Gfx.circle(820, 80, 40, '#fffaea');
     Gfx.rect(0, 330, W, H - 330, '#241c2e');
-    Gfx.sprite('prop_stage', W / 2, 430, { anchor: 'bc', scale: 1.4 });
+    Gfx.sprite('v_stage', W / 2, 430, { anchor: 'bc', scale: 1.4 });
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : this.t * 2;
     const bob = i => Math.abs(Math.sin((beat + i * 0.25) * Math.PI)) * 6;
     Gfx.sprite('bronk_play', W / 2 - 30, 392 - bob(0), { anchor: 'bc', frame: Math.floor(beat * 2) % 4, scale: 1.2 });

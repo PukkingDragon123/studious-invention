@@ -223,7 +223,7 @@ const SetLight = {
       { color: night ? '#6aa9ee' : '#a8d8ff', alpha: night ? 0.06 : 0.12, clear: 0.5 });
     if (o.fire > 0)
       Light.point(HOME.stove, GY - 36, 300 * (0.6 + o.fire * 0.4), { color: '#ffa832', flicker: 0.1, glow: 0.22 * o.fire, core: 0.2 });
-    for (const lx of [HOME.rug - 30, HOME.table - 46])     // the lamps
+    for (const lx of HOME.lamps)                           // the lamps
       Light.point(lx, 282, 160, { color: '#ff9a20', flicker: 0.08, glow: 0.14 });
     for (const tx of [HOME.arch - 96, HOME.arch + 96])     // the torches by the arch
       Light.point(tx, 296, 150, { color: '#ffa832', flicker: 0.12, glow: 0.16 });
