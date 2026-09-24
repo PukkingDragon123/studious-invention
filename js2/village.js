@@ -721,7 +721,7 @@ class VillageScene {
     // stamina: moving costs, standing still slowly recovers
     if (spd > 20) run.stamina = clamp(run.stamina - dt * (p.sprinting ? 17 : 4.2), 0, run.maxStamina);
     else run.stamina = clamp(run.stamina + dt * 7.5, 0, run.maxStamina);
-    if (tired && chance(dt * 1.4)) { Emotes.show(p, 'sweat', 0.9); if (chance(0.3)) AudioSys.sfx('stamina_low'); }
+    if (tired && chance(dt * 1.4)) { Emotes.show(p, 'sweat', 0.9); if (chance(0.3)) AudioSys.sfx('stamina_low'); if (chance(0.25)) quip(p, 'tired'); }
     // animation: the belly leads, the body follows
     p.play(rolling ? 'dash' : spd > 20 ? (p.sprinting ? 'run' : 'walk') : 'idle');
     this.bellyPhase += dt * (4 + spd * 0.045);
@@ -995,13 +995,7 @@ class VillageScene {
     Gfx.sprite('icon_coin', W - 148, 16, { anchor: 'tl', scale: 1.2 });
     Gfx.text(String(run.gold), W - 118, 18, { color: SKIN.ink, scale: 1.4 });
     UI.slab(W - 262, 8, 96, 36, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
-    {
-      const gx = W - 244, gy = 26, ctx = Gfx.ctx;
-      Gfx.glow(gx, gy, 18, '#b177e6', 0.3 + Math.sin(this.t * 3) * 0.1);
-      ctx.fillStyle = '#120c16'; ctx.beginPath(); ctx.moveTo(gx, gy - 11); ctx.lineTo(gx + 8, gy); ctx.lineTo(gx, gy + 11); ctx.lineTo(gx - 8, gy); ctx.fill();
-      ctx.fillStyle = '#7c3eb2'; ctx.beginPath(); ctx.moveTo(gx, gy - 9); ctx.lineTo(gx + 6, gy); ctx.lineTo(gx, gy + 9); ctx.lineTo(gx - 6, gy); ctx.fill();
-      ctx.fillStyle = '#b177e6'; ctx.beginPath(); ctx.moveTo(gx, gy - 9); ctx.lineTo(gx - 6, gy); ctx.lineTo(gx, gy); ctx.fill();
-    }
+    drawGemIcon(W - 244, 26, this.t);
     Gfx.text(String(run.gems || 0), W - 226, 18, { color: SKIN.ink, scale: 1.4 });
     // ---- relics, in gold slots
     let rx = 14;

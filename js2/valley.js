@@ -15,6 +15,23 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
+// Bronk has something to say about most things. Never twice in a row.
+const QUIPS = {
+  gem: ['SHINY.', 'Pretty rock!', 'Mine now.', 'Ooga. OOGA.', 'Rock with feelings.', 'Vela will want this.'],
+  push: ['hnnnngh', 'MOVE, rock.', 'rock... heavy...', 'why is it ROUND', 'I lift. I lift things.'],
+  gate: ['Rocks. I know rocks.', 'Nailed it.', 'Easy.', 'Told you. Rocks.'],
+  guard: ['Who is next?', 'Door. Open. Good.', 'That is how you knock.'],
+  tired: ['need... sit...', 'one... more... step...', 'belly... too... big...', 'is this... cardio'],
+  reset: ['Again. From the top.', 'Nobody saw that.'],
+};
+function quip(actor, kind, chanceOf = 1) {
+  if (!actor || Math.random() > chanceOf) return;
+  const list = QUIPS[kind]; if (!list) return;
+  let q; do { q = list[(Math.random() * list.length) | 0]; } while (list.length > 1 && q === quip.last);
+  quip.last = q;
+  Dialogue.float(actor, q, 2.2);
+}
+
 // ------------------------------------------------------------ zone building
 Zone.prototype.sectionOf = function (tx) {
   if (!this.walls) return 0;
@@ -203,6 +220,7 @@ class Gate extends Entity {
     Particles.debris(this.x, this.y + 20, 20, ['#5c3a20', '#85562f', '#3a2415']);
     Particles.dust(this.x, this.y + 20, 24);
     Popups.add(this.x, this.y - 110, this.kind === 'guard' ? 'THE WAY IS OPEN' : 'THE STONES HOLD', '#a8e878', { scale: 1.6, life: 2.2 });
+    if (Game.scene && Game.scene.player) quip(Game.scene.player, this.kind === 'guard' ? 'guard' : 'gate');
     Popups.add(this.x, this.y - 88, 'gate lifted', '#e8dfc6', { scale: 1.0, life: 2.2 });
   }
   update(dt, V) {
@@ -338,6 +356,7 @@ class Boulder extends Entity {
     this.from = { x: this.x, y: this.y };
     this.place(nx, ny, z);
     this.moveT = 0;
+    quip(V.player, 'push', 0.3);
     AudioSys.sfx('thud', { vol: 0.6 }); Juice.shake(3, 0.12);
     Particles.dust(this.x - dx * 16, this.y, 8);
     Particles.debris(this.x - dx * 12, this.y - 4, 3, ['#574a66', '#7a6d8a']);
@@ -401,6 +420,7 @@ class ResetStone extends Entity {
     AudioSys.sfx('horn', { vol: 0.5 });
     for (const b of this.stones) { b.seated = false; b.from = { x: b.x, y: b.y }; b.place(b.home.tx, b.home.ty, V.zone); b.moveT = 0; Particles.dust(b.x, b.y, 10); }
     Popups.add(this.x, this.y - 44, 'STONES RESET', '#ffe98a', { scale: 1.2 });
+    quip(V.player, 'reset');
     yield 0.3;
   }
   draw() {
@@ -464,6 +484,7 @@ class GemNode extends Entity {
     AudioSys.sfx('gold'); AudioSys.sfx('pickup');
     Particles.sparkle(this.x, this.y - 24, 26, [GEM_COLS[this.kind][1], '#ffffff', '#ffe98a']);
     Popups.add(this.x, this.y - 58, `+${n} GEMS`, GEM_COLS[this.kind][1], { scale: 1.6, life: 1.8 });
+    quip(p, 'gem');
     if (!Game.run.tips || !Game.run.tips.gems) {
       (Game.run.tips = Game.run.tips || {}).gems = true;
       yield* Dialogue.say('', 'Gems. The altar in the village square will set them into your riffs - three gems, one enchantment, and it lasts the whole run.', { at: p });
@@ -530,6 +551,15 @@ class Altar extends Entity {
   }
 }
 
+// the gem, as an icon: the same purple cut stone everywhere it is counted
+function drawGemIcon(gx, gy, t = Time.t) {
+  const ctx = Gfx.ctx;
+  Gfx.glow(gx, gy, 18, '#b177e6', 0.3 + Math.sin(t * 3) * 0.1);
+  ctx.fillStyle = '#120c16'; ctx.beginPath(); ctx.moveTo(gx, gy - 11); ctx.lineTo(gx + 8, gy); ctx.lineTo(gx, gy + 11); ctx.lineTo(gx - 8, gy); ctx.fill();
+  ctx.fillStyle = '#7c3eb2'; ctx.beginPath(); ctx.moveTo(gx, gy - 9); ctx.lineTo(gx + 6, gy); ctx.lineTo(gx, gy + 9); ctx.lineTo(gx - 6, gy); ctx.fill();
+  ctx.fillStyle = '#b177e6'; ctx.beginPath(); ctx.moveTo(gx, gy - 9); ctx.lineTo(gx - 6, gy); ctx.lineTo(gx, gy); ctx.fill();
+}
+
 // --------------------------------------------------------- enchant overlay
 class EnchantOverlay {
   constructor() { this.card = null; this.scroll = 0; this.t = 0; }
@@ -547,7 +577,7 @@ class EnchantOverlay {
     const r = UI.window(24, 20, W - 48, H - 40, 'THE ALTAR', { onClose: () => { Game.overlay = null; } });
     // the gems you have
     const gx = r.x + r.w - 150;
-    Gfx.sprite('relic_amber', gx, r.y - 2, { anchor: 'tl', scale: 1 });
+    drawGemIcon(gx + 10, r.y + 10, this.t);
     Gfx.text(`${run.gems || 0} GEMS`, gx + 30, r.y + 4, { color: SKIN.text, scale: 1.4 });
     if (!this.card) {
       Gfx.text(`Pick a riff to enchant  -  ${ENCHANT_COST} gems`, r.x + 8, r.y + 4, { color: SKIN.textDim, scale: 1.2 });

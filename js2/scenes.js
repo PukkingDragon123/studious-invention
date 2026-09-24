@@ -388,6 +388,7 @@ class PauseOverlay {
       });
       y += 52;
       UI.checkbox(x + 2, y, 22, Settings.shake !== false, () => { Settings.shake = Settings.shake === false; Game.saveSettings(); }, { label: 'SCREEN SHAKE' });
+      UI.checkbox(x + 222, y, 22, Settings.lighting !== false, () => { Settings.lighting = Settings.lighting === false; Game.saveSettings(); }, { label: 'LIGHTING' });
       y += 30;
       Gfx.textWrap('Notes landing late? Lower the offset. Early? Raise it.', x + 2, y, w - 210, { color: SKIN.textDim, lineHeight: 14 });
       UI.wbutton(W / 2 - 90, 56 + PH - 56, 180, 44, 'BACK', () => { if (this.settingsOnly) Game.overlay = null; else this.mode = 'menu'; });
