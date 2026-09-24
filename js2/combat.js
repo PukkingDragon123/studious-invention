@@ -5,6 +5,7 @@
 'use strict';
 
 const STAGE_Y = 430;
+const CAM_DY = 96;            // the camera sits lower, so the fighters stand clear of the hand
 const ACTOR_SCALE = 2;
 
 const Backdrops = {
@@ -84,7 +85,7 @@ class Combat {
     this.played = 0; this.powers = {}; this.flags = {}; this.t = 0; this.relicFlash = {};
     this.band = (this.run ? this.run.band : []).slice();
     this.player = { st: { str: 0, weak: 0, vuln: 0, thorns: 0, regen: 0 }, block: 0 };
-    this.cam = new Camera(); this.cam.zoom = 1; this.cam.lookAt(W / 2, 288, true);
+    this.cam = new Camera(); this.cam.zoom = 1; this.cam.lookAt(W / 2, 288 + CAM_DY, true);
     this.bronk = new Actor({ base: 'bronk', x: 210, y: STAGE_Y, scale: ACTOR_SCALE, facing: 1 });
     this.banner = null; this.won = false; this.goldEarned = 0; this.handSlide = 0; this.zoomed = 0;
     this.hitStop = 0; this.beatPulse = 0;
@@ -142,7 +143,7 @@ class Combat {
   *intro() {
     this.busy = true;
     Juice.letterbox(true);
-    this.cam.zoom = 1.7; this.cam.lookAt(W - 240, 350, true);
+    this.cam.zoom = 1.7; this.cam.lookAt(W - 240, 350 + CAM_DY * 0.5, true);
     yield 0.35;
     const lead = this.enemies[0];
     AudioSys.sfx('roar', lead.def.roar || {});
@@ -161,7 +162,7 @@ class Combat {
     }
     this.cam.zoomTo(1.35);
     yield lead.def.boss ? 1.5 : 0.85;
-    this.cam.zoomTo(1); this.cam.lookAt(W / 2, 288);
+    this.cam.zoomTo(1); this.cam.lookAt(W / 2, 288 + CAM_DY);
     Juice.letterbox(false);
     yield 0.4;
     yield* Relics.trigger('onCombatStart', this);
@@ -209,7 +210,7 @@ class Combat {
   }
   *enemyAct(e) {
     const m = e.intent; if (!m) return;
-    this.cam.lookAt(lerp(W / 2, e.actor.x, 0.5), 300); this.cam.zoomTo(1.1);
+    this.cam.lookAt(lerp(W / 2, e.actor.x, 0.5), 300 + CAM_DY); this.cam.zoomTo(1.1);
     Popups.add(e.actor.x, e.actor.top - 26, m.name, '#fffaea', { vy: -18, life: 1 });
     yield 0.25;
     if (m.block) { e.block += m.block; AudioSys.sfx('block'); Popups.add(e.actor.x, e.actor.y - 50, `+${m.block}`, '#6aa9ee'); e.actor.squash(0.12); yield 0.25; }
@@ -235,7 +236,7 @@ class Combat {
       for (let i = 0; i < (m.summonN || 1); i++) { if (this.alive().length >= 4) break; const s = this.spawn(m.summon); s.intent = null; AudioSys.sfx('summon'); FX.burst(s.actor.x, s.actor.cy, { scale: 1.4 }); yield 0.25; }
       this.layout(); yield 0.3;
     }
-    this.cam.lookAt(W / 2, 288); this.cam.zoomTo(1);
+    this.cam.lookAt(W / 2, 288 + CAM_DY); this.cam.zoomTo(1);
   }
   *victory() {
     if (this.won) return; this.won = true;
@@ -243,7 +244,7 @@ class Combat {
     AudioSys.stop(0.7); AudioSys.sfx('victory');
     this.bronk.play('play');
     Juice.letterbox(true);
-    this.cam.lookAt(this.bronk.x + 40, 300); this.cam.zoomTo(1.6);
+    this.cam.lookAt(this.bronk.x + 40, 300 + CAM_DY * 0.5); this.cam.zoomTo(1.6);
     for (let i = 0; i < 40; i++) { Particles.confetti(rnd(0, W), -10, 2); }
     yield 0.4;
     yield* Relics.trigger('onCombatEnd', this);
@@ -336,7 +337,7 @@ class Combat {
     yield 0.45;
     this.riff = null; this.phase = 'player';
     Juice.letterbox(false);
-    this.cam.zoomTo(1); this.cam.lookAt(W / 2, 288);
+    this.cam.zoomTo(1); this.cam.lookAt(W / 2, 288 + CAM_DY);
     this.bronk.play('idle');
     this.run.stats.notes += r.notes; this.run.stats.sick += r.sick;
     return r;
@@ -494,13 +495,13 @@ class Combat {
     };
     return [
       { title: 'YOUR HAND', rect: () => this.handRect(), text: 'Every turn you draw five riffs. Click one to play it. On a phone, tap once to look at it and again to play it.' },
-      { title: 'ENERGY', rect: { x: 28, y: H - 160, w: 84, h: 84 }, text: 'Every card costs energy - the number in its top corner. You get 3 a turn, and what you do not spend is gone.' },
+      { title: 'ENERGY', rect: { x: 20, y: H - 146, w: 76, h: 76 }, text: 'Every card costs energy - the number in its top corner. You get 3 a turn, and what you do not spend is gone.' },
       riffI >= 0 && { title: 'RIFF CARDS', rect: () => this.handRect(riffI), text: 'The ♪ cards are riffs. Play one and it cuts to the note field: hit each arrow as it reaches the line. Better timing, bigger hit.' },
       e && { title: 'INTENT', rect: intentRect, text: 'Every beast shows what it will do on its turn. A fang and a number is an attack for that much. Plan around it.' },
       wallI >= 0 && { title: 'BLOCK', rect: () => this.handRect(wallI), text: 'Stone Wall gives BLOCK. Block soaks damage until your next turn, then it crumbles. Block up when a big hit is coming.' },
-      { title: 'HYPE', rect: { x: 10, y: 92, w: 40, h: 276 }, text: 'Landed notes fill the Hype column. At full, ENCORE plays a free solo that hits every beast for every note you land.' },
-      this.run.relics.length && { title: 'RELICS', rect: { x: 12, y: 4, w: this.run.relics.length * 36, h: 36 }, text: 'Relics are charms that work all run without being played. Point at one to read it. More drop from elites and bosses.' },
-      { title: 'END TURN', rect: { x: W - 190, y: H - 80, w: 180, h: 58 }, text: 'Out of energy? End the turn and the beasts act. Beat all of them to win the fight - and every beast you put down is raptor bait.' },
+      { title: 'HYPE', rect: { x: 8, y: 128, w: 26, h: 234 }, text: 'Landed notes fill the Hype column. At full, ENCORE plays a free solo that hits every beast for every note you land.' },
+      this.run.relics.length && { title: 'RELICS', rect: { x: 12, y: 70, w: this.run.relics.length * 34 - 4, h: 30 }, text: 'Relics are charms that work all run without being played. Point at one to read it. More drop from elites and bosses.' },
+      { title: 'END TURN', rect: { x: W - 180, y: H - 60, w: 168, h: 48 }, text: 'Out of energy? End the turn and the beasts act. Beat all of them to win the fight - and every beast you put down is raptor bait.' },
     ];
   }
   update(dt) {
@@ -622,10 +623,13 @@ class Combat {
     this.drawStatus(e.st, a.x - bw / 2, a.y + 32);
     const info = Enemies.intentInfo(e, this);
     if (info && !this.riff) {
-      const iy = top - 30;
-      let ix = a.x - (info.icons.length * 24 + (info.dmg !== undefined ? 30 : 0)) / 2;
+      const iy = top - 32;
+      const label = info.dmg !== undefined ? (info.hits > 1 ? `${info.dmg}x${info.hits}` : String(info.dmg)) : '';
+      const pw = info.icons.length * 24 + (label ? Gfx.measure(label, 1.3) + 10 : 0) + 12;
+      let ix = a.x - pw / 2 + 6;
+      HUD.plate(a.x - pw / 2, iy - 4, pw, 28, { gold: false, accent: info.dmg !== undefined ? '#ef6a5e' : '#6aa9ee', shadow: false });
       for (const ic of info.icons) { Gfx.sprite(ic, ix, iy, { anchor: 'tl', scale: 1 }); ix += 24; }
-      if (info.dmg !== undefined) Gfx.text(info.hits > 1 ? `${info.dmg}x${info.hits}` : String(info.dmg), ix + 2, iy + 4, { color: '#ffffff', outline: true, scale: 1.2 });
+      if (label) Gfx.text(label, ix + 2, iy + 3, { color: info.dmg !== undefined ? '#ffb0a8' : '#ffffff', scale: 1.3 });
       const p = this.cam.toScreen(a.x, iy);
       if (UI.hovered(p.x - 40, p.y - 14, 80, 28)) UI.tooltip(p.x - 80, p.y + 20, [info.text, info.dmg !== undefined ? `Attacks for {y}${info.dmg}{/}${info.hits > 1 ? ` x${info.hits}` : ''}.` : e.intent.block ? 'Braces.' : e.intent.str ? 'Powers up.' : e.intent.summon ? 'Calls for help.' : 'Curses you.'], { width: 200 });
     } else if (e.st.stun > 0) Gfx.sprite('st_stun', a.x, top - 24, { anchor: 'c', frame: Math.floor(this.t * 8) });
@@ -641,61 +645,80 @@ class Combat {
     }
   }
   drawHud() {
-    // ---- the top bar: one long slab laid across the top of the screen
-    UI.slab(-8, -10, W + 16, 54, { r: 3, shadow: true, gold: false });
-    UI.filigree(-8, -10, W + 16, 54, { len: 8 });
-    Gfx.rect(0, 44, W, 3, SKIN.ink);
-    // health, cut into it
-    UI.slab(8, 6, 250, 32, { face: '#3f0e18', lit: '#7d1d2b', mid: '#241109', dark: SKIN.ink, r: 3, shadow: false, rough: false, len: 7 });
-    Gfx.sprite('icon_heart', 16, 11, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2, scale: 1.2 });
-    Gfx.bar(46, 14, 190, 16, this.hp / this.maxHp, '#c2333c', { bg: '#241109' });
-    Gfx.text(`${this.hp}/${this.maxHp}`, 141, 15, { color: '#fffaea', align: 'center', scale: 1.3, outline: true });
-    // shells
-    UI.slab(268, 6, 110, 32, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: false, rough: false, len: 7 });
-    Gfx.sprite('icon_coin', 276, 11, { anchor: 'tl', scale: 1.2 });
-    Gfx.text(String(this.run.gold), 306, 14, { color: SKIN.ink, scale: 1.4 });
-    // relics, each in its own little gold slot
-    let rx = 392;
-    for (const id of this.run.relics) {
-      if (this.relicFlash[RELICS[id].name] > 0) Gfx.circle(rx + 15, 22, 20, '#ffe98a');
-      UI.slot(rx, 6, 32, {});
-      Relics.drawIcon(id, rx + 6, 12); rx += 36;
+    const E = HUD.EDGE, C = HUD.C;
+    // ---- top left: you. Portrait, life, block, and your relics under it
+    {
+      const x = E, y = E, w = 262, h = 50;
+      HUD.plate(x, y, w, h);
+      HUD.portrait(x + 25, y + 25, 19, 'bronk_idle', { scale: 0.8, frame: Math.floor(this.t * 2) % 2 });
+      const bx = x + 52, bw = w - 64;
+      this.hpGhost = damp(this.hpGhost ?? this.hp / this.maxHp, this.hp / this.maxHp, 3, Time.dt);
+      HUD.bar(bx, y + 12, bw, 14, this.hp / this.maxHp, C.life, C.lifeDark, { ghost: this.hpGhost });
+      HUD.text(`${this.hp}`, bx + 5, y + 14, { scale: 1 });
+      HUD.text(`/${this.maxHp}`, bx + bw - 4, y + 14, { scale: 0.9, color: C.dim, align: 'right' });
+      if (this.player.block > 0) {
+        Gfx.sprite('icon_shield', bx + 8, y + 38, { anchor: 'c', scale: 1 });
+        HUD.text(`${this.player.block} BLOCK`, bx + 20, y + 33, { color: '#8ec8ff', scale: 1 });
+      }
+      // relics: small, in a row, readable on hover
+      let rx = x;
+      const ry = y + h + 8;
+      for (const id of this.run.relics) {
+        const flash = this.relicFlash[RELICS[id].name] > 0;
+        HUD.plate(rx, ry, 30, 30, { gold: flash, hot: flash, fill: flash ? 'rgba(96,72,20,0.9)' : undefined });
+        Relics.drawIcon(id, rx + 7, ry + 7);
+        if (UI.hovered(rx, ry, 30, 30)) UI.tooltip(rx, ry + 36, [`{y}${RELICS[id].name}{/}`, RELICS[id].desc], { width: 230 });
+        rx += 34;
+      }
     }
-    Gfx.text(`TURN ${this.turn}`, W - 76, 15, { color: SKIN.faceHi, align: 'right', scale: 1.4, outline: true });
-    if (!this.riff) UI.iconButton(W - 52, 6, 38, 32, 'icon_menu', () => Game.pause(), { scale: 1.2 });
+    // ---- top middle: the turn
+    HUD.plate(W / 2 - 50, E, 100, 30, { gold: false });
+    HUD.text(`TURN ${this.turn}`, W / 2, E + 9, { color: C.dim, align: 'center', scale: 1.2 });
+    // ---- top right: shells, gems, menu
+    if (!this.riff) UI.iconButton(W - E - 36, E, 36, 30, 'icon_menu', () => Game.pause(), { scale: 1.1 });
+    HUD.chip(W - E - 36 - 8 - 84, E, 84, (x, y) => HUD.shell(x, y), this.run.gold, C.shell);
+    HUD.chip(W - E - 36 - 8 - 84 - 8 - 72, E, 72, (x, y) => HUD.gem(x, y), this.run.gems || 0, C.gem);
     if (this.riff) return;
-    // ---- energy: a big carved stone bead with gold round the rim
-    const ex = 70, ey = H - 118;
-    Gfx.circle(ex, ey, 39, SKIN.ink);
-    Gfx.circle(ex, ey, 37, SKIN.goldDark);
-    Gfx.circle(ex, ey, 34, SKIN.gold);
-    Gfx.circle(ex, ey, 31, this.energy > 0 ? '#1d3d72' : '#3b3048');
-    Gfx.circle(ex - 8, ey - 11, 11, this.energy > 0 ? '#6aa9ee' : '#574a66');
-    Gfx.ring(ex, ey, 33, SKIN.goldLit, 1);
-    Gfx.text(`${this.energy}`, ex, ey - 17, { color: '#ffffff', align: 'center', scale: 2.8, outline: true, outlineWidth: 2 });
-    Gfx.text(`/${this.maxEnergy + Relics.mod('energy') + (this.powers.groove || 0)}`, ex, ey + 12, { color: '#86e8d2', align: 'center', scale: 1.2 });
-    // ---- hype: a tall framed column
-    const hx = 18, hy = 118, hh = 240, hw = 24;
-    Gfx.text('HYPE', hx - 2, hy - 22, { color: '#e06a9b', scale: 1.3 });
-    UI.slab(hx - 6, hy - 6, hw + 12, hh + 12, { face: '#241c2e', lit: '#3b3048', mid: '#120c16', dark: SKIN.ink, r: 3, shadow: false, rough: false, len: 8 });
-    const fh = Math.round(hh * this.hype / 100);
-    Gfx.rect(hx, hy + hh - fh, hw, fh, this.encoreReady ? (Math.floor(this.t * 6) % 2 ? '#ffffff' : '#e06a9b') : '#a03a68');
-    Gfx.rect(hx, hy + hh - fh, hw, 3, '#ffb0cf');
-    for (let i = 1; i < 4; i++) Gfx.rectA(hx, hy + hh * i / 4, hw, 2, SKIN.ink, 0.6);
-    Gfx.text(String(Math.floor(this.hype)), hx + hw / 2, hy + hh + 10, { color: '#e06a9b', align: 'center', scale: 1.3 });
-    if (this.encoreReady && this.phase === 'player' && !this.busy)
-      UI.wbutton(8, hy + hh + 28, 132, 40, 'ENCORE!', () => this.playEncore(), { scale: 1.3, danger: true, key: 'encore' });
-    // ---- the piles, in gold slots
-    // both piles live on the left, so the right-hand corner is free for the
-    // one button you press every single turn
-    UI.slot(12, H - 78, 56, { count: this.drawPile.length });
-    Cards.back(20, H - 70, 0.36);
-    UI.hit(12, H - 78, 56, 56, () => Game.overlay = new DeckOverlay(this.drawPile, 'DRAW PILE'));
-    UI.slot(76, H - 78, 56, { count: this.discard.length });
-    Cards.back(84, H - 70, 0.36);
-    UI.hit(76, H - 78, 56, 56, () => Game.overlay = new DeckOverlay(this.discard, 'DISCARD'));
-    UI.wbutton(W - 186, H - 76, 172, 50, Input.touch ? 'END TURN' : 'END TURN (E)', () => this.endTurn(),
-      { disabled: this.busy || this.phase !== 'player', scale: 1.2, key: 'endturn' });
+    // ---- bottom left: energy, and the two piles
+    const ex = 58, ey = H - 108;
+    Gfx.circle(ex, ey, 38, C.ink);
+    Gfx.circle(ex, ey, 36, this.energy > 0 ? '#16305e' : '#241c2e');
+    Gfx.ring(ex, ey, 35, this.energy > 0 ? C.gold : C.goldDim, 2);
+    if (this.energy > 0) Gfx.glow(ex, ey, 60, C.energy, 0.18 + Math.sin(this.t * 3) * 0.06);
+    const maxE = this.maxEnergy + Relics.mod('energy') + (this.powers.groove || 0);
+    for (let i = 0; i < maxE; i++) {                      // one pip per point of energy
+      const a = -Math.PI / 2 + (i - (maxE - 1) / 2) * 0.42;
+      Gfx.circle(ex + Math.cos(a) * 28, ey + Math.sin(a) * 28, 4, i < this.energy ? '#8ec8ff' : '#3b3048');
+    }
+    HUD.text(`${this.energy}`, ex, ey - 12, { color: C.text, align: 'center', scale: 2.6, outline: true, outlineWidth: 2 });
+    HUD.text('ENERGY', ex, ey + 14, { color: '#8ec8ff', align: 'center', scale: 0.9 });
+    const pile = (x, label, n, list, title) => {
+      HUD.plate(x, H - 52, 56, 40, { gold: false });
+      HUD.text(String(n), x + 28, H - 46, { color: C.text, align: 'center', scale: 1.4 });
+      HUD.text(label, x + 28, H - 26, { color: C.dim, align: 'center', scale: 0.8 });
+      UI.hit(x, H - 52, 56, 40, () => Game.overlay = new DeckOverlay(list, title));
+    };
+    pile(E, 'DRAW', this.drawPile.length, this.drawPile, 'DRAW PILE');
+    pile(E + 62, 'DISCARD', this.discard.length, this.discard, 'DISCARD');
+    // ---- hype: a slim column up the left edge
+    {
+      const hx = E + 2, hy = 150, hh = 190, hw = 14;
+      HUD.plate(hx - 6, hy - 22, hw + 12, hh + 44, { gold: false });
+      HUD.text('HYPE', hx + hw / 2, hy - 16, { color: C.hype, align: 'center', scale: 0.8 });
+      Gfx.rect(hx - 1, hy - 1, hw + 2, hh + 2, C.ink);
+      Gfx.rect(hx, hy, hw, hh, '#2a1020');
+      const fh = Math.round(hh * clamp(this.hype / 100, 0, 1));
+      Gfx.rect(hx, hy + hh - fh, hw, fh, this.encoreReady ? (Math.floor(this.t * 6) % 2 ? '#ffffff' : C.hype) : '#c2407e');
+      Gfx.rectA(hx, hy + hh - fh, hw, 3, '#ffffff', 0.5);
+      for (let i = 1; i < 4; i++) Gfx.rectA(hx, hy + hh * i / 4, hw, 1, C.ink, 0.7);
+      HUD.text(String(Math.floor(this.hype)), hx + hw / 2, hy + hh + 6, { color: C.hype, align: 'center', scale: 0.9 });
+      if (this.encoreReady && this.phase === 'player' && !this.busy)
+        HUD.button(hx + hw + 12, hy + hh - 40, 120, 40, 'ENCORE!', () => this.playEncore(), { danger: true, hot: true });
+    }
+    // ---- bottom right: the one button you press every turn
+    const canEnd = !this.busy && this.phase === 'player';
+    HUD.button(W - E - 168, H - E - 48, 168, 48, 'END TURN', () => this.endTurn(),
+      { disabled: !canEnd, keyHint: 'E', hot: canEnd && this.energy === 0, scale: 1.3 });
   }
   drawHand() {
     if (this.handSlide > 0.97) return;

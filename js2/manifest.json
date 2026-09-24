@@ -360,85 +360,85 @@
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "lush grass, tufts and blades, two tones of green plus a dark base. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "lush grass, tufts and blades, two tones of green plus a dark base. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_grass2": {
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "grass variant with a few flowers and a stone. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "grass variant with a few flowers and a stone. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_dirt": {
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "packed dirt with pebbles. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "packed dirt with pebbles. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_dirt2": {
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "dirt variant with cracks and a bone shard. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "dirt variant with cracks and a bone shard. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_path": {
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "worn stone path, flat slabs with gaps. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "worn stone path, flat slabs with gaps. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_stone": {
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "grey rock floor, angular facets. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "grey rock floor, angular facets. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_sand": {
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "pale sand with ripples. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "pale sand with ripples. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_ash": {
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "grey volcanic ash with embers. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "grey volcanic ash with embers. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_rubble": {
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "smashed masonry, broken bricks and dust. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "smashed masonry, broken bricks and dust. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_moss": {
   "w": 32,
   "h": 32,
   "frames": 1,
-  "note": "dark mossy stone. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "dark mossy stone. MUST TILE SEAMLESSLY: the left column must continue into the right column and the top row into the bottom. No outline. Keep contrast low so characters read on top."
  },
  "tile_water": {
   "w": 32,
   "h": 32,
   "frames": 4,
-  "note": "shallow water, animated ripples, seamless in all directions, blue/teal ramp.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "shallow water, animated ripples, seamless in all directions, blue/teal ramp."
  },
  "tile_lava": {
   "w": 32,
   "h": 32,
   "frames": 4,
-  "note": "molten lava, animated glow, seamless.",
-  "file": "art_world"
+  "file": "art_valley",
+  "note": "molten lava, animated glow, seamless."
  },
  "wall_stone": {
   "w": 32,
@@ -1342,5 +1342,152 @@
   "frames": 1,
   "note": "hide door curtain hung on a rail",
   "file": "art_house"
+ },
+ "v_tree": {
+  "w": 88,
+  "h": 120,
+  "frames": 2,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_tree_fruit": {
+  "w": 88,
+  "h": 120,
+  "frames": 2,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_tree_jungle": {
+  "w": 88,
+  "h": 120,
+  "frames": 2,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_pine": {
+  "w": 72,
+  "h": 124,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_palm": {
+  "w": 84,
+  "h": 112,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_deadtree": {
+  "w": 76,
+  "h": 108,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_bush": {
+  "w": 48,
+  "h": 34,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_bush_berry": {
+  "w": 48,
+  "h": 34,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_bush_jungle": {
+  "w": 48,
+  "h": 34,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_fern": {
+  "w": 36,
+  "h": 26,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_rock": {
+  "w": 44,
+  "h": 32,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_rock_bare": {
+  "w": 44,
+  "h": 32,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_stump": {
+  "w": 30,
+  "h": 24,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_flowers": {
+  "w": 22,
+  "h": 14,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_hut": {
+  "w": 144,
+  "h": 124,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_hut_ruin": {
+  "w": 144,
+  "h": 124,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_totem": {
+  "w": 40,
+  "h": 96,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "tile_grass3": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "tile_grass4": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "tile_moss2": {
+  "w": 32,
+  "h": 32,
+  "frames": 1,
+  "file": "art_valley",
+  "note": "valley scenery"
+ },
+ "v_tree_big": {
+  "w": 88,
+  "h": 120,
+  "frames": 2,
+  "file": "art_valley",
+  "note": "valley scenery"
  }
 }

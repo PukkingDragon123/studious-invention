@@ -8,31 +8,34 @@
 const ZONES = {
   1: {
     name: 'BEDROCK VILLAGE', sub: 'what the fire left behind', music: 'village',
-    goal: 'THE VILLAGE GATE', w: 92, h: 66, base: ['tile_grass', 'tile_grass', 'tile_grass2'], rough: 'tile_dirt', path: 'tile_path',
-    scatter: ['prop_bush', 'prop_fern', 'prop_rock', 'prop_tree', 'prop_bones'],
-    trees: ['prop_tree', 'prop_palm'], hide: ['prop_bush'],
+    goal: 'THE VILLAGE GATE', w: 92, h: 66, base: ['tile_grass', 'tile_grass', 'tile_grass3', 'tile_grass4', 'tile_grass2'], rough: 'tile_dirt', path: 'tile_path', plaza: 'tile_stone',
+    scatter: ['v_bush', 'v_fern', 'v_rock', 'v_stump', 'v_flowers', 'v_bush_berry', 'prop_bones'],
+    trees: ['v_tree', 'v_tree_big', 'v_tree_fruit', 'v_tree', 'v_palm'], hide: ['v_bush', 'v_bush_berry'], hut: 'v_hut', ruin: 'v_hut_ruin',
     enemies: ['compy', 'dodo', 'boar'], elite: 'raptor', encounters: 1,
     sky: '#7fb0c8',
   },
   2: {
     name: 'TAR JUNGLE', sub: 'sticky, steaming, full of teeth', music: 'village',
-    goal: 'THE TAR GATE', w: 96, h: 70, base: ['tile_moss', 'tile_grass', 'tile_moss'], rough: 'tile_dirt2', path: 'tile_dirt',
-    scatter: ['prop_fern', 'prop_mushroom', 'prop_bush', 'prop_palm', 'prop_skull'],
-    trees: ['prop_palm', 'prop_tree'], hide: ['prop_bush', 'prop_fern'],
+    goal: 'THE TAR GATE', w: 96, h: 70, base: ['tile_moss', 'tile_moss2', 'tile_moss'], rough: 'tile_dirt2', path: 'tile_dirt', plaza: 'tile_rubble',
+    scatter: ['v_fern', 'prop_mushroom', 'v_bush_jungle', 'v_rock', 'v_stump', 'prop_skull'],
+    trees: ['v_tree_jungle', 'v_palm', 'v_tree_jungle', 'v_pine'], hide: ['v_bush_jungle', 'v_fern'], hut: 'v_hut_ruin', ruin: 'v_hut_ruin',
     enemies: ['raptor', 'ptero', 'tarblob', 'lizard'], elite: 'tricera', encounters: 2,
     sky: '#2f5a38',
   },
   3: {
     name: 'VOLCANO SLOPE', sub: "the raptor's road home", music: 'village',
-    goal: 'THE ASH GATE', w: 94, h: 70, base: ['tile_ash', 'tile_stone', 'tile_ash'], rough: 'tile_rubble', path: 'tile_stone',
-    scatter: ['prop_rock', 'prop_deadtree', 'prop_bones', 'prop_skull'],
-    trees: ['prop_deadtree'], hide: ['prop_rock'],
+    goal: 'THE ASH GATE', w: 94, h: 70, base: ['tile_ash', 'tile_ash', 'tile_rubble'], rough: 'tile_rubble', path: 'tile_dirt2', plaza: 'tile_stone',
+    scatter: ['v_rock_bare', 'v_stump', 'prop_bones', 'prop_skull', 'v_rock'],
+    trees: ['v_deadtree', 'v_deadtree', 'v_pine'], hide: ['v_rock_bare'], hut: 'v_hut_ruin', ruin: 'v_hut_ruin',
     enemies: ['lizard', 'brute', 'stego', 'raptor'], elite: 'trex', encounters: 3,
     sky: '#5a2018',
   },
 };
 
 const SOLID_TILES = new Set(['tile_water', 'tile_lava']);
+// How big people are out here. The cutscene sprites are drawn for close-ups;
+// in the valley a man is about a tile and a half tall and his hut is twice that.
+const VSCALE = 0.72;
 
 class Zone {
   constructor(act, seed) {
@@ -79,14 +82,19 @@ class Zone {
     for (let i = 0; i < 3; i++) { const a = r.pick(pois), b = r.pick(pois); if (a !== b) this.carvePath(a, b); }
     this.pois = pois;
 
-    // the village square: huts around the second point of interest
+    // the village square: a paved plaza with the huts round the edge of it
     const sq = pois[1];
+    for (let y = -4; y <= 4; y++) for (let x = -5; x <= 5; x++) {
+      if ((x / 5.4) ** 2 + (y / 4.4) ** 2 > 1) continue;
+      if (this.inside(sq.x + x, sq.y + y)) this.tiles[this.idx(sq.x + x, sq.y + y)] = d.plaza || d.path;
+    }
     for (let i = 0; i < 5; i++) {
       const a = (i / 5) * Math.PI * 2 + 0.4;
-      const hx = sq.x + Math.round(Math.cos(a) * 5), hy = sq.y + Math.round(Math.sin(a) * 4);
-      this.addProp(hx * TILE + 16, hy * TILE + 16, this.act === 1 && i > 1 ? 'prop_hut_ruin' : (this.act === 1 ? 'prop_hut' : 'prop_hut_ruin'), { footW: 3, footH: 2 });
+      const hx = sq.x + Math.round(Math.cos(a) * 8), hy = sq.y + Math.round(Math.sin(a) * 6);
+      this.addProp(hx * TILE + 16, hy * TILE + 20, this.act === 1 && i < 3 ? d.hut : d.ruin, { footW: 4, footH: 2, solid: true });
     }
-    this.addProp(sq.x * TILE + 16, (sq.y + 3) * TILE, 'prop_totem', { footW: 1, footH: 1 });
+    // the totem stands on the far side of the fire, never between you and the square
+    this.addProp((sq.x + 2) * TILE + 16, (sq.y + 3) * TILE + 8, 'v_totem', { footW: 1, footH: 1, solid: true });
 
     // scenery: dense woods at the rim, open ground along the paths and squares
     const tries = Math.floor(this.w * this.h * 0.14);   // sparse: the ruin should feel abandoned, not overgrown
@@ -227,7 +235,7 @@ class Entity {
 class Npc extends Entity {
   constructor(x, y, base, name, line) {
     super(x, y);
-    this.actor = new Actor({ base, x, y, scale: 1 });
+    this.actor = new Actor({ base, x, y, scale: VSCALE });
     this.name = name; this.line = line; this.prompt = 'TALK';
     this.t = rnd(0, 6); this.home = { x, y }; this.wander = rnd(2, 6);
   }
@@ -294,7 +302,7 @@ class FogNode extends Entity {
 class Trader extends Entity {
   constructor(x, y) {
     super(x, y);
-    this.actor = new Actor({ base: 'mammoth', x, y, scale: 1, clip: 'trader' });
+    this.actor = new Actor({ base: 'mammoth', x, y, scale: 0.86, clip: 'trader' });
     this.prompt = 'TRADE'; this.leg = 0; this.wait = 0; this.r = 46;
     this.here = 1; this.stay = rnd(16, 26); this.gone = 0; this.spots = null;
   }
@@ -404,7 +412,7 @@ class ZoneGoal extends Entity {
 class Critter extends Entity {
   constructor(x, y, kind) {
     super(x, y);
-    this.actor = new Actor({ base: kind, x, y, scale: 0.8 });
+    this.actor = new Actor({ base: kind, x, y, scale: VSCALE * 0.8 });
     this.home = { x, y }; this.t = rnd(0, 4); this.flee = 0; this.r = 14;
   }
   update(dt, V) {
@@ -456,7 +464,7 @@ class Prowler extends Entity {
     this.kind = kind; this.elite = !!elite; this.act = act;
     const b = BEAST[kind] || BEAST.lizard;
     this.b = b;
-    this.actor = new Actor({ base: kind, x, y, scale: elite ? 1.15 : 1 });
+    this.actor = new Actor({ base: kind, x, y, scale: VSCALE * (elite ? 1.2 : 1) });
     this.state = 'patrol'; this.leg = 0; this.wait = 0; this.alert = 0; this.lost = 0;
     this.dir = { x: 1, y: 0 }; this.r = 20;
     this.speed = b.speed * (elite ? 1.18 : 1);
@@ -615,12 +623,12 @@ class VillageScene {
     this.zone = Game.run.zone && Game.run.zone.act === this.act ? Game.run.zone : new Zone(this.act, Game.run.seed);
     Game.run.zone = this.zone;
     this.cam = new Camera();
-    this.cam.zoom = this.cam.tzoom = VIEW * 0.62;
+    this.cam.zoom = this.cam.tzoom = VIEW * 0.76;
     this.cam.setBounds(0, 0, this.zone.w * TILE, this.zone.h * TILE);
     this.t = 0; this.locked = false; this.hidden = false; this.co = null;
     this.prompt = null; this.intro = 2.2;
     const s = Game.run.pos && Game.run.pos.act === this.act ? Game.run.pos : { x: this.zone.start.x * TILE + 16, y: this.zone.start.y * TILE + 16 };
-    this.player = new Actor({ base: 'bronk', x: s.x, y: s.y, scale: 1, speed: 138 });
+    this.player = new Actor({ base: 'bronk', x: s.x, y: s.y, scale: VSCALE, speed: 138 });
     this.player.sprinting = false;
     this.cam.follow = this.player; this.cam.lookAt(this.player.x, this.player.y, true);
     this.footT = 0; this.puffT = 0; this.bellyPhase = 0;
@@ -777,43 +785,70 @@ class VillageScene {
     this.updateAmbience(dt);
     // camera: look a little ahead of the player, and pull back when sprinting
     this.cam.lead = 0.18;
-    this.cam.zoomTo(VIEW * (p.sprinting ? 0.56 : 0.62));
+    this.cam.zoomTo(VIEW * (p.sprinting ? 0.70 : 0.76));
     this.cam.update(dt);
     if (Input.pressed('Escape')) Game.pause();
     if (Input.pressed('KeyM')) this.showMap = !this.showMap;
   }
+  // Where two kinds of ground meet, the soft one spills over the hard one:
+  // grass leans out over the road in tufts and throws a little shadow on
+  // it, so a road is a road through a field and not a grey tile in a green
+  // one. Everything is hashed off the tile position, so nothing flickers.
   tileDetail(z, x, y) {
     const t = z.tiles[z.idx(x, y)], px = x * TILE, py = y * TILE;
-    const h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
-    const soft = t.includes('grass') || t.includes('moss');
-    const hard = t === z.def.path || t.includes('stone') || t.includes('rubble');
-    // where this tile meets a different kind of ground below or to the right
-    // compare kinds of ground, not tile names: two grasses are one field
-    const kind = n => n.includes('grass') || n.includes('moss') ? 1 : (n === z.def.path || n.includes('stone') || n.includes('rubble')) ? 2 : n.includes('dirt') || n.includes('ash') || n.includes('sand') ? 3 : 4;
+    const kind = n => n.includes('grass') || n.includes('moss') ? 1 : n.includes('water') || n.includes('lava') ? 4 : 2;
     const k0 = kind(t);
-    const kb = z.inside(x, y + 1) ? kind(z.tiles[z.idx(x, y + 1)]) : k0;
-    const kr = z.inside(x + 1, y) ? kind(z.tiles[z.idx(x + 1, y)]) : k0;
-    if (kb !== k0 && soft) {                                 // a grass bank over the road
-      Gfx.rectA(px, py + TILE - 3, TILE, 3, '#120c16', 0.45);
-      for (let k = 0; k < 4; k++) Gfx.rect(px + 3 + k * 8 + (h >> k) % 3, py + TILE - 5, 2, 3, '#3f9a45');
-    } else if (kb !== k0) Gfx.rectA(px, py + TILE - 2, TILE, 2, '#120c16', 0.3);
-    if (kr !== k0) Gfx.rectA(px + TILE - 2, py, 2, TILE, '#120c16', 0.26);
-    if (soft) {
-      if (h % 7 === 0) {                                     // a tuft
-        const tx = px + 6 + (h >> 3) % 20, ty = py + 10 + (h >> 7) % 16;
-        Gfx.rect(tx, ty - 5, 2, 6, '#14331e'); Gfx.rect(tx + 3, ty - 7, 2, 8, '#27632f'); Gfx.rect(tx + 6, ty - 4, 2, 5, '#14331e');
-        Gfx.rect(tx + 3, ty - 7, 1, 3, '#6cc95c');
-      } else if (h % 23 === 0) {                             // a flower
-        const tx = px + 8 + (h >> 4) % 16, ty = py + 8 + (h >> 8) % 16;
-        const col = ['#ffe98a', '#ef6a5e', '#e8dfc6', '#b177e6'][(h >> 5) % 4];
-        Gfx.rect(tx, ty + 2, 1, 4, '#27632f');
-        Gfx.rect(tx - 1, ty, 3, 3, '#120c16'); Gfx.rect(tx, ty + 1, 1, 1, col); Gfx.rect(tx - 1, ty, 1, 1, col); Gfx.rect(tx + 1, ty, 1, 1, col);
+    if (k0 !== 2) return;
+    const h0 = ((x * 73856093) ^ (y * 19349663)) >>> 0;
+    const soft = (dx, dy) => z.inside(x + dx, y + dy) && kind(z.tiles[z.idx(x + dx, y + dy)]) === 1;
+    const grassCol = z.def.base[0].includes('moss') ? ['#14331e', '#27632f', '#3f9a45'] : ['#27632f', '#3f9a45', '#6cc95c'];
+    const edge = (dx, dy) => {
+      if (!soft(dx, dy)) return;
+      // the shadow the grass casts onto the road
+      if (dy === -1) Gfx.rectA(px, py, TILE, 4, '#0b0718', 0.22);
+      if (dy === 1) Gfx.rectA(px, py + TILE - 2, TILE, 2, '#0b0718', 0.12);
+      if (dx === -1) Gfx.rectA(px, py, 3, TILE, '#0b0718', 0.16);
+      if (dx === 1) Gfx.rectA(px + TILE - 3, py, 3, TILE, '#0b0718', 0.16);
+      // tufts leaning out over the edge
+      for (let i = 0; i < 5; i++) {
+        const h = (h0 >> (i * 3)) ^ (i * 2654435761);
+        const along = 2 + ((h >>> 0) % 28), len = 2 + ((h >>> 5) % 4);
+        for (let j = 0; j < len; j++) {
+          const c = grassCol[j === 0 ? 1 : j === len - 1 ? 2 : 1];
+          if (dy === -1) Gfx.rect(px + along, py + j, 2, 1, j === len - 1 ? grassCol[2] : c);
+          if (dy === 1) Gfx.rect(px + along, py + TILE - 1 - j, 2, 1, c);
+          if (dx === -1) Gfx.rect(px + j, py + along, 1, 2, c);
+          if (dx === 1) Gfx.rect(px + TILE - 1 - j, py + along, 1, 2, c);
+        }
       }
-    } else if (hard && h % 6 === 0) {                        // a pebble with its own shadow
-      const tx = px + 4 + (h >> 3) % 22, ty = py + 6 + (h >> 6) % 20;
-      Gfx.rect(tx, ty + 2, 6, 2, 'rgba(18,12,22,0.4)');
-      Gfx.rect(tx, ty, 5, 3, '#7a6d8a'); Gfx.rect(tx + 1, ty, 2, 1, '#9391a6');
-    }
+    };
+    edge(0, -1); edge(0, 1); edge(-1, 0); edge(1, 0);
+    // round off the outside corners, so a road bends instead of stepping
+    const corner = (dx, dy, cx, cy) => {
+      if (!soft(dx, 0) || !soft(0, dy)) return;
+      for (let j = 0; j < 9; j++) for (let i = 0; i < 9; i++) {
+        if (i * i + j * j > 60) continue;
+        const qx = cx + (dx < 0 ? i : -i - 1), qy = cy + (dy < 0 ? j : -j - 1);
+        const inside = (9 - i) * (9 - i) + (9 - j) * (9 - j) > 70;
+        if (inside) Gfx.rect(qx, qy, 1, 1, i + j < 6 ? grassCol[2] : grassCol[1]);
+      }
+    };
+    corner(-1, -1, px, py); corner(1, -1, px + TILE, py); corner(-1, 1, px, py + TILE); corner(1, 1, px + TILE, py + TILE);
+  }
+  // Large, slow variation over the whole field: some ground is in a dip and
+  // some catches the sun. It is what stops a tiled field looking tiled.
+  drawDrift(x0, y0, x1, y1) {
+    const c = Gfx.ctx, CELL = 7;
+    for (let cy = Math.floor(y0 / CELL) - 1; cy <= Math.ceil(y1 / CELL) + 1; cy++)
+      for (let cx = Math.floor(x0 / CELL) - 1; cx <= Math.ceil(x1 / CELL) + 1; cx++) {
+        const h = ((cx * 92837111) ^ (cy * 689287499)) >>> 0;
+        const wx = (cx * CELL + (h % 5)) * TILE, wy = (cy * CELL + ((h >>> 4) % 5)) * TILE;
+        const r = (5 + (h >>> 9) % 4) * TILE, light = (h >>> 13) % 2 === 0;
+        const g = c.createRadialGradient(wx, wy, 0, wx, wy, r);
+        g.addColorStop(0, light ? 'rgba(255,240,190,0.09)' : 'rgba(8,4,20,0.12)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = g; c.fillRect(wx - r, wy - r, r * 2, r * 2);
+      }
   }
   coachSteps() {
     const p = this.player, cam = this.cam;
@@ -867,13 +902,14 @@ class VillageScene {
   }
   stickInput() {
     // left-hand virtual stick: drag anywhere in the lower-left quadrant
-    const base = { x: 110, y: H - 110 };
+    const base = { x: 104, y: H - 100 };
     let out = { x: 0, y: 0 };
     for (const [, t] of Input.touches) {
       if (t.x < W * 0.45 && t.y > H * 0.35) {
         const dx = t.x - base.x, dy = t.y - base.y, d = Math.hypot(dx, dy);
-        if (d > 6) { const m = Math.min(1, d / 62); out = { x: dx / d * m, y: dy / d * m }; }
-        this.stickPos = { x: clamp(t.x, base.x - 62, base.x + 62), y: clamp(t.y, base.y - 62, base.y + 62) };
+        if (d > 6) { const m = Math.min(1, d / 58); out = { x: dx / d * m, y: dy / d * m }; }
+        const cl = Math.min(d, 34) / (d || 1);
+        this.stickPos = { x: base.x + dx * cl, y: base.y + dy * cl };
         return out;
       }
     }
@@ -923,6 +959,7 @@ class VillageScene {
     // the ground gets its detail and its edges: an ink lip wherever one kind of
     // ground meets another, and tufts, flowers and pebbles scattered by hash
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) this.tileDetail(z, x, y);
+    this.drawDrift(x0, y0, x1, y1);
     // vision cones under everything
     for (const e of z.entities) if (e instanceof Prowler) e.drawCone();
     // y-sorted scenery + entities + player
@@ -960,138 +997,116 @@ class VillageScene {
     Popups.draw(true);
     Floaters.draw();
     Emotes.draw();
-    // interaction prompt
-    if (this.prompt) {
-      const p = this.prompt;
-      const y = (p.actor ? p.actor.top : p.y - 40) - 16;
-      const label = Input.touch ? p.prompt : `[E] ${p.prompt}`;
-      const w = Gfx.measure(label, 1) + 16;
-      Gfx.round(p.x - w / 2, y - 6, w, 20, 4, '#120c16');
-      Gfx.outlineRound(p.x - w / 2, y - 6, w, 20, 4, '#ffe98a');
-      Gfx.text(label, p.x, y, { color: '#ffe98a', align: 'center' });
-    }
     this.cam.restore(Gfx.ctx);
     if (Settings.lighting !== false) gradeValley(this); else Gfx.vignette(0.55);
+    // what you can do here: a small plate over the thing, with the key on it
+    if (this.prompt) {
+      const p = this.prompt;
+      const s = this.cam.toScreen(p.x, (p.actor ? p.actor.top : p.y - 40) - 10);
+      const lw = Gfx.measure(p.prompt, 1.1), kw = Input.touch ? 0 : Math.max(16, Gfx.measure('E', 0.9) + 8) + 8;
+      const w = lw + kw + 20, x = Math.round(s.x - w / 2), y = Math.round(s.y - 26 + Math.sin(this.t * 4) * 2);
+      HUD.plate(x, y, w, 24, { hot: true, cut: 3 });
+      if (!Input.touch) HUD.key('E', x + 10, y + 5);
+      HUD.text(p.prompt, x + 10 + kw, y + 7, { color: HUD.C.shell, scale: 1.1 });
+      Gfx.rect(Math.round(s.x) - 3, y + 24, 6, 2, HUD.C.ink);
+      Gfx.rect(Math.round(s.x) - 1, y + 26, 2, 2, HUD.C.ink);
+    }
     this.drawHud();
     Dialogue.draw();
   }
   drawHud() {
-    const run = Game.run;
-    // ---- vitals. On a touch screen the bottom-left corner belongs to the
-    // stick, so they move up under the relics instead.
-    const x = 14, y = Input.touch ? 130 : H - 82;
-    UI.slab(x - 8, y - 8, 272, 76, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
-    Gfx.sprite('icon_heart', x, y + 2, { anchor: 'tl', frame: Math.floor(this.t * 3) % 2, scale: 1.2 });
-    Gfx.round(x + 30, y + 2, 220, 22, 2, SKIN.ink);
-    Gfx.bar(x + 32, y + 4, 216, 18, run.hp / run.maxHp, '#c2333c', { bg: '#241109' });
-    Gfx.text(`${run.hp}/${run.maxHp}`, x + 140, y + 6, { color: '#fffaea', align: 'center', scale: 1.3, outline: true });
-    Gfx.sprite('icon_stamina', x + 2, y + 32, { anchor: 'tl', scale: 1.2 });
-    const st = run.stamina / run.maxStamina;
-    Gfx.round(x + 30, y + 32, 220, 20, 2, SKIN.ink);
-    Gfx.bar(x + 32, y + 34, 216, 16, st, st > 0.3 ? '#6cc95c' : '#ffa832', { bg: '#14331e' });
-    if (st <= 0.02) Gfx.text('WINDED!', x + 140, y + 35, { color: '#ef6a5e', align: 'center', scale: 1.3, outline: true });
-    // ---- shells, and the gems for the altar
-    UI.slab(W - 158, 8, 112, 36, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
-    Gfx.sprite('icon_coin', W - 148, 16, { anchor: 'tl', scale: 1.2 });
-    Gfx.text(String(run.gold), W - 118, 18, { color: SKIN.ink, scale: 1.4 });
-    UI.slab(W - 262, 8, 96, 36, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
-    drawGemIcon(W - 244, 26, this.t);
-    Gfx.text(String(run.gems || 0), W - 226, 18, { color: SKIN.ink, scale: 1.4 });
-    // ---- relics, in gold slots
-    let rx = 14;
-    for (const id of run.relics) { UI.slot(rx, 10, 32, {}); Relics.drawIcon(id, rx + 6, 16); rx += 36; }
-    // ---- the objective: whatever is actually in your way right now, with an
-    // arrow on the panel pointing at it
+    const run = Game.run, E = HUD.EDGE, C = HUD.C;
+    // ---- top left: who you are and how you are doing
+    {
+      const x = E, y = E, w = 238, h = 58;
+      HUD.plate(x, y, w, h);
+      HUD.portrait(x + 29, y + 29, 22, 'bronk_idle', { frame: Math.floor(this.t * 2) % 2, scale: 0.9 });
+      const bx = x + 60, bw = w - 72;
+      HUD.bar(bx, y + 12, bw, 14, run.hp / run.maxHp, C.life, C.lifeDark, { ghost: this.hpGhost });
+      HUD.text(`${run.hp}`, bx + 5, y + 14, { scale: 1, color: C.text });
+      HUD.text(`/${run.maxHp}`, bx + bw - 4, y + 14, { scale: 0.9, color: C.dim, align: 'right' });
+      const st = run.stamina / run.maxStamina;
+      HUD.bar(bx, y + 36, bw, 8, st, st > 0.3 ? C.breath : '#ffa832', C.breathDark, { ticks: 4 });
+      if (st <= 0.02) HUD.text('WINDED', bx + bw / 2, y + 47, { color: '#ffa832', align: 'center', scale: 0.9 });
+      if (this.hidden) {                                   // a small eye under it, not a word in the sky
+        HUD.plate(x, y + h + 6, 92, 22, { gold: false, accent: '#86e8d2' });
+        HUD.text('HIDDEN', x + 50, y + h + 12, { color: '#86e8d2', align: 'center', scale: 1 });
+      }
+    }
+    // ---- top middle: the one thing you are doing, and where it is
     {
       const r = Game.run, z = this.zone;
       const g0 = z.walls && z.walls[0].gate, g1 = z.walls && z.walls[1].gate;
       const goal = z.entities.find(e => e instanceof ZoneGoal);
-      let title, line, target, done = false, pips = null;
-      if (g0 && !g0.opened) {
-        title = 'BREAK THROUGH'; line = 'beat the gate guard'; target = g0.guard && !g0.guard.dead ? g0.guard : g0;
-      } else if (g1 && !g1.opened) {
+      let title, line, target, col = '#ef6a5e';
+      if (g0 && !g0.opened) { title = 'BREAK THROUGH'; line = 'beat the gate guard'; target = g0.guard && !g0.guard.dead ? g0.guard : g0; }
+      else if (g1 && !g1.opened) {
         const on = g1.plates.filter(p => p.pressed).length;
-        title = 'THE STONE GATE'; line = `${on} / 2 plates`; target = z.puzzle ? { x: (z.puzzle.ax + 5) * TILE, y: (z.puzzle.ay + 4) * TILE } : g1;
-        pips = { n: 2, got: on, spr: 'icon_check' };
-      } else if (r.bait < r.baitNeed) {
-        title = 'MAKE RAPTOR BAIT'; line = `${r.bait} / ${r.baitNeed} down`; target = goal;
-        pips = { n: r.baitNeed, got: r.bait, spr: 'icon_skull' };
-      } else { title = 'BAIT LAID'; line = 'to the gate'; target = goal; done = true; }
-      const bx = 24, by = 58;
-      UI.slab(bx - 14, by - 12, 272, 62, { face: SKIN.faceMid, lit: SKIN.face, r: 3, shadow: true, rough: false, len: 8 });
-      Gfx.rect(bx - 10, by - 8, 5, 54, done ? '#6cc95c' : '#c2333c');
-      Gfx.text(title, bx + 2, by - 1, { color: SKIN.faceHi, scale: 1.4 });
-      Gfx.text(title, bx + 2, by - 2, { color: done ? '#14331e' : SKIN.ink, scale: 1.4 });
-      if (pips) for (let i = 0; i < pips.n; i++) {
-        const gx = bx + 2 + i * 32, got = i < pips.got;
-        Gfx.sprite(pips.spr, gx + 11, by + 30, { anchor: 'c', scale: 1.4, alpha: got ? 1 : 0.22 });
-        if (got && pips.spr === 'icon_skull') Gfx.sprite('icon_check', gx + 19, by + 34, { anchor: 'c', scale: 1 });
-      }
-      Gfx.text(line, pips ? bx + 2 + pips.n * 32 + 8 : bx + 2, by + 26, { color: SKIN.text, scale: 1.2 });
+        title = 'STONE GATE'; line = `${on}/2 plates`; col = '#ffe98a';
+        target = z.puzzle ? { x: (z.puzzle.ax + 5) * TILE, y: (z.puzzle.ay + 4) * TILE } : g1;
+      } else if (r.bait < r.baitNeed) { title = 'RAPTOR BAIT'; line = `${r.bait}/${r.baitNeed} beasts down`; target = goal; }
+      else { title = 'THE GATE'; line = 'the bait is laid'; target = goal; col = '#a8e878'; }
+      const tw = Gfx.measure(title, 1.2), lw = Gfx.measure(line, 1);
+      const w = Math.max(220, tw + lw + 96), x = Math.round(W / 2 - w / 2), y = E;
+      HUD.plate(x, y, w, 34, { accent: col });
+      HUD.text(title, x + 14, y + 11, { color: col, scale: 1.2 });
+      HUD.text(line, x + 22 + tw, y + 13, { color: C.dim, scale: 1 });
       if (target) {
         const dx = target.x - this.player.x, dy = target.y - this.player.y;
-        const ang = Math.atan2(dy, dx), dist = Math.hypot(dx, dy);
-        const cx = bx + 232, cy = by + 6, ctx = Gfx.ctx;
-        ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
-        ctx.fillStyle = SKIN.ink;
-        ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(-8, -9); ctx.lineTo(-3, 0); ctx.lineTo(-8, 9); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = SKIN.gold;
-        ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -7); ctx.lineTo(-2, 0); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill();
-        ctx.restore();
-        Gfx.text(`${Math.round(dist / 32)}m`, cx, cy + 14, { color: SKIN.text, align: 'center', scale: 1 });
+        const ang = Math.atan2(dy, dx), d = Math.hypot(dx, dy);
+        const cx = x + w - 44, cy = y + 17, c = Gfx.ctx;
+        c.save(); c.translate(cx, cy); c.rotate(ang);
+        c.fillStyle = C.ink; c.beginPath(); c.moveTo(11, 0); c.lineTo(-6, -7); c.lineTo(-2, 0); c.lineTo(-6, 7); c.closePath(); c.fill();
+        c.fillStyle = C.gold; c.beginPath(); c.moveTo(9, 0); c.lineTo(-4, -5); c.lineTo(-1, 0); c.lineTo(-4, 5); c.closePath(); c.fill();
+        c.restore();
+        HUD.text(`${Math.round(d / 32)}m`, cx + 14, y + 13, { color: C.dim, scale: 0.9 });
       }
     }
-    if (this.hidden) Gfx.text('HIDDEN', W / 2, 62, { color: '#86e8d2', align: 'center', scale: 1.6, outline: true, outlineWidth: 2 });
+    // ---- top right: what you are carrying, and the way out to the menu
+    {
+      const y = E;
+      UI.iconButton(W - E - 36, y, 36, 30, 'icon_menu', () => Game.pause(), { tip: 'Menu (Esc)', scale: 1.1 });
+      HUD.chip(W - E - 36 - 8 - 84, y, 84, (x, yy) => HUD.shell(x, yy), run.gold, C.shell);
+      HUD.chip(W - E - 36 - 8 - 84 - 8 - 72, y, 72, (x, yy) => HUD.gem(x, yy), run.gems || 0, C.gem);
+    }
     // zone banner on arrival
     if (this.intro > 0) {
-      const k = clamp(this.intro / 2.2, 0, 1);
-      const a = this.intro > 1.9 ? (2.2 - this.intro) / 0.3 : k < 0.2 ? k / 0.2 : 1;
-      Gfx.ctx.globalAlpha = a;
-      Gfx.rectA(0, 150, W, 84, '#120c16', 0.72);
-      Gfx.text(this.zone.def.name, W / 2, 166, { color: '#ffe98a', align: 'center', scale: 3, outline: true, outlineWidth: 2 });
-      Gfx.text(this.zone.def.sub, W / 2, 204, { color: '#d6cfe0', align: 'center', scale: 1.2 });
-      Gfx.ctx.globalAlpha = 1;
+      const k = this.intro > 1.9 ? (2.2 - this.intro) / 0.3 : this.intro < 0.5 ? this.intro / 0.5 : 1;
+      HUD.banner(this.zone.def.name, this.zone.def.sub, k);
     }
     if (this.showMap) this.drawMinimap();
     this.drawPad();
-    if (!Input.touch) Gfx.text('WASD move   SHIFT run   SPACE dodge   E interact   M map',
-      (W - 140) / 2, H - 18, { color: '#9391a6', align: 'center', scale: 1.1, outline: true });
-    UI.iconButton(W - 46, 10, 36, 32, 'icon_menu', () => Game.pause(), { tip: 'Menu (Esc)', scale: 1.2 });
   }
-  // The pad. On a touch screen it is a real stick in the bottom-left and a
-  // column of buttons in the bottom-right; with a mouse the buttons are still
-  // there and still work, they are just smaller and the stick is not drawn.
+  // Touch only: a stick and three round buttons. With a keyboard the
+  // screen stays clear - the prompt over the thing tells you the key.
   drawPad() {
-    const touch = Input.touch;
-    if (touch) {
-      const base = { x: 108, y: H - 104 };
-      const ctx = Gfx.ctx;
-      ctx.globalAlpha = 0.30; Gfx.circle(base.x, base.y, 66, '#120c16'); ctx.globalAlpha = 1;
-      Gfx.ring(base.x, base.y, 66, SKIN.ink, 3);
-      Gfx.ring(base.x, base.y, 63, SKIN.faceMid, 2);
-      for (let i = 0; i < 4; i++) {                       // four notches, so it reads as a stick
-        const a = i * Math.PI / 2;
-        Gfx.rectA(base.x + Math.cos(a) * 52 - 3, base.y + Math.sin(a) * 52 - 3, 7, 7, SKIN.faceLit, 0.7);
-      }
-      const k = this.stickPos || base;
-      Gfx.circle(k.x, k.y, 29, SKIN.ink);
-      Gfx.circle(k.x, k.y, 26, SKIN.btnDark);
-      Gfx.circle(k.x, k.y, 23, this.stickPos ? SKIN.btn : SKIN.btnFace);
-      Gfx.circle(k.x - 6, k.y - 8, 8, SKIN.btnLit);
-      Gfx.ring(k.x, k.y, 24, SKIN.gold, 2);
-    }
-    // ---- the buttons, bottom right, biggest one nearest the thumb
-    const bw = touch ? 124 : 104, bh = touch ? 52 : 40, bx = W - bw - 16;
-    let by = H - bh - 22;
-    UI.wbutton(bx, by, bw, bh, this.prompt ? this.prompt.prompt : 'ACT',
-      () => { this.interactTapped = true; }, { disabled: !this.prompt, scale: touch ? 1.3 : 1.1, key: 'act' });
-    by -= bh + 8;
-    UI.wbutton(bx, by, bw, bh, 'DODGE', () => { this.dodgeTap = true; },
-      { disabled: this.dodgeCool > 0, scale: touch ? 1.3 : 1.1, key: 'dodge' });
-    by -= bh + 8;
-    const runHov = UI.wbutton(bx, by, bw, bh, 'RUN', () => { },
-      { scale: touch ? 1.3 : 1.1, key: 'run', danger: this.sprintHeld });
-    this.sprintHeld = !!(Input.down && runHov);
+    if (!Input.touch) { this.sprintHeld = false; return; }
+    const base = { x: 104, y: H - 100 }, ctx = Gfx.ctx, R = 58;
+    ctx.globalAlpha = 0.5; Gfx.circle(base.x, base.y, R, HUD.C.ink); ctx.globalAlpha = 1;
+    Gfx.ring(base.x, base.y, R, HUD.C.goldDim, 2);
+    const k = this.stickPos || base;
+    Gfx.circle(k.x, k.y, 26, HUD.C.ink);
+    Gfx.circle(k.x, k.y, 23, this.stickPos ? '#4d4a5c' : '#3b3048');
+    Gfx.circle(k.x - 6, k.y - 7, 7, '#6e6b80');
+    Gfx.ring(k.x, k.y, 24, HUD.C.gold, 2);
+    const btn = (cx, cy, r, label, on, danger) => {
+      Gfx.circle(cx, cy, r + 2, HUD.C.ink);
+      ctx.globalAlpha = on ? 0.95 : 0.6;
+      Gfx.circle(cx, cy, r, danger ? '#5c1420' : '#241c2e');
+      ctx.globalAlpha = 1;
+      Gfx.ring(cx, cy, r, on ? HUD.C.gold : HUD.C.goldDim, 2);
+      Gfx.text(label, cx, cy - 5, { color: on ? HUD.C.text : HUD.C.dim, align: 'center', scale: 1 });
+    };
+    const bx = W - 70, act = this.prompt ? this.prompt.prompt : 'ACT';
+    btn(bx, H - 74, 40, act.length > 7 ? act.slice(0, 7) : act, !!this.prompt);
+    btn(bx - 92, H - 58, 30, 'DODGE', this.dodgeCool <= 0);
+    btn(bx - 12, H - 164, 30, 'RUN', true, this.sprintHeld);
+    // the buttons themselves
+    UI.hit(bx - 40, H - 114, 80, 80, () => { this.interactTapped = true; }, { noCursor: true });
+    UI.hit(bx - 122, H - 88, 60, 60, () => { this.dodgeTap = true; }, { noCursor: true });
+    let runHeld = false;
+    for (const [id, p] of Input.touches) if (dist(p.x, p.y, bx - 12, H - 164) < 36) runHeld = true;
+    this.sprintHeld = runHeld;
   }
   click() { }
 }
