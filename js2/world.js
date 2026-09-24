@@ -63,8 +63,21 @@ const World = {
     const L = camX - 160, R = camX + VW + 160;
     const night = !!o.night;
 
+    // Inside the hill the rock covers nearly all of the sky, so the country
+    // behind it is only painted where there is a hole to see it through:
+    // either end of the hill, the crack over the bed, and the smoke holes.
+    const ctx = Gfx.ctx, a0 = SHELL.x0 + 110, a1 = MOUTH.cx - MOUTH.rx - 30;
+    const inside = R > a0 && L < a1;
+    if (inside) {
+      ctx.save(); ctx.beginPath();
+      if (L < a0) ctx.rect(L, -600, a0 - L, 1400);
+      if (R > a1) ctx.rect(a1, -600, R - a1, 1400);
+      for (const hx of [HOME.bed + 44, DOMES[0].x, DOMES[1].x]) if (hx + 40 > L && hx - 40 < R) ctx.rect(hx - 40, -600, 80, 1400);
+      ctx.clip();
+    }
     World.sky(t, o, camX, L, R);
     World.yard(t, o, camX, L, R);
+    if (inside) ctx.restore();
 
     // ---- the house itself, seen in cutaway
     if (L < HOME.door + 260) {
@@ -596,37 +609,8 @@ const World = {
       });
     }
 
-    // ---- BAND 1: snow peaks, almost not moving at all
-    World.peaks(t, camX, L, R, ev);
-    // ---- BAND 2 and 3: the purple ridges, with spires on the far one
-    const ridge = (depth, col, edge, base, amp, scrub) => {
-      const ctx = Gfx.ctx, off = camX * depth;
-      const hy = x => base + Math.sin((x + off) * 0.0031) * amp + Math.sin((x + off) * 0.009) * amp * 0.35;
-      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(L, GY);
-      for (let x = L; x <= R; x += 22) ctx.lineTo(x, hy(x));
-      ctx.lineTo(R, GY + 200); ctx.lineTo(L, GY + 200); ctx.fill();
-      for (let x = Math.floor(L / 6) * 6; x < R; x += 6) Gfx.rect(x, hy(x), 6, 4, edge);
-      for (let x = Math.floor(L / 6) * 6; x < R; x += 6) Gfx.rectA(x, hy(x) + 4, 6, 2, '#120c16', 0.22);
-      for (let x = Math.floor(L / 36) * 36; x < R; x += 36) {
-        const y = hy(x) + 12 + jitter(x + depth * 90, 36);
-        Gfx.rectA(x + jitter(x, 26), y, 11, 5, edge, 0.5);
-        if (scrub && ((x / 36) | 0) % 3 === 0) Gfx.round(x + jitter(x + 2, 26), y + 9, 16, 9, 4, edge);
-        if (((x / 36) | 0) % 4 === 0) Gfx.rectA(x + jitter(x + 5, 26), y + 22, 7, 3, '#120c16', 0.18);
-      }
-    };
-    ridge(0.6, ev ? '#4b2070' : '#7c3eb2', ev ? '#7c3eb2' : '#b177e6', 322, 30);
-    for (let x = Math.floor(L / 420) * 420; x < R; x += 420) {    // rock spires on the far ridge
-      const px = x - camX * 0.42, hgt = 70 + jitter(x, 46), fy = 352;
-      Gfx.ctx.fillStyle = ev ? '#2a1220' : '#4b2070'; Gfx.ctx.beginPath();
-      Gfx.ctx.moveTo(px - 18, fy); Gfx.ctx.lineTo(px - 5, fy - hgt);
-      Gfx.ctx.lineTo(px + 4, fy - hgt * 0.8); Gfx.ctx.lineTo(px + 20, fy); Gfx.ctx.fill();
-      Gfx.rectA(px - 8, fy - hgt, 7, hgt, ev ? '#5c1607' : '#7c3eb2', 0.6);
-      Gfx.rectA(px - 18, fy - 2, 38, 3, '#120c16', 0.3);
-    }
-    ridge(0.42, ev ? '#2a1220' : '#4b2070', ev ? '#5c1607' : '#7c3eb2', 352, 22);
-    // ---- BAND 4: the treeline on the last ridge before the valley floor
-    World.treebelt(t, camX, L, R, ev);
-    ridge(0.22, ev ? '#241109' : '#27632f', ev ? '#5c3a20' : '#3f9a45', 382, 12, true);
+    // ---- the country: the same range and the same hills you can see from the yard
+    for (const Lr of Vista.HOME_LAYERS) Vista.draw(Lr, ev ? 'dusk' : null, camX, L, R);
     // ---- the haze that sits between the valley and everything behind it
     Gfx.rectA(L, 352, R - L, 44, ev ? '#e06a1b' : '#a8d8ff', ev ? 0.14 : 0.18);
     Gfx.rectA(L, 368, R - L, 22, ev ? '#ffa832' : '#ffe08a', 0.09);
@@ -965,30 +949,14 @@ const World = {
     Gfx.rect(L, -400, R - L, 460, '#3f0e18');
     World.skyRamp(L, R, 60, 250, ['#3f0e18', '#7d1d2b', '#a03a68', '#e06a1b', '#ffa832']);
     const ctx = Gfx.ctx;
-    // terraced pit walls stepping down, each one a band of cut rock
-    const face = ['#241c2e', '#3b3048', '#574a66', '#7a6d8a'];
-    const lit = ['#4d4a5c', '#7a6d8a', '#9391a6', '#bdbccd'];
+    // the far range, over the lip of the pit
+    Vista.draw(Vista.HOME_LAYERS[0], 'dusk', camX, L, R);
+    // terraced pit walls stepping down, each one a bench of cut rock (baked)
+    Vista.quarry(L, R);
     for (let s2 = 0; s2 < 4; s2++) {
-      const y = 190 + s2 * 46;
-      const hy = x => y + Math.sin((x + s2 * 300) * 0.009) * 7 + Math.sin(x * 0.03) * 3;
-      ctx.fillStyle = face[s2];
-      ctx.beginPath(); ctx.moveTo(L, y);
-      for (let x = L; x <= R; x += 24) ctx.lineTo(x, hy(x));
-      ctx.lineTo(R, GY + 200); ctx.lineTo(L, GY + 200); ctx.fill();
-      for (let x = Math.floor(L / 8) * 8; x < R; x += 8) {        // the cut lip
-        Gfx.rect(x, hy(x), 8, 3, lit[s2]);
-        Gfx.rectA(x, hy(x) + 3, 8, 2, '#120c16', 0.25);
-      }
-      for (let k = 1; k < 5; k++)                                 // strata
-        for (let x = Math.floor(L / 16) * 16; x < R; x += 16)
-          Gfx.rectA(x + jitter(x + k, 10), hy(x) + k * 10, 11, 2, k % 2 ? '#120c16' : lit[s2], 0.20);
+      const hy = x => Vista.benchY(s2, x);
       // ---- the ore. This is why anyone is here.
       World.oreSeam(t, L, R, hy, s2);
-      for (let x = Math.floor(L / 30) * 30; x < R; x += 30) {      // chips
-        const cy = hy(x) + 8 + jitter(x + s2, 34);
-        Gfx.rectA(x + jitter(x, 22), cy, 5, 3, '#120c16', 0.3);
-        Gfx.rectA(x + jitter(x + 4, 22), cy - 1, 3, 2, lit[s2], 0.35);
-      }
       if (s2 < 3) World.scaffold(t, L, R, hy, s2);
     }
     // mine mouths cut into the terraces, lit from inside
@@ -1089,42 +1057,14 @@ const World = {
         + Math.sin(px * 0.41 + 2) * 3;
     };
     Gfx.shadow(x, GY + 4, 250, 0.3);
-    for (let px = Math.floor((x - 136) / 4) * 4; px < x + 136; px += 4) {
-      const y = prof(px + 2); if (y == null) continue;
-      const yt = Math.round(y / 4) * 4;
-      Gfx.rect(px, yt, 4, GY - yt + 12, '#574a66');
-      Gfx.rect(px, yt, 4, 6, '#9391a6');                          // the lit top edge
-      Gfx.rect(px, yt + 6, 4, 6, '#7a6d8a');
-      Gfx.rect(px, yt - 3, 4, 3, '#241c2e');
-    }
-    for (let k = 0; k < 8; k++)                                   // strata, following the cut
-      for (let px = Math.floor((x - 132) / 9) * 9; px < x + 132; px += 9) {
-        const y = prof(px); if (y == null) continue;
-        const sy = y + 28 + k * 24 + Math.sin(px * 0.012 + k) * 5;
-        if (sy > GY - 4) continue;
-        Gfx.rectA(px, sy, 9, 3, k % 2 ? '#3b3048' : '#7a6d8a', 0.38);
-      }
-    for (let i = 0; i < 26; i++) {                                // chisel scars
-      const px = x - 118 + (i % 7) * 34 + jitter(i, 14);
-      const y = prof(px); if (y == null) continue;
-      const sy = y + 22 + ((i * 53) % 160);
-      if (sy > GY - 6) continue;
-      Gfx.rectA(px, sy, 11, 3, '#241c2e', 0.34);
-      Gfx.rectA(px, sy - 1, 7, 1, '#bdbccd', 0.22);
-    }
-    for (let i = 0; i < 5; i++) {                                 // vertical jointing
-      const px = x - 96 + i * 48 + jitter(i * 3, 16);
-      const y = prof(px); if (y == null) continue;
-      Gfx.rectA(px, y + 10, 3, GY - y - 14, '#241c2e', 0.32);
-      Gfx.rectA(px + 3, y + 10, 2, GY - y - 14, '#9391a6', 0.10);
-    }
+    Vista.mass('face' + gi, prof, x - 136, 272, GY - 250, 500 + gi);
     // a ladder against the left shoulder, and the spoil heaped at the foot
     { const lx = x - 108, ly = prof(lx) || GY - 90;
       Gfx.rect(lx - 4, ly + 8, 4, GY - ly - 6, '#3a2415');
       Gfx.rect(lx + 18, ly + 8, 4, GY - ly - 6, '#3a2415');
       for (let k = 0; k * 16 < GY - ly - 10; k++) Gfx.rect(lx - 4, GY - 12 - k * 16, 26, 4, '#5c3a20'); }
-    for (let i = 0; i < 9; i++)
-      Gfx.round(x - 120 + i * 30 + jitter(i, 12), GY - 8 - (i % 3) * 5, 22 + (i % 4) * 7, 12, 4, i % 2 ? '#4d4a5c' : '#3b3048');
+    for (let i = 0; i < 9; i++)                                   // the spoil, heaped at the foot
+      Gfx.sprite(i % 3 ? 'v_rock_bare' : 'v_rock', x - 120 + i * 30 + jitter(i, 12), GY + 4, { anchor: 'bc', scale: 0.45 + (i % 4) * 0.12, flip: i % 2 === 1 });
     // ---- the pocket of crystal this face is being cut for
     [QUARRY.gems[gi]].forEach((g, _i) => {
       const i = gi;
@@ -1500,6 +1440,9 @@ const World = {
     { const mx = 520 - camX * 0.03;
       Gfx.circle(mx, -30, 38, '#ef6a5e'); Gfx.glow(mx, -30, 300, '#e06a1b', 0.30); }
     World.flock(t, camX, L, R, true, -230);
+    // the range behind it all, lit from underneath by what is burning
+    Vista.draw(Vista.HOME_LAYERS[0], 'fire', camX, L, R);
+    Vista.draw(Vista.HOME_LAYERS[1], 'fire', camX, L, R);
 
     // ---- BACK: the village, and what is in it. All silhouette, all on fire.
     const bo = camX * 0.16;

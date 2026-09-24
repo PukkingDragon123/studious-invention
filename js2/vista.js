@@ -274,6 +274,123 @@ const Vista = (() => {
     for (let x = Math.floor(L / LW) * LW; x < R; x += LW) Gfx.ctx.drawImage(c, x, y);
   }
 
+  // ----------------------------------------------------------- the quarry
+  // Four benches of cut rock stepping down into the pit. Each face is bedded
+  // stone with joints and pick marks, lit along its lip, in shadow under it,
+  // and gritty with fallen rubble at its foot. The bench lines repeat every
+  // tile, so the seams and scaffolds drawn along them line up exactly.
+  const QY = 176;
+  const TAU = Math.PI * 2;
+  const benchY = (s, x) => 190 + s * 46 + Math.sin((x + s * 300) * TAU / LW) * 7 + Math.sin(x * TAU * 5 / LW) * 3;
+  function quarryWall() {
+    const h = 272, O = out(LW, h);
+    const RAMPS = [
+      ['#161120', '#1f1829', '#2a2135', '#362b43', '#443753', '#534563'],
+      ['#1f1829', '#2a2135', '#362b43', '#443753', '#534563', '#645675'],
+      ['#2a2135', '#362b43', '#443753', '#534563', '#645675', '#776988'],
+      ['#362b43', '#443753', '#534563', '#645675', '#776988', '#8b7d9b'],
+    ].map(r => r.map(hex));
+    const LIP = [['#6e6180', '#877a97'], ['#7d7090', '#9a8daa'], ['#8c80a0', '#aca0bb'], ['#9d92b0', '#c0b6cc']].map(r => r.map(hex));
+    const INK = hex('#0e0a14');
+    // each bench is laid down in beds of its own thickness, and each bed is
+    // split by a few joints that lean their own way
+    const R = new RNGl(77);
+    const beds = [0, 1, 2, 3].map(() => {
+      const out = []; let y = 0;
+      while (y < 80) {
+        const th = R.next() < 0.3 ? 9 + Math.floor(R.next() * 8) : 3 + Math.floor(R.next() * 6);
+        const js = []; let x = Math.floor(R.next() * 90);
+        while (x < LW) { js.push(x); x += 50 + Math.floor(R.next() * 130); }
+        out.push({ y, th, tone: R.next() - 0.5, lean: (R.next() - 0.5) * 0.6, js });
+        y += th;
+      }
+      return out;
+    });
+    for (let x = 0; x < LW; x++) {
+      const tops = [0, 1, 2, 3].map(k => benchY(k, x) - QY);
+      for (let y = Math.max(0, Math.floor(tops[0])); y < h; y++) {
+        let b = 0; while (b < 3 && y >= tops[b + 1]) b++;
+        const d = y - tops[b];
+        let c;
+        if (d < 1) c = LIP[b][1];
+        else if (d < 3) c = LIP[b][0];
+        else if (d < 4.2) c = INK;
+        else {
+          const Rm = RAMPS[b];
+          const dd = d + Math.sin(x * TAU * 3 / LW + b) * 2;
+          let k = 0; const B = beds[b];
+          while (k < B.length - 1 && dd >= B[k + 1].y) k++;
+          const bd = B[k], inBed = dd - bd.y;
+          let lv = 2.5 + bd.tone * 1.3 + (fbm(x + b * 200, 900 + b, 3, 16) - 0.5) * 1.6;
+          if (inBed < 1) lv -= 1.3;                                      // the bedding plane
+          else if (inBed < 2) lv += 0.5;
+          lv -= Math.max(0, 1 - (d - 4) / 14) * 1.5;                     // under the lip, in shade
+          const xs = x - bd.lean * inBed;
+          for (const jx of bd.js) { const dx = xs - jx; if (dx >= 0 && dx < 1) lv -= 2; else if (dx >= 1 && dx < 2) lv += 0.7; }
+          const pm = (x + y * 2 + k * 5) % 11;                             // pick marks
+          if (pm === 0 && hash((x >> 2) + k * 97, b) < 0.4) lv -= 0.9;
+          const foot = b < 3 ? tops[b + 1] - y : 99;                       // rubble at the foot
+          if (foot < 7 && hash(x * 31 + y, b + 60) < 0.4 - foot * 0.05) lv += 1.6;
+          lv += (hash(x * 7 + y * 131, b + 70) - 0.5) * 0.7;
+          const i = Math.floor(lv + dith(x, y) * 0.8 + 0.5);
+          c = Rm[i < 0 ? 0 : i >= Rm.length ? Rm.length - 1 : i];
+        }
+        O.px[y * LW + x] = pack(c);
+      }
+    }
+    O.cv.getContext('2d').putImageData(O.img, 0, 0);
+    return O.cv;
+  }
+  // A shoulder of rock left standing where they are cutting: blocks of cut
+  // stone, lit along the top, with a ragged profile. `prof(x)` is its top at
+  // world x (null outside it); the canvas covers [x0, x0 + w) from y0 to GY.
+  function rockMass(prof, x0, w, y0, seed) {
+    const h = GY + 12 - y0, O = out(w, h);
+    const RM = ['#241c2e', '#2e2538', '#3b3048', '#4d4260', '#5f5472', '#736887', '#897e9c', '#a096b2', '#bdb3cc'].map(hex);
+    const INK = hex('#0e0a14');
+    // cells: wide blocks, the way quarried stone splits
+    const gw = 30, gh = 16, cols = Math.ceil(w / gw) + 3, rows = Math.ceil(h / gh) + 3;
+    const Rr = new RNGl(seed), sx = [], sy = [], tn = [];
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { sx.push((i - 1 + 0.15 + Rr.next() * 0.7) * gw); sy.push((j - 1 + 0.15 + Rr.next() * 0.7) * gh); tn.push(Rr.next() - 0.5); }
+    const ay = gw / gh;
+    for (let x = 0; x < w; x++) {
+      const top = prof(x0 + x);
+      if (top == null) continue;
+      const t0 = Math.round(top - y0);
+      for (let y = Math.max(0, t0); y < h; y++) {
+        const d = y - t0;
+        let c;
+        if (d < 2) c = RM[8]; else if (d < 4) c = RM[6];
+        else {
+          const gx = Math.floor(x / gw), gy = Math.floor(y / gh);
+          let f1 = 1e9, f2 = 1e9, id = 0, vx = 0, vy = 0;
+          for (let jj = 0; jj <= 2; jj++) for (let ii = 0; ii <= 2; ii++) {
+            const cc = (gy + jj) * cols + gx + ii;
+            const dx = x - sx[cc], dy = (y - sy[cc]) * ay, dq = dx * dx + dy * dy;
+            if (dq < f1) { f2 = f1; f1 = dq; id = cc; vx = dx; vy = dy; } else if (dq < f2) f2 = dq;
+          }
+          const e = Math.sqrt(f2) - Math.sqrt(f1), len = Math.sqrt(f1) + 0.001;
+          const bev = e < 3.4 ? 1 - e / 3.4 : 0;
+          let lv = 4 + tn[id] * 1.4 + ((-vx * 0.5 - vy * 0.9) / len) * bev * 2.2;
+          if (e < 1.2) lv -= 2.6;
+          lv -= Math.max(0, 1 - (d - 4) / 18) * 1.2;                       // under the lit edge
+          lv -= Math.max(0, (d - 40) / 160) * 1.2;                          // and down toward the floor
+          lv += (hash(x * 13 + y * 7, seed) - 0.5) * 0.8;
+          if ((x + y * 3) % 17 === 0 && hash(x >> 3, y >> 3, seed) < 0.35) lv -= 1;   // chisel scars
+          const i = Math.floor(lv + dith(x, y) * 0.8 + 0.5);
+          c = RM[i < 0 ? 0 : i >= RM.length ? RM.length - 1 : i];
+        }
+        if (d === 0 || (d > 0 && prof(x0 + x - 1) != null && y < prof(x0 + x - 1) - y0)) { /* edge */ }
+        O.px[y * w + x] = pack(c);
+      }
+      // ink along the skyline of it
+      if (t0 - 1 >= 0) O.px[(t0 - 1) * w + x] = pack(INK);
+    }
+    O.cv.getContext('2d').putImageData(O.img, 0, 0);
+    return O.cv;
+  }
+  const masses = {};
+
   // ----------------------------------------------------- the home's layers
   const HOME_LAYERS = [
     { key: 'peaks', y: 150, depth: 0.05, make: () => mountains({
@@ -298,6 +415,7 @@ const Vista = (() => {
   const MOOD = {
     night: { col: '#241c4e', a: 0.62, glow: '#e06a1b', ga: 0.10 },
     dusk: { col: '#6a1f3a', a: 0.42, glow: '#ffa832', ga: 0.16 },
+    fire: { col: '#2a0a1c', a: 0.66, glow: '#ff5a2a', ga: 0.30 },
   };
   const cache = new Map();
   function layer(L, mood) {
@@ -330,6 +448,13 @@ const Vista = (() => {
   return {
     HOME_LAYERS, draw, layer,
     ground: (L, R, y) => tile('ground', ground, L, R, y),
+    quarry: (L, R) => tile('quarry', quarryWall, L, R, QY),
+    // a baked shoulder of rock, keyed by name, built the first time it is asked for
+    mass(key, prof, x0, w, y0, seed) {
+      const c = masses[key] || (masses[key] = rockMass(prof, x0, w, y0, seed));
+      Gfx.ctx.drawImage(c, x0, y0);
+    },
+    benchY,
     soil: (L, R, y) => tile('soil', soil, L, R, y),
     // the height of a layer's skyline at world x, for standing things on it
     top(key, x, camX) {
@@ -340,8 +465,9 @@ const Vista = (() => {
     step() {
       if (!tiles.ground) { tiles.ground = ground(); return false; }
       if (!tiles.soil) { tiles.soil = soil(); return false; }
+      if (!tiles.quarry) { tiles.quarry = quarryWall(); return false; }
       for (const L of HOME_LAYERS) if (!cache.has(L.key + '|day')) { layer(L, null); return false; }
-      for (const m of ['night', 'dusk']) for (const L of HOME_LAYERS) if (!cache.has(L.key + '|' + m)) { layer(L, m); return false; }
+      for (const m of ['night', 'dusk', 'fire']) for (const L of HOME_LAYERS) if (!cache.has(L.key + '|' + m)) { layer(L, m); return false; }
       return true;
     },
   };
