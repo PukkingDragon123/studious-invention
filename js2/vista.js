@@ -269,9 +269,10 @@ const Vista = (() => {
     return O.cv;
   }
   const tiles = {};
-  function tile(name, fn, L, R, y) {
+  function tile(name, fn, L, R, y, sc = 1) {
     const c = tiles[name] || (tiles[name] = fn());
-    for (let x = Math.floor(L / LW) * LW; x < R; x += LW) Gfx.ctx.drawImage(c, x, y);
+    const step = LW * sc;
+    for (let x = Math.floor(L / step) * step; x < R; x += step) Gfx.ctx.drawImage(c, x, y, c.width * sc, c.height * sc);
   }
 
   // ----------------------------------------------------------- the quarry
@@ -416,6 +417,7 @@ const Vista = (() => {
     night: { col: '#241c4e', a: 0.62, glow: '#e06a1b', ga: 0.10 },
     dusk: { col: '#6a1f3a', a: 0.42, glow: '#ffa832', ga: 0.16 },
     fire: { col: '#2a0a1c', a: 0.66, glow: '#ff5a2a', ga: 0.30 },
+    jungle: { col: '#0c3a36', a: 0.5, glow: '#86e8d2', ga: 0.10 },
   };
   const cache = new Map();
   function layer(L, mood) {
@@ -438,17 +440,47 @@ const Vista = (() => {
     cache.set(key, c);
     return c;
   }
-  // lay one layer across [L, R] in world space at its depth
-  function draw(Lr, mood, camX, L, R) {
-    const c = layer(Lr, mood);
+  // lay one layer across [L, R] in world space at its depth (dy moves it
+  // up or down, for stages whose horizon is somewhere else)
+  function draw(Lr, mood, camX, L, R, dy = 0) { drawAt(Lr, mood, camX, L, R, Lr.y + dy, 1); }
+  // the same, at an explicit height and pixel size: a stage drawn at 1:1
+  // with its people at 2x gets its country at 2x too
+  function drawAt(Lr, mood, camX, L, R, y, sc = 1) {
+    const c = layer(Lr, mood), step = LW * sc;
     const off = camX * Lr.depth;
-    let x = Math.floor((L - off) / LW) * LW + off;
-    for (; x < R; x += LW) Gfx.ctx.drawImage(c, Math.round(x), Lr.y);
+    let x = Math.floor((L - off) / step) * step + off;
+    for (; x < R; x += step) Gfx.ctx.drawImage(c, Math.round(x), Math.round(y), c.width * sc, c.height * sc);
+  }
+  // the floor of a fighting pit, one tile per act: packed dirt with stones
+  // and tufts, wet moss, or ash with the embers still in it
+  function pit(act) {
+    const h = 300, O = out(LW, h);
+    const K = act === 3 ? { g: ['#1f1b26', '#2e2b38', '#3b3648', '#4d4a5c', '#6e6b80'], s: ['#4d4a5c', '#6e6b80', '#9391a6'], t: ['#e06a1b', '#ffa832'] }
+      : act === 2 ? { g: ['#132a18', '#1d3a20', '#27482a', '#315a31', '#3f6e3a'], s: ['#2e3b33', '#4d5c50', '#6e7d70'], t: ['#27632f', '#3f9a45'] }
+        : { g: ['#3a2415', '#4a2e1a', '#5c3a20', '#6e4626', '#85562f'], s: ['#4d4a5c', '#6e6b80', '#9391a6'], t: ['#27632f', '#3f9a45'] };
+    const G = K.g.map(hex), S = K.s.map(hex), T = K.t.map(hex);
+    for (let y = 0; y < h; y++) for (let x = 0; x < LW; x++) {
+      // it gets darker toward the back of the pit, where the bank is
+      let lv = 2.4 + (pn(x * 3 + y * 11, 128, 41 + act) - 0.5) * 1.6 + Math.min(1, y / 60) * 0.5 - (y < 8 ? 1.2 : 0);
+      let c = G[Math.max(0, Math.min(4, Math.floor(lv + dith(x, y) * 0.8 + 0.5)))];
+      const cx = x >> 3, cy = y >> 2, hs = hash(cx * 7919 + cy, 43 + act);
+      if (hs < 0.07) {                                           // a stone
+        const dx = x - (cx * 8 + 3.5), dy = (y - (cy * 4 + 2)) * 1.8;
+        if (dx * dx + dy * dy < 5) c = S[dy < -0.5 ? 2 : dy > 1 ? 0 : 1];
+      } else if (y > 10) {                                       // a tuft of blades, or an ember
+        const tx = x >> 2, ty = y >> 3, th = hash(tx * 3571 + ty, 47 + act);
+        if (th > 0.985 && (x & 3) !== 3 && ((y & 7) >= 5 - (x & 1) * 2)) c = T[(x & 1)];
+      }
+      O.px[y * LW + x] = pack(c);
+    }
+    O.cv.getContext('2d').putImageData(O.img, 0, 0);
+    return O.cv;
   }
   return {
-    HOME_LAYERS, draw, layer,
+    HOME_LAYERS, draw, drawAt, layer,
     ground: (L, R, y) => tile('ground', ground, L, R, y),
     quarry: (L, R) => tile('quarry', quarryWall, L, R, QY),
+    pit: (act, L, R, y, sc = 1) => tile('pit' + act, () => pit(act), L, R, y, sc),
     // a baked shoulder of rock, keyed by name, built the first time it is asked for
     mass(key, prof, x0, w, y0, seed) {
       const c = masses[key] || (masses[key] = rockMass(prof, x0, w, y0, seed));
@@ -467,7 +499,7 @@ const Vista = (() => {
       if (!tiles.soil) { tiles.soil = soil(); return false; }
       if (!tiles.quarry) { tiles.quarry = quarryWall(); return false; }
       for (const L of HOME_LAYERS) if (!cache.has(L.key + '|day')) { layer(L, null); return false; }
-      for (const m of ['night', 'dusk', 'fire']) for (const L of HOME_LAYERS) if (!cache.has(L.key + '|' + m)) { layer(L, m); return false; }
+      for (const m of ['night', 'dusk', 'fire', 'jungle']) for (const L of HOME_LAYERS) if (!cache.has(L.key + '|' + m)) { layer(L, m); return false; }
       return true;
     },
   };
