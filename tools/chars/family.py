@@ -318,26 +318,44 @@ def bronk(p):
 
 
 def rib_axe(f, hx0, bob, strum):
-    """the Rib-Axe, held across the belly: a mammoth ribcage for a body, a
-    thighbone for a neck, gut strings, and a skull on the end for tuning pegs"""
-    body = ell(hx0 - 4, 52 + bob, 12, 9)
-    b = f.put(body, BONE, bias=0.3, band=2)
-    for i in range(-3, 4):                                            # the ribs
-        x = hx0 - 4 + i * 3.2
-        for y in range(int(52 + bob - 8), int(52 + bob + 9)):
-            if (int(x), y) in b and abs(y - 52 - bob) > 1: f.cv.set(int(x), y, '!')
-    hole = disc(hx0 - 4, 52 + bob, 3)
-    f.flat(hole, '1')
-    neck = cap((hx0 + 5, 47 + bob), (hx0 + 26, 22 + bob), 2, 1.6)
-    f.put(neck, FURD, band=1)
-    peg = disc(hx0 + 27, 20 + bob, 3.4)
-    f.put(peg, BONE, band=1)
-    f.dot(hx0 + 26, 20 + bob, '0'); f.dot(hx0 + 28, 20 + bob, '0')
-    for k in range(3):                                               # the strings
-        a, c = (hx0 - 12, 52 + bob + (k - 1) * 2), (hx0 + 25, 22 + bob + (k - 1))
-        for t in range(0, 41):
-            u = t / 40.0
-            x, y = a[0] + (c[0] - a[0]) * u, a[1] + (c[1] - a[1]) * u + (math.sin(u * math.pi) * (strum * 0.25) if u < 0.4 else 0)
+    """the Rib-Axe, held across the belly: a double-bladed axe head built out
+    of a mammoth's ribs for a body, a thighbone for a neck with frets cut in
+    it, gut strings, and a raptor skull on the end with an ember in its eye"""
+    cx, cy = hx0 - 5, 52 + bob
+    # the two blades, bound in the middle
+    blade = poly([(cx - 3, cy - 5), (cx - 16, cy - 11), (cx - 18, cy), (cx - 16, cy + 11), (cx - 3, cy + 5)])
+    blade |= poly([(cx + 3, cy - 5), (cx + 12, cy - 10), (cx + 14, cy), (cx + 12, cy + 10), (cx + 3, cy + 5)])
+    blade |= ell(cx, cy, 5, 7)
+    b = f.put(blade, BONE, bias=0.35, band=2)
+    for i in (-13, -9, -5, 6, 10):                                   # the ribs
+        for y in range(int(cy - 11), int(cy + 12)):
+            if (int(cx + i), y) in b and abs(y - cy) > 1: f.cv.set(int(cx + i), y, '!')
+    for q in edge_of(b, (1, 1)): f.cv.set(q[0], q[1], '!')
+    wrap = set(q for q in ell(cx, cy, 5, 7) if abs(q[1] - cy) > 3)
+    f.put(wrap, ['j', 'k', 'l'], band=1, grad=False)                 # sinew binding
+    f.flat(disc(cx, cy, 2.4), 'R'); f.flat(disc(cx - 0.6, cy - 0.6, 1.1), 'T')   # a gem in the hub
+    # the neck: a thighbone, with frets
+    n0, n1 = (hx0 + 4, 47 + bob), (hx0 + 23, 22 + bob)
+    neck = cap(n0, n1, 2.6, 2.0)
+    nk = f.put(neck, ['!', '@', '#'], band=1)
+    for k in range(1, 7):
+        u = k / 7.0
+        f.over(n0[0] + (n1[0] - n0[0]) * u, n0[1] + (n1[1] - n0[1]) * u, 'j')
+    # the headstock: a little raptor skull with an ember for an eye
+    hx, hy = hx0 + 25, 19 + bob
+    sk = ell(hx, hy, 4.4, 3.4) | ell(hx + 4, hy + 1, 3, 2)
+    f.put(sk, BONE, bias=0.4, band=1)
+    f.dot(hx - 1, hy - 1, '0'); f.dot(hx, hy - 1, 'B'); f.dot(hx - 1, hy, 'A')
+    for x in range(int(hx + 1), int(hx + 7), 2): f.dot(x, hy + 2, '$'); f.dot(x + 1, hy + 2, '1')
+    for (px_, py_) in ((hx - 3, hy - 4), (hx + 1, hy - 4)):           # tuning pegs: two little horns
+        f.dot(px_, py_, '#'); f.dot(px_ - 1, py_ - 1, '$')
+    # the strings, shivering when struck
+    for k in range(3):
+        a, c = (cx - 14, cy + (k - 1) * 2), (hx - 2, hy + (k - 1))
+        for t in range(0, 57):
+            u = t / 56.0
+            wob = math.sin(u * math.pi * 3 + k) * (strum * 0.18) if u < 0.55 else 0
+            x, y = a[0] + (c[0] - a[0]) * u, a[1] + (c[1] - a[1]) * u + wob
             f.dot(x, y, '9' if (t + k) % 3 else '8')
 
 
@@ -490,11 +508,15 @@ def vela(p):
     if arms == 'horn':
         # the Tusk Horn, up at her lips and curling away up and right
         mx, my = hx0 + 5, 20 + bob
-        horn = chain([(mx, my, 1.2), (mx + 6, my - 1, 2), (mx + 12, my - 5 - p.get('wob', 0), 3), (mx + 16, my - 12 - p.get('wob', 0), 4.2)])
-        f.put(horn, BONE, bias=0.3, band=1)
-        bell = disc(mx + 16, my - 13 - p.get('wob', 0), 3.6)
-        f.flat(bell & horn, '!')
-        for k in (0.35, 0.6): f.over(mx + 16 * k, my - 5 * k, 'Y')
+        w_ = p.get('wob', 0)
+        horn = chain([(mx, my, 1.3), (mx + 6, my - 1, 2.2), (mx + 12, my - 5 - w_, 3.3), (mx + 17, my - 12 - w_, 4.6), (mx + 19, my - 17 - w_, 5.6)])
+        hn = f.put(horn, BONE, bias=0.35, band=1)
+        bell = ell(mx + 19.5, my - 18 - w_, 4.4, 2.6)
+        f.flat(bell & hn, '1'); f.flat(ell(mx + 19.5, my - 18.5 - w_, 2.6, 1.2) & hn, '0')
+        for k in (0.3, 0.52, 0.74):                                   # leather bands, and a bead on a thong
+            bx, by = mx + 19 * k, my - 16 * k * k - w_ * k
+            for d in range(-3, 4): f.over(bx + d * 0.25, by + d, 'k')
+        f.dot(mx + 11, my - 1 - w_, 'k'); f.dot(mx + 11, my + 1 - w_, 'k'); f.dot(mx + 11, my + 2 - w_, 'F')
     held(f, p, handL, handR, rng)
     # -------- head: an oval, lashes and lipstick
     hy = 20 + bob + p.get('hdy', 0)
@@ -579,13 +601,17 @@ def pebble(p):
     strap = polyline([(hx0 - 11, 30 + bob), (hx0 + 9, 44 + bob)], r=0.7)
     f.put(strap, ['j', 'k'], band=1, grad=False)
     beat = p.get('beat', None)
-    for i, (bx, by, r) in enumerate(((hx0 - 5, 46 + bob, 4.4), (hx0 + 5, 46.5 + bob, 4))):
-        sk = disc(bx, by, r)
+    for i, (bx, by, r) in enumerate(((hx0 - 6, 46 + bob, 5.4), (hx0 + 6, 46.5 + bob, 4.8))):
+        sk = ell(bx, by, r, r * 0.95) | ell(bx, by + r * 0.6, r * 0.66, r * 0.5)
         f.put(sk, BONE, bias=0.3, band=1)
-        f.dot(bx - 1.5, by + 0.5, '0'); f.dot(bx + 1.5, by + 0.5, '0'); f.dot(bx, by + 2, '1')
-        top = ell(bx, by - r + 1.2, r - 0.4, 1.4)
-        f.put(top, ['k', 'l', 'm'], band=1, grad=False)
-        if beat is not None and ((beat > 0.5) == (i == 0)): f.flat(set([(int(bx) - 1, int(by - r)), (int(bx) + 1, int(by - r))]), '7', solid=False)
+        # eye sockets, a nose hole and a row of teeth: a little dino skull
+        f.flat(disc(bx - r * 0.4, by + 0.4, 1.2), '0'); f.flat(disc(bx + r * 0.4, by + 0.4, 1.2), '0')
+        f.dot(bx, by + 2, '1')
+        for d in range(-2, 3): f.dot(bx + d * 1.2, by + r * 0.9, '$' if d % 2 else '1')
+        top = ell(bx, by - r + 1.4, r - 0.3, 1.8)
+        f.put(top, ['k', 'l', 'm', 'n'], band=1, grad=False)
+        for d in (-r + 1, r - 1): f.dot(bx + d, by - r + 2.6, 'j')           # the lacing
+        if beat is not None and ((beat > 0.5) == (i == 0)): f.flat(set([(int(bx) - 1, int(by - r)), (int(bx), int(by - r - 1)), (int(bx) + 1, int(by - r))]), '7', solid=False)
     # arms: short and busy
     arms = p.get('arms', 'hang')
     shL, shR = (hx0 - 10, 30 + bob), (hx0 + 10, 30 + bob)
@@ -596,11 +622,18 @@ def pebble(p):
         handL, handR = (hx0 - 6, 41 + bob - a * 5), (hx0 + 6, 41 + bob - (1 - a) * 5)
     if arms == 'up': handL, handR = (shL[0] - 4, shL[1] - 11), (shR[0] + 4, shR[1] - 11)
     if arms == 'eat': handL, handR = (shL[0] - 1, shL[1] + 13), (hx0 + 9, 25 + bob + p.get('chew', 0))
+    f.sticks = (handL, handR) if arms == 'drum' else None
     for side, sh, hand in ((-1, shL, handL), (1, shR, handR)):
         el = elbow(sh, hand, side, 8)
         a = cap(sh, el, 3.2, 3) | cap(el, hand, 3, 2.6)
         f.put(a, SKIN, bias=0.1 if side < 0 else -0.2)
         f.put(disc(hand[0], hand[1], 2.8), SKIN, bias=0.3, band=1)
+    if f.sticks:
+        # two bone drumsticks, knobbed at the end, coming down on the skulls
+        for side, hand in ((-1, f.sticks[0]), (1, f.sticks[1])):
+            tip = (hand[0] - side * 1.5, hand[1] + 6)
+            f.put(cap(hand, tip, 1.1, 1.1), ['!', '@', '#'], band=1)
+            f.put(disc(tip[0], tip[1], 1.8), BONE, band=1)
     held(f, p, handL, handR, rng)
     # the head: big and round
     hy = 16 + bob + p.get('hdy', 0)
@@ -705,9 +738,17 @@ def roxy(p):
         f.put(a, SKIN, bias=0.1 if side < 0 else -0.2)
         f.put(disc(hand[0], hand[1], 2.1), SKIN, bias=0.3, band=1)
     if arms == 'flute':
-        fl = cap((hx0 + 1, 21 + bob), (hx0 + 18, 19 + bob), 1.3, 1.3)
-        f.put(fl, BONE, band=1)
-        for k in range(3): f.over(hx0 + 8 + k * 3, 19 + bob, '!')
+        fl = cap((hx0 + 1, 21 + bob), (hx0 + 22, 18 + bob), 1.6, 1.4)
+        f.put(fl, BONE, bias=0.3, band=1)
+        for k in range(4): f.over(hx0 + 7 + k * 3.2, 19.6 + bob - k * 0.45, '1')     # finger holes
+        f.put(disc(hx0 + 22.5, 18 + bob, 1.8), ['!', '@', '#'], band=1)                 # the knuckle end
+        # two feathers on a thong, swinging
+        sw = p.get('fing', 0)
+        for i, col in enumerate((['M', 'N', 'O'], ['E', 'F', 'G'])):
+            top = (hx0 + 21, 19.5 + bob)
+            end = (top[0] + 1 + i * 2 - sw, top[1] + 7 + i * 1.5)
+            for d in range(0, 5): f.dot(top[0] + (end[0] - top[0]) * d / 5, top[1] + (end[1] - top[1]) * d / 5, 'k')
+            f.put(cap(end, (end[0] + 1, end[1] + 4), 1.3, 0.6), col, band=1)
     held(f, p, handL, handR, rng)
     # the head
     neck = cap((hx, 24 + bob), (hx, 30 + bob), 2, 2.4)

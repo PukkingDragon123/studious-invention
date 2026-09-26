@@ -10,6 +10,77 @@ const ACTOR_SCALE = 2;
 
 const Backdrops = {
   TORCHES: [84, 880],
+  // a hollow log on its side with a hide stretched over the end, on top of a
+  // bigger one: the stone age's idea of a speaker stack
+  speaker(x, y, pulse, b) {
+    const k = 1 + pulse * pulse * 0.08;
+    for (const [dy, w, h] of [[0, 52, 34], [-34, 44, 28]]) {
+      const yy = y + dy;
+      Gfx.round(x - w / 2 - 1, yy - h - 1, w + 2, h + 2, 6, '#120c16');
+      Gfx.round(x - w / 2, yy - h, w, h, 5, '#5c3a20');
+      Gfx.round(x - w / 2, yy - h, w, 5, 3, '#85562f');
+      for (let i = 0; i < 3; i++) Gfx.rect(x - w / 2 + 6 + i * (w - 12) / 2, yy - h + 2, 2, h - 4, '#3a2415');
+      const r = (h / 2 - 4) * (dy ? 1 : k);
+      Gfx.circle(x, yy - h / 2, r + 2, '#241109');
+      Gfx.circle(x, yy - h / 2, r, '#e8dfc6');
+      Gfx.circle(x - r * 0.3, yy - h / 2 - r * 0.3, r * 0.35, '#fffaea');
+      Gfx.circle(x, yy - h / 2, r * 0.35, '#c4b89a');
+    }
+    if (pulse > 0.85) for (let i = 0; i < 2; i++) Particles.spawn(x + rnd(-10, 10), y - 50, { n: 1, color: ['#fffaea', '#ffe98a'], speed: 30, angle: -Math.PI / 2, spread: 0.8, gravity: -10, life: 0.6, size: 2, shape: 'note' });
+  },
+  // bones, feathers and skull lanterns strung between the torches
+  garland(t, b) {
+    const [x0, x1] = Backdrops.TORCHES, y0 = 250, sag = 44, n = 30;
+    const at = u => ({ x: lerp(x0, x1, u), y: y0 + Math.sin(u * Math.PI) * sag + Math.sin(t * 1.3 + u * 6) * 1.5 });
+    for (let i = 0; i < 80; i++) { const p0 = at(i / 80), p1 = at((i + 1) / 80); Gfx.line(p0.x, p0.y, p1.x, p1.y, '#3a2415', 2); }
+    const FEATH = { 1: ['#ef6a5e', '#ffe98a'], 2: ['#2cb3a2', '#a8e878'], 3: ['#ffa832', '#e8dfc6'], 4: ['#6aa9ee', '#fffaea'], 5: ['#c2333c', '#e06a1b'] }[b];
+    for (let i = 1; i < n; i++) {
+      const u = i / n, p = at(u), sw = Math.sin(t * 2 + i) * 2;
+      if (i % 5 === 0) {
+        // a skull with a flame inside
+        Gfx.line(p.x, p.y, p.x + sw, p.y + 8, '#3a2415', 1);
+        Gfx.round(p.x - 6 + sw, p.y + 8, 12, 10, 4, '#8a7f68');
+        Gfx.round(p.x - 5 + sw, p.y + 8, 10, 8, 3, '#e8dfc6');
+        Gfx.rect(p.x - 3 + sw, p.y + 11, 2, 2, '#ffa832'); Gfx.rect(p.x + 1 + sw, p.y + 11, 2, 2, '#ffa832');
+        Gfx.rect(p.x - 2 + sw, p.y + 15, 4, 1, '#241c2e');
+        if (window.Post) Post.light(p.x + sw, p.y + 12, 46, '#ffa832', 0.45 + Math.sin(t * 7 + i) * 0.08);
+      } else if (i % 2) {
+        Gfx.line(p.x, p.y, p.x + sw, p.y + 5, '#3a2415', 1);
+        Gfx.rect(p.x - 1 + sw, p.y + 5, 3, 9, FEATH[i % 4 === 1 ? 0 : 1]);
+        Gfx.rect(p.x + sw, p.y + 5, 1, 9, '#120c16');
+      } else {
+        Gfx.rect(p.x - 4, p.y + 1, 8, 3, '#e8dfc6'); Gfx.rect(p.x - 5, p.y, 2, 5, '#fffaea'); Gfx.rect(p.x + 3, p.y, 2, 5, '#fffaea');
+      }
+    }
+  },
+  // the low stone stage the family plays on, with a hunt painted on its face
+  dais(b) {
+    const x0 = -40, x1 = 360, top = 420, face = 434, bot = 454;
+    const rock = { 1: ['#3b3048', '#574a66', '#7a6d8a', '#a79bb4'], 2: ['#1e2a2a', '#2e4040', '#445a58', '#6a8480'], 3: ['#5c3a20', '#85562f', '#a4663a', '#c48a56'], 4: ['#4a5670', '#6a7896', '#8c9ab8', '#c0cce0'], 5: ['#1a1016', '#2a1c24', '#3c2a34', '#5a4250'] }[b];
+    Gfx.rectA(x0, bot, x1 - x0, 6, '#000000', 0.35);
+    Gfx.round(x0, face, x1 - x0, bot - face, 4, rock[0]);
+    Gfx.round(x0, face, x1 - x0, bot - face - 3, 4, rock[1]);
+    for (let x = x0 + 8; x < x1 - 8; x += 22) Gfx.rect(x + ((x * 7) % 9), face + 3, 2, bot - face - 6, rock[0]);
+    Gfx.round(x0 - 4, top, x1 - x0 + 8, face - top + 2, 6, rock[0]);
+    Gfx.round(x0 - 3, top, x1 - x0 + 6, face - top, 5, rock[2]);
+    Gfx.round(x0 - 1, top, x1 - x0 + 2, 4, 3, rock[3]);
+    for (let x = x0 + 10; x < x1; x += 31) Gfx.rect(x, top + 5 + (x % 3), 7, 1, rock[1]);
+    // ochre on the face: hands, a mammoth, two hunters with spears
+    const ctx = Gfx.ctx; ctx.globalAlpha = 0.8;
+    const O = '#c2333c', O2 = '#9c3510';
+    for (const hx of [x0 + 30, x0 + 300]) { Gfx.rect(hx, face + 7, 6, 5, O); for (let f = 0; f < 4; f++) Gfx.rect(hx - 1 + f * 2, face + 4, 1, 3, O); Gfx.rect(hx + 6, face + 7, 2, 1, O); }
+    Gfx.rect(x0 + 120, face + 6, 22, 8, O2); Gfx.rect(x0 + 138, face + 4, 8, 6, O2); Gfx.rect(x0 + 146, face + 8, 2, 6, O2);
+    for (let l = 0; l < 4; l++) Gfx.rect(x0 + 122 + l * 5, face + 14, 2, 4, O2);
+    for (const sx of [x0 + 176, x0 + 196]) { Gfx.rect(sx, face + 6, 2, 2, O); Gfx.rect(sx, face + 8, 1, 6, O); Gfx.rect(sx - 2, face + 10, 5, 1, O); Gfx.line(sx - 6, face + 5, sx + 6, face + 13, O, 1); }
+    ctx.globalAlpha = 1;
+  },
+  // bits of the land lying about on the fighting ground
+  litter(b) {
+    const L = { 1: ['v_fern', 'v_rock', 'v_flowers', 'v_mushroom'], 2: ['v_fern', 'v_bush_jungle', 'v_mushroom', 'v_rock'], 3: ['v_bones', 'v_skull', 'v_rock_bare', 'v_pot'], 4: ['v_rock_bare', 'v_bones', 'v_rock', 'v_stump'], 5: ['v_skull', 'v_bones', 'v_rock_bare', 'v_rock_bare'] }[b];
+    // only far back, where nobody stands and no name has to be read
+    const spots = [[410, 356], [505, 346], [612, 340], [948, 372], [18, 356], [372, 350], [790, 338]];
+    spots.forEach(([x, y], i) => Gfx.sprite(L[i % L.length], x, y, { anchor: 'bc', scale: 1, tint: '#120c16', tintAmount: 0.3, flip: i % 2 === 1 }));
+  },
   // the same far country as the board you were just standing on, at the
   // fighters' pixel size, over a pit floor of the land's own ground
   draw(act, t, cam) {
@@ -24,12 +95,21 @@ const Backdrops = {
     // the locals, on the bank, bobbing to it
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
     Gfx.rect(-600, 296, 2400, 30, { 1: '#2f4a1e', 2: '#102a16', 3: '#5c3a20', 4: '#6a7ea8', 5: '#241c2e' }[b]);
-    for (let i = 0; i < 16; i++) {
-      const x = -300 + i * 94 + (i % 3) * 18 - px * 0.5;
-      const bb = Math.abs(Math.sin((beat + i * 0.31) * Math.PI)) * 6;
-      Gfx.sprite(i % 3 ? 'compy_idle' : 'dodo_idle', x, 322 - bb, { anchor: 'bc', tint: '#120c16', tintAmount: 0.82, alpha: 0.8, frame: Math.floor(beat + i), flip: i % 2 === 0 });
+    // log-drum speaker stacks on the bank, thumping on the beat
+    const pulse = 1 - (beat % 1);
+    for (const sx of [236, 724]) Backdrops.speaker(sx - px * 0.5, 324, pulse, b);
+    // the crowd: every beast in the land, bouncing to it
+    const CROWD = ['compy_idle', 'dodo_idle', 'raptor_idle', 'compy_idle', 'boar_idle', 'dodo_idle', 'lizard_idle', 'compy_idle'];
+    for (let i = 0; i < 18; i++) {
+      const x = -300 + i * 86 + (i % 3) * 18 - px * 0.5;
+      if (Math.abs(x - 236 + px * 0.5) < 40 || Math.abs(x - 724 + px * 0.5) < 40) continue;
+      const bb = Math.abs(Math.sin((beat + i * 0.31) * Math.PI)) * (i % 2 ? 7 : 4);
+      Gfx.sprite(CROWD[i % CROWD.length], x, 322 - bb, { anchor: 'bc', tint: '#120c16', tintAmount: 0.8, alpha: 0.85, frame: Math.floor(beat + i), flip: i % 2 === 0, scale: CROWD[i % CROWD.length] === 'compy_idle' ? 1 : 0.8 });
     }
     Vista.pit(b, -600, 1800, 322, 2);
+    Backdrops.garland(t, b);
+    Backdrops.dais(b);
+    Backdrops.litter(b);
     Gfx.rect(-600, 322, 2400, 3, { 1: '#85562f', 2: '#27632f', 3: '#a4663a', 4: '#c0d0e8', 5: '#4d4a5c' }[b]);
     Gfx.rectA(-600, 325, 2400, 6, '#000000', 0.3);
     const prop = { 1: 'v_bush', 2: 'v_bush_jungle', 3: 'v_rock_bare', 4: 'v_rock_bare', 5: 'v_rock_bare' }[b];

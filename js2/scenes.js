@@ -3,66 +3,54 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
-// The menu sits at the campfire. Bronk is eating, the fire is going, and the
-// thing in the bush behind him has been there for some time.
+// The menu sits at a campfire at night, and the family is having a jam: the
+// Rib-Axe, the Tusk Horn, the Skull Bongos and the Bone Flute. Whoever you
+// have not unlocked yet is only a shadow by the fire. In the bushes behind
+// them, a very large grandmother's glasses catch the light.
 function drawTitleWorld(t) {
   const ctx = Gfx.ctx;
-  const camX = 150, camY = GY - VH * 0.76;
+  const camX = 150, camY = GY - VH * 0.76, FX = 566;
   Gfx.clear('#07060f');
   ctx.save();
   ctx.scale(VIEW, VIEW);
   ctx.translate(-Math.round(camX), -Math.round(camY));
-  World.camp(t, { fireX: CAMP.fire, watchers: 0 }, camX);
-
-  // ---- the log, and the man on it
-  const BX = CAMP.bronk;
-  Gfx.round(BX - 64, GY - 18, 112, 22, 10, '#241109');
-  Gfx.round(BX - 60, GY - 17, 104, 5, 2, '#5c3a20');
-  for (let i = 0; i < 5; i++) Gfx.rectA(BX - 52 + i * 21, GY - 12, 13, 2, '#0b0a18', 0.5);
-  Gfx.rectA(BX - 60, GY - 6, 104, 7, '#e06a1b', 0.24 + Math.sin(t * 9) * 0.05);
-  Gfx.round(BX + 40, GY - 19, 15, 24, 7, '#3a2415');
-  Gfx.round(BX + 43, GY - 15, 9, 15, 4, '#5c3a20');
-
-  // ---- something enormous in the bush, and it is not blinking much
-  const RX = BX - 96, RY = GY + 26;
-  Gfx.sprite('trex_idle', RX, RY, { anchor: 'bc', scale: 1.2, frame: Math.floor(t * 2) % 2, tint: '#0d0a1c', tintAmount: 0.84 });
-  const hx = RX + 49, hy = RY - 116;   // the eye, on a head that faces the fire
-  if (Math.sin(t * 0.7) > -0.93) {                       // it blinks, about as often as it needs to
-    for (const [ex, ey, sc] of [[hx, hy, 1], [hx - 13, hy - 4, 0.6]]) {
-      Gfx.glow(ex, ey, 40 * sc, '#ffa832', 0.32 * sc);
-      Gfx.rectA(ex - 3, ey - 2, 7, 4, '#ffe98a', 0.95);
-      Gfx.rectA(ex - 1, ey - 1, 2, 2, '#ef6a5e', 0.9);
-    }
+  World.camp(t, { fireX: FX, watchers: 0 }, camX);
+  const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
+  // stars over the treeline, and fireflies
+  for (let i = 0; i < 40; i++) {
+    const sx = camX + 10 + ((i * 137) % 480), sy = camY + 6 + ((i * 53) % 70);
+    ctx.globalAlpha = 0.35 + 0.35 * Math.sin(t * 2 + i * 1.7);
+    Gfx.rect(sx, sy, 1, 1, i % 5 ? '#fffaea' : '#ffe98a');
   }
-  for (let i = 0; i < 3; i++) {                          // and it is drooling on the bush
-    const dx = hx - 16 + i * 13;
-    const len = 9 + Math.abs(Math.sin(t * (0.9 + i * 0.4) + i * 2.2)) * 24;
-    for (let k = 0; k < len; k += 3)
-      Gfx.rectA(dx + Math.sin(t * 2 + k * 0.1 + i) * 1.2, hy + 24 + k, k > len - 7 ? 3 : 2, 3, '#6aa9ee', 0.26 + 0.44 * (k / len));
+  ctx.globalAlpha = 1;
+  // ---- Grandma Rex, in the bushes, watching the fire
+  const RX = 408, RY = GY + 20;
+  Gfx.sprite('grandma_idle', RX, RY, { anchor: 'bc', scale: 1, frame: Math.floor(t * 1.5) % 2, tint: '#0d0a1c', tintAmount: 0.86 });
+  const gx = RX + 28, gy = RY - 124;
+  if (Math.sin(t * 0.6) > -0.9) for (const [ex, r] of [[gx, 5], [gx - 14, 4]]) {
+    Gfx.ctx.strokeStyle = '#ffe98a'; Gfx.ctx.lineWidth = 1.2; Gfx.ctx.globalAlpha = 0.85;
+    Gfx.ctx.beginPath(); Gfx.ctx.arc(ex, gy, r, 0, Math.PI * 2); Gfx.ctx.stroke();
+    Gfx.rectA(ex - 2, gy - 2, 2, 2, '#fffaea', 0.9); Gfx.ctx.globalAlpha = 1;
+    if (window.Post) Post.light(ex, gy, 16, '#ffa832', 0.3);
   }
-  if (chance(0.25)) Particles.spawn((hx - 16 + rnd(0, 30) - camX) * VIEW, (hy + 54 - camY) * VIEW,
-    { n: 1, color: ['#a8d8ff', '#6aa9ee'], speed: 6, gravity: 240, life: 1.1, size: 2, sizeEnd: 1, world: false });
-  for (const [bx, sc] of [[RX - 34, 2.4], [RX + 20, 2.8], [RX + 72, 2.3]])
-    Gfx.sprite('v_bush', bx, GY + 6, { anchor: 'bc', scale: sc * 0.85, tint: '#0b0a18', tintAmount: 0.92 });
-
-  // ---- dinner. it does not want to come off the bone, and he is not giving up.
-  const chew = Math.sin(t * 1.5);
-  const pull = clamp(chew, 0, 1);                        // 0 chewing, 1 hauling on it
-  const lean = pull * 7;
-  Gfx.sprite('bronk_eat', BX - lean, GY + 12, { anchor: 'bc', scale: 1, frame: Math.floor(t * 5) % 4 });
-  const mx = BX + 30 + pull * 34, my = GY - 40 - pull * 6;
-  // the strand between his teeth and the meat, which stretches and will not part
-  for (let k = 0; k <= 12; k++) {
-    const q = k / 12;
-    const sx2 = lerp(BX + 4 - lean, mx - 8, q);
-    const sy2 = lerp(GY - 44, my + 2, q) + Math.sin(q * Math.PI) * (5 + pull * 9);
-    const th = (5 - Math.sin(q * Math.PI) * 3.2) * (1 - pull * 0.45);
-    Gfx.round(sx2 - th, sy2 - th / 2, th * 2, th, th / 2, '#c4b89a');
-    Gfx.round(sx2 - th, sy2 - th / 2, th * 1.4, th * 0.5, th / 3, '#e8dfc6');
+  for (const [bx, sc] of [[RX - 40, 2.4], [RX + 12, 2.8], [RX + 60, 2.2]])
+    Gfx.sprite('v_bush', bx, GY + 8, { anchor: 'bc', scale: sc * 0.85, tint: '#0b0a18', tintAmount: 0.92 });
+  // ---- the band
+  const open = Heroes.unlocked();
+  const BAND = [['bronk', FX - 116, 1, 0], ['vela', FX - 74, 1, 0.25], ['pebble', FX - 40, 1, 0.5], ['roxy', FX + 36, -1, 0.75]];
+  for (const [id, x, face, ph] of BAND) {
+    const H0 = Heroes.get(id), on = open.includes(id);
+    const hop = on ? Math.abs(Math.sin((beat + ph) * Math.PI)) * 3 : 0;
+    const spr = on && SPRITES[H0.base + '_play'] ? H0.base + '_play' : H0.base + '_idle';
+    Gfx.shadow(x, GY + 1, 30, 0.35);
+    Gfx.sprite(spr, x, GY + 1 - hop, { anchor: 'bc', frame: Math.floor(beat * 2 + ph * 4), flip: face < 0, tint: on ? null : '#0d0a1c', tintAmount: on ? 0 : 0.9 });
+    if (on && ((beat + ph) % 1) < 0.05 && chance(0.6)) Particles.notes((x - camX) * VIEW, (GY - 90 - camY) * VIEW, 1);
+    if (!on) Gfx.text('?', x, GY - 60 + Math.sin(t * 2 + ph * 6) * 2, { color: '#7a6d8a', align: 'center', scale: 1.4, outline: true });
   }
-  Gfx.sprite('v_meat', mx, my, { anchor: 'c', scale: 2.2 + pull * 0.2, rot: -0.5 + pull * 0.5 });
-  if (pull > 0.9 && chance(0.4)) Particles.spawn((mx - camX) * VIEW, (my - camY) * VIEW,
-    { n: 1, color: ['#ef6a5e', '#c4b89a'], speed: 90, spread: 6.28, life: 0.6, size: 3, sizeEnd: 0, gravity: 300, world: false });
+  for (let i = 0; i < 6; i++) {
+    const fx = camX + 250 + ((i * 71 + t * 9) % 230), fy = GY - 40 - ((i * 37) % 60) + Math.sin(t * 1.3 + i) * 8;
+    Gfx.rectA(fx, fy, 1, 1, '#e8ff8a', 0.5 + 0.5 * Math.sin(t * 3 + i * 2));
+  }
   Particles.draw(Gfx.ctx, true);        // the fire's own sparks live in world space
   ctx.restore();
   Particles.draw(Gfx.ctx, false);
@@ -126,11 +114,23 @@ function titleStone(t) {
     Gfx.text(txt, cx + 1, ty + 1, { color: '#3a2415', align: 'center', scale: sc });
     Gfx.text(txt, cx, ty, { color: col, align: 'center', scale: sc });
   };
-  carve('ONGA', y + 48, 5.6, '#9c3510');
-  carve('BONGA', y + 116, 5.6, '#5c1607');
+  // the name bounces to the music, a letter at a time
+  const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
+  const bounce = (txt, ty, sc, col, ph) => {
+    const wd = Gfx.measure(txt, sc); let lx = cx - wd / 2;
+    [...txt].forEach((ch, i) => {
+      const dy = -Math.abs(Math.sin((beat * 0.5 + ph + i * 0.12) * Math.PI)) * 4;
+      Gfx.text(ch, lx, ty + 3 + dy, { color: SKIN.faceHi, scale: sc });
+      Gfx.text(ch, lx + 1, ty + 1 + dy, { color: '#3a2415', scale: sc });
+      Gfx.text(ch, lx, ty + dy, { color: col, scale: sc });
+      lx += Gfx.measure(ch, sc);
+    });
+  };
+  bounce('ONGA', y + 48, 5.6, '#9c3510', 0);
+  bounce('BONGA', y + 116, 5.6, '#5c1607', 0.5);
   Gfx.rect(x + 40, y + 188, w - 80, 3, '#3a2415');
   Gfx.rect(x + 40, y + 191, w - 80, 2, SKIN.faceHi);
-  carve('A STONE AGE ROCK SAGA', y + 200, 1.3, '#3a2415');
+  carve('A STONE AGE BOARD GAME SAGA', y + 200, 1.3, '#3a2415');
   // ---- hand prints, the way you sign a wall
   for (const [hx, hy, fl] of [[x + 34, y + 96, false], [x + w - 46, y + 128, true]]) {
     ctx.globalAlpha = 0.5;
