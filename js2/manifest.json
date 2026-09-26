@@ -210,116 +210,116 @@
   "file": "art_beasts"
  },
  "compy_idle": {
-  "w": 42,
-  "h": 30,
+  "w": 58,
+  "h": 42,
   "frames": 2,
-  "note": "tiny pack raptor, olive green with a yellow throat, big dumb eye, twitchy.",
-  "file": "art_dinos"
+  "file": "art_dinos",
+  "note": "pocket raptor: lime with stripes, orange quills, one huge eye, too many teeth"
  },
  "compy_walk": {
-  "w": 42,
-  "h": 30,
-  "frames": 4,
-  "note": "scampering run.",
-  "file": "art_dinos"
+  "w": 58,
+  "h": 42,
+  "frames": 6,
+  "file": "art_dinos",
+  "note": "pocket raptor: lime with stripes, orange quills, one huge eye, too many teeth"
  },
  "dodo_idle": {
-  "w": 46,
-  "h": 44,
+  "w": 56,
+  "h": 54,
   "frames": 2,
-  "note": "fat grey-blue dodo, enormous yellow beak, three tail feathers, permanently startled.",
-  "file": "art_dinos"
+  "file": "art_dinos",
+  "note": "slate-blue feather pillow, banana beak, white tail curl, half-lidded eye"
  },
  "dodo_walk": {
-  "w": 46,
-  "h": 44,
-  "frames": 4,
-  "note": "waddle, body tipping side to side.",
-  "file": "art_dinos"
+  "w": 56,
+  "h": 54,
+  "frames": 6,
+  "file": "art_dinos",
+  "note": "slate-blue feather pillow, banana beak, white tail curl, half-lidded eye"
  },
  "boar_idle": {
-  "w": 66,
-  "h": 42,
+  "w": 84,
+  "h": 56,
   "frames": 2,
-  "note": "cave boar: bristly dark brown, upward tusks, small red eye, ridge of hair along the spine.",
-  "file": "art_dinos"
+  "file": "art_dinos",
+  "note": "bristly barrel, black mohawk, pink snout, furious little eye, hooked tusks"
  },
  "boar_walk": {
-  "w": 66,
-  "h": 42,
-  "frames": 4,
-  "note": "trotting charge.",
-  "file": "art_dinos"
+  "w": 84,
+  "h": 56,
+  "frames": 6,
+  "file": "art_dinos",
+  "note": "bristly barrel, black mohawk, pink snout, furious little eye, hooked tusks"
  },
  "raptor_idle": {
-  "w": 72,
-  "h": 56,
+  "w": 96,
+  "h": 72,
   "frames": 2,
-  "note": "classic raptor: teal-green with darker stripes, feathered crest and forearms, sickle claw raised.",
-  "file": "art_dinos"
+  "file": "art_dinos",
+  "note": "leaf green, teal stripes, orange crest, feathered arms, sickle claws, mean brow"
  },
  "raptor_walk": {
-  "w": 72,
-  "h": 56,
-  "frames": 4,
-  "note": "stalking run, tail level.",
-  "file": "art_dinos"
+  "w": 96,
+  "h": 72,
+  "frames": 6,
+  "file": "art_dinos",
+  "note": "leaf green, teal stripes, orange crest, feathered arms, sickle claws, mean brow"
  },
  "ptero_fly": {
-  "w": 84,
-  "h": 46,
+  "w": 104,
+  "h": 62,
   "frames": 4,
-  "note": "pterodactyl in flight, leathery tan wings, long crest, full flap cycle: wings up, mid, down, mid.",
-  "file": "art_dinos"
+  "file": "art_dinos",
+  "note": "tan body, red leather wings on finger bones, red crest, pickaxe beak"
  },
  "tricera_idle": {
-  "w": 104,
-  "h": 66,
+  "w": 128,
+  "h": 78,
   "frames": 2,
-  "note": "triceratops: heavy tan-brown body, big bony frill with scalloped edge, three ivory horns, beak mouth.",
-  "file": "art_dinos"
+  "file": "art_dinos",
+  "note": "tan with spots, painted frill, three bone horns, parrot beak, scowl"
  },
  "tricera_walk": {
-  "w": 104,
-  "h": 66,
-  "frames": 4,
-  "note": "heavy walk.",
-  "file": "art_dinos"
+  "w": 128,
+  "h": 78,
+  "frames": 6,
+  "file": "art_dinos",
+  "note": "tan with spots, painted frill, three bone horns, parrot beak, scowl"
  },
  "lizard_idle": {
-  "w": 58,
-  "h": 38,
+  "w": 78,
+  "h": 48,
   "frames": 2,
-  "note": "lava lizard: orange-red scaled body with glowing cracks, spiky back ridge, forked tongue.",
-  "file": "art_dinos"
+  "file": "art_dinos",
+  "note": "lava lizard: black rock plates cracked over glowing orange, flicking tongue"
  },
  "lizard_walk": {
-  "w": 58,
-  "h": 38,
-  "frames": 4,
-  "note": "skittering run.",
-  "file": "art_dinos"
+  "w": 78,
+  "h": 48,
+  "frames": 6,
+  "file": "art_dinos",
+  "note": "lava lizard: black rock plates cracked over glowing orange, flicking tongue"
  },
  "tarblob_idle": {
-  "w": 54,
-  "h": 46,
+  "w": 60,
+  "h": 52,
   "frames": 4,
-  "note": "living tar blob: near-black glossy ooze with two white eyes, constantly wobbling and dripping. All four frames differ.",
-  "file": "art_dinos"
+  "file": "art_dinos",
+  "note": "glossy heap of tar, two googly eyes, drips and bubbles"
  },
  "stego_idle": {
-  "w": 106,
-  "h": 62,
+  "w": 130,
+  "h": 76,
   "frames": 2,
-  "note": "stegosaurus: purple-grey body, two rows of tan back plates, spiked tail, tiny head.",
-  "file": "art_dinos"
+  "file": "art_dinos",
+  "note": "lilac hill, tall ochre plates, spiked tail, melon head, mild confusion"
  },
  "stego_walk": {
-  "w": 106,
-  "h": 62,
-  "frames": 4,
-  "note": "slow plod, plates shifting.",
-  "file": "art_dinos"
+  "w": 130,
+  "h": 76,
+  "frames": 6,
+  "file": "art_dinos",
+  "note": "lilac hill, tall ochre plates, spiked tail, melon head, mild confusion"
  },
  "tile_grass": {
   "w": 32,
