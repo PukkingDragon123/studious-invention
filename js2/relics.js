@@ -4,7 +4,7 @@
 'use strict';
 
 const RELICS = {
-  bone_pick: { name: 'Bone Pick', tier: 'starter', spr: 'relic_bone_pick', desc: "Bronk's lucky pick. Draw {y}1{/} extra card at the start of every fight.",
+  bone_pick: { name: 'Bone Pick', tier: 'common', spr: 'relic_bone_pick', desc: "A lucky plectrum. Draw {y}1{/} extra card at the start of every fight.",
     onCombatStart: c => c.drawCards(1) },
   trex_tooth: { name: 'T-Rex Tooth', tier: 'rare', spr: 'relic_trex_tooth', desc: 'A tooth the size of your forearm. Start of combat: {r}ROAR{/}, all beasts take {y}7{/} damage and gain {o}1{/} Weak.',
     onCombatStart: function* (c) { AudioSys.sfx('roar', { pitch: 60, vol: 1, len: 1.1 }); Juice.shake(9, 0.5); yield 0.35; for (const e of c.alive()) { c.damageEnemy(e, 7, { src: 'relic' }); c.applyEnemy(e, 'weak', 1, true); } yield 0.35; } },
@@ -41,11 +41,19 @@ const Relics = {
       else if (c && c.flashRelic && hook !== 'onCombo') c.flashRelic(r);
     }
   },
+  // the same, for things that happen on the board rather than in a fight
+  *boardTrigger(hook, B, ...args) {
+    for (const r of this.owned()) {
+      const fn = r[hook]; if (!fn) continue;
+      const res = fn(B, ...args);
+      if (res && typeof res.next === 'function') yield* res;
+    }
+  },
   pool(tier, ex = []) { return Object.keys(RELICS).filter(k => RELICS[k].tier === tier && !ex.includes(k)); },
   randomReward(rng, tiers = ['common', 'common', 'uncommon', 'rare'], exclude = []) {
     const ex = exclude.concat(Game.run ? Game.run.relics : []);
     for (let i = 0; i < 24; i++) { const p = this.pool(rng.pick(tiers), ex); if (p.length) return rng.pick(p); }
-    const any = Object.keys(RELICS).filter(k => !ex.includes(k) && RELICS[k].tier !== 'starter');
+    const any = Object.keys(RELICS).filter(k => !ex.includes(k) && RELICS[k].tier !== 'starter' && RELICS[k].tier !== 'boss');
     return any.length ? rng.pick(any) : null;
   },
   give(id) {

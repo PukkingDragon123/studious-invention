@@ -534,6 +534,30 @@ const AudioSys = {
       case 'card_deal': nz('bandpass', 900, 1.4, 0.13, 0.28, 0, 2800); break;
       case 'zoom_in': tone('sine', 200, 1200, 0.42, 0.1); nz('highpass', 1200, 1, 0.38, 0.07); break;
       case 'pause': tone('square', 700, 500, 0.08, 0.1); tone('square', 500, 350, 0.1, 0.08, 0.07); break;
+      // ---- the board: dice, ground, and the things that live on it --------
+      case 'dice_roll': for (let i = 0; i < 6; i++) { nz('bandpass', 1800 + Math.random() * 900, 3, 0.03, 0.18, i * 0.07 + Math.random() * 0.03); tone('triangle', 700 + Math.random() * 300, 500, 0.02, 0.05, i * 0.07); } break;
+      case 'dice_hit': nz('bandpass', 1500 + Math.random() * 600, 2.5, 0.04, 0.3 * (p.vol ?? 1)); tone('triangle', 420 + Math.random() * 120, 260, 0.05, 0.12 * (p.vol ?? 1)); break;
+      case 'dice_land': nz('bandpass', 1200, 2, 0.06, 0.32); tone('sine', 220, 140, 0.1, 0.25); tone('triangle', 880, 880, 0.05, 0.05, 0.05); break;
+      case 'gem': [1568, 2093, 2637].forEach((f, i) => tone('sine', f, f * 1.01, 0.12, 0.13, i * 0.05)); nz('highpass', 5000, 1, 0.08, 0.06, 0.05); break;
+      case 'splash': nz('bandpass', 900, 0.8, 0.22, 0.34, 0, 2400); nz('highpass', 3000, 1, 0.16, 0.1, 0.04); tone('sine', 300, 120, 0.12, 0.1); break;
+      case 'sizzle': nz('highpass', 4200, 0.7, 0.35, 0.18); nz('bandpass', 2400, 1.5, 0.25, 0.1, 0.05); break;
+      case 'squeak': tone('sine', 1400, 2200, 0.12, 0.08); tone('sine', 2100, 1600, 0.1, 0.05, 0.08); break;
+      case 'eat': nz('lowpass', 900, 1, 0.07, 0.5); tone('sine', 190, 80, 0.08, 0.4); nz('lowpass', 800, 1, 0.07, 0.45, 0.12); tone('sine', 170, 70, 0.08, 0.35, 0.12); break;
+      case 'spikes': nz('bandpass', 2600, 4, 0.08, 0.45); tone('square', 900, 300, 0.1, 0.12); nz('lowpass', 500, 1, 0.2, 0.4, 0.05); break;
+      case 'geyser': { nz('bandpass', 400, 0.6, 0.9, 0.5, 0, 2200); nz('highpass', 2000, 1, 0.8, 0.2, 0.1); tone('sine', 90, 40, 0.6, 0.4); break; }
+      case 'zap': nz('highpass', 3000, 2, 0.1, 0.35); tone('sawtooth', 1800, 200, 0.14, 0.12); tone('square', 2400, 600, 0.08, 0.08, 0.03); break;
+      // ---- the opening: the knock, the tummy, the toilet ------------------
+      case 'knock': for (let i = 0; i < 3; i++) { tone('sine', 130, 60, 0.12, 0.8, i * 0.26); nz('lowpass', 700, 1, 0.08, 0.6, i * 0.26); } break;
+      case 'growl': { const o = this.osc('sawtooth', 70, t, t + 1.1); o.frequency.linearRampToValueAtTime(95, t + 0.3); o.frequency.linearRampToValueAtTime(52, t + 1);
+        const lfo = this.osc('sine', 9, t, t + 1.1); const lg = c.createGain(); lg.gain.value = 18; lfo.connect(lg); lg.connect(o.frequency);
+        const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5, t + 0.1); g.gain.exponentialRampToValueAtTime(0.001, t + 1.05);
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; o.connect(lp).connect(g).connect(d); break; }
+      case 'plop': tone('sine', 900, 180, 0.12, 0.35); nz('bandpass', 700, 2, 0.08, 0.2, 0.02); break;
+      case 'flush': nz('bandpass', 500, 0.5, 1.3, 0.45, 0, 1800); nz('lowpass', 300, 1, 1.1, 0.3, 0.2); tone('sine', 200, 60, 1, 0.1, 0.3); break;
+      case 'creak': tone('sawtooth', 180, 260, 0.35, 0.08); tone('sawtooth', 240, 150, 0.3, 0.06, 0.2); break;
+      case 'sob': for (let i = 0; i < 3; i++) tone('triangle', 420 - i * 30, 300 - i * 30, 0.22, 0.12, i * 0.28); break;
+      case 'gulp': tone('sine', 400, 140, 0.16, 0.3); nz('lowpass', 600, 1, 0.1, 0.2, 0.05); break;
+      case 'whistle': tone('sine', 1200, 2400, 0.35, 0.1); tone('sine', 2400, 1200, 0.35, 0.08, 0.35); break;
     }
   }
 };

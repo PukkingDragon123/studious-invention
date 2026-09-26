@@ -4,12 +4,13 @@
 'use strict';
 
 const W = 960, H = 540;          // logical canvas: art is authored at 1:1
-// One art pixel is VIEW screen pixels, in EVERY scene - the village, combat,
-// the cutscene camera and the side-scrolling stages all draw through this, so
-// nothing ever changes size when the game cuts. VW/VH are how much world fits.
+// One art pixel is VIEW screen pixels in the home, the fights and the stories,
+// so nothing changes size when the game cuts between them. The board is the
+// exception: it is a map, drawn a pixel to a pixel so you can see the road.
+// VW/VH are how much world fits at VIEW.
 const VIEW = 2;
 const VW = W / VIEW, VH = H / VIEW;
-const TILE = 32;                 // village tile size
+const TILE = 32;                 // a ground tile
 
 // ------------------------------------------------------------------ math
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;

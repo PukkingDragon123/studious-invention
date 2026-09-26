@@ -10,36 +10,30 @@ const ACTOR_SCALE = 2;
 
 const Backdrops = {
   TORCHES: [84, 880],
-  // three parallax layers plus haze, so the stage has depth behind the fight
+  // the same far country as the board you were just standing on, at the
+  // fighters' pixel size, over a pit floor of the land's own ground
   draw(act, t, cam) {
-    const px = (cam ? cam.x - W / 2 : 0);
-    const sky = act === 1 ? ['#1d3d72', '#3570c0', '#6aa9ee', '#a8d8ff', '#ffdcb8', '#ffb0cf']
-      : act === 2 ? ['#101f3d', '#0f3838', '#18706a', '#1d4a26', '#27632f', '#3f9a45']
-        : ['#1a0a1e', '#281040', '#5c1607', '#9c3510', '#e06a1b', '#ffa832'];
-    Gfx.bands(-600, -400, 2400, 760, sky);
-    const ctx = Gfx.ctx;
-    if (act === 1) { Gfx.circle(700 - px * 0.05, 30, 40, '#ffe98a'); Gfx.glow(700 - px * 0.05, 30, 150, '#ffe98a', 0.3); }
-    if (act === 3) { Gfx.glow(500 - px * 0.05, 120, 460, '#e06a1b', 0.28); }
-    // the country behind the pit: the same range and hills as everywhere
-    // else in the valley, wet and green in the jungle, burning at the end
-    const mood = act === 3 ? 'fire' : act === 2 ? 'jungle' : null, VL = Vista.HOME_LAYERS;
-    Vista.drawAt(VL[0], mood, px, -600, 1800, 20, 2);
-    Vista.drawAt(VL[1], mood, px, -600, 1800, 98, 2);
-    Vista.drawAt(VL[2], mood, px, -600, 1800, 226, 2);
-    Gfx.rectA(-600, 200, 2400, 100, act === 3 ? '#e06a1b' : '#ffffff', 0.06);   // haze
-    // the crowd on a bank
+    const px = (cam ? cam.x - W / 2 : 0), b = clamp(act, 1, BIOME_COUNT), B = BIOMES[b];
+    World.skyRamp(-600, 1800, -400, 360, B.sky);
+    const Ls = BoardSky.bands(b);
+    Vista.drawAt(Ls[0], null, px, -600, 1800, 12, 2);
+    Vista.drawAt(Ls[1], null, px, -600, 1800, 84, 2);
+    Vista.drawAt(Ls[2], null, px, -600, 1800, 200, 2);
+    const hz = { 1: '#c0d8ee', 2: '#7aa89a', 3: '#f0c890', 4: '#dce6f4', 5: '#6e2a24' }[b];
+    Gfx.rectA(-600, 230, 2400, 70, hz, 0.14);
+    // the locals, on the bank, bobbing to it
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
-    Gfx.rect(-600, 296, 2400, 30, act === 3 ? '#241c2e' : act === 2 ? '#102a16' : '#2f4a1e');
-    for (let i = 0; i < 18; i++) {
-      const x = -300 + i * 84 + (i % 3) * 16 - px * 0.5;
-      const b = Math.abs(Math.sin((beat + i * 0.31) * Math.PI)) * 6;
-      Gfx.sprite(i % 2 ? 'villager_idle' : 'villager2_idle', x, 322 - b, { anchor: 'bc', tint: '#120c16', tintAmount: 0.82, alpha: 0.8, frame: Math.floor(beat + i) });
+    Gfx.rect(-600, 296, 2400, 30, { 1: '#2f4a1e', 2: '#102a16', 3: '#5c3a20', 4: '#6a7ea8', 5: '#241c2e' }[b]);
+    for (let i = 0; i < 16; i++) {
+      const x = -300 + i * 94 + (i % 3) * 18 - px * 0.5;
+      const bb = Math.abs(Math.sin((beat + i * 0.31) * Math.PI)) * 6;
+      Gfx.sprite(i % 3 ? 'compy_idle' : 'dodo_idle', x, 322 - bb, { anchor: 'bc', tint: '#120c16', tintAmount: 0.82, alpha: 0.8, frame: Math.floor(beat + i), flip: i % 2 === 0 });
     }
-    // the pit floor
-    Vista.pit(act, -600, 1800, 322, 2);
-    Gfx.rect(-600, 322, 2400, 3, act === 3 ? '#4d4a5c' : act === 2 ? '#27632f' : '#85562f');
+    Vista.pit(b, -600, 1800, 322, 2);
+    Gfx.rect(-600, 322, 2400, 3, { 1: '#85562f', 2: '#27632f', 3: '#a4663a', 4: '#c0d0e8', 5: '#4d4a5c' }[b]);
     Gfx.rectA(-600, 325, 2400, 6, '#000000', 0.3);
-    for (let i = 0; i < 14; i++) Gfx.sprite(act === 3 ? 'v_rock_bare' : 'v_bush', -500 + i * 160 - px * 0.7, 350, { anchor: 'bc', scale: act === 3 ? 0.8 : 0.85, alpha: 0.5, tint: '#120c16', tintAmount: 0.3 });
+    const prop = { 1: 'v_bush', 2: 'v_bush_jungle', 3: 'v_rock_bare', 4: 'v_rock_bare', 5: 'v_rock_bare' }[b];
+    for (let i = 0; i < 14; i++) Gfx.sprite(prop, -500 + i * 160 - px * 0.7, 350, { anchor: 'bc', scale: 0.8, alpha: 0.5, tint: '#120c16', tintAmount: 0.3 });
     // two torches marking the edge of the fighting ground: this is a stage
     for (const tx of Backdrops.TORCHES) {
       Gfx.shadow(tx, 344, 30, 0.3);
@@ -53,9 +47,14 @@ const Backdrops = {
         World.flame(tx + (i - 1) * 4, 254, (i === 1 ? 30 : 20) + Math.abs(Math.sin(t * 6.3 + i + tx)) * 12, i === 1 ? 10 : 6,
           Math.sin(t * 4.1 + i * 2) * 3, ['#e06a1b', '#ffa832', '#ffe98a', '#9c3510'], i + tx);
       if (chance(0.3)) Particles.fire(tx + rnd(-4, 4), 236, 1);
+      if (window.Post) Post.light(tx, 240, 150, '#ffa832', 0.8);
     }
-    if (act === 3) for (let i = 0; i < 3; i++) if (chance(0.35)) Particles.spawn(cam ? cam.x + rnd(-W / 2, W / 2) : rnd(0, W), 460, { n: 1, color: ['#e06a1b', '#ffa832', '#574a66'], speed: 24, gravity: -36, life: 3.4, size: 3, sizeEnd: 0 });
-    if (act === 2) for (let i = 0; i < 2; i++) if (chance(0.25)) Particles.spawn(cam ? cam.x + rnd(-W / 2, W / 2) : rnd(0, W), rnd(100, 300), { n: 1, color: ['#a8e878', '#6cc95c'], speed: 8, vx: 12, gravity: -4, life: 4, size: 2 });
+    const cx = () => cam ? cam.x + rnd(-W / 2, W / 2) : rnd(0, W);
+    if (b === 5) for (let i = 0; i < 3; i++) if (chance(0.35)) Particles.spawn(cx(), 460, { n: 1, color: ['#e06a1b', '#ffa832', '#574a66'], speed: 24, gravity: -36, life: 3.4, size: 3, sizeEnd: 0 });
+    if (b === 2) for (let i = 0; i < 2; i++) if (chance(0.5)) Particles.spawn(cx(), 100, { n: 1, color: ['#a8d8ff', '#6aa9ee'], speed: 20, vx: -40, vy: 520, gravity: 0, life: 0.9, size: 2, shape: 'drop' });
+    if (b === 4) if (chance(0.5)) Particles.spawn(cx(), 100, { n: 1, color: ['#ffffff', '#e8f0ff'], speed: 10, vx: -30, vy: 60, gravity: 0, life: 6, size: 3, drag: 1 });
+    if (b === 1) if (chance(0.2)) Particles.spawn(cx(), rnd(120, 300), { n: 1, color: ['#fffaea', '#ffe98a'], speed: 8, vx: 12, gravity: -4, life: 4, size: 2 });
+    if (b === 3) if (chance(0.15)) Particles.spawn(cx(), rnd(300, 400), { n: 1, color: ['#e2b86e', '#c89a58'], speed: 40, vx: 120, gravity: -10, life: 2, size: 3 });
   }
 };
 
@@ -70,10 +69,17 @@ class Combat {
     this.phase = 'intro'; this.busy = true; this.selected = null; this.preview = null; this.riff = null;
     this.played = 0; this.powers = {}; this.flags = {}; this.t = 0; this.relicFlash = {};
     this.band = (this.run ? this.run.band : []).slice();
+    this.heroDef = Heroes.get(this.run && this.run.hero);
+    this.maxEnergy = this.heroDef.energy || 3; this.energy = this.maxEnergy; this.handSize = this.heroDef.hand || 5;
+    // the ground you crossed on the way here, and the ground you are standing on
+    const bd = this.run && this.run.board;
+    this.touched = Object.assign({}, o.touched || (bd && bd.touched) || {});
+    this.terrain = o.terrain || null;
+    this.rage = 0; this.echoNext = []; this.wetFeet = this.touchedAny('wet');
     this.player = { st: { str: 0, weak: 0, vuln: 0, thorns: 0, regen: 0 }, block: 0 };
     this.cam = new Camera(); this.cam.zoom = 1; this.cam.lookAt(W / 2, 288 + CAM_DY, true);
-    this.bronk = new Actor({ base: 'bronk', x: 210, y: STAGE_Y, scale: ACTOR_SCALE, facing: 1 });
-    this.banner = null; this.won = false; this.goldEarned = 0; this.handSlide = 0; this.zoomed = 0;
+    this.me = new Actor({ base: this.heroDef.base, x: 210, y: STAGE_Y, scale: ACTOR_SCALE, facing: 1 });
+    this.banner = null; this.won = false; this.gemsEarned = 0; this.handSlide = 0; this.zoomed = 0;
     this.hitStop = 0; this.beatPulse = 0;
   }
   get hp() { return this.run.hp; } set hp(v) { this.run.hp = v; }
@@ -95,14 +101,14 @@ class Combat {
       this.flags.ambushed = true;
     }
     const boss = this.enemies.some(e => e.def.boss);
-    AudioSys.play(boss ? 'blaze' : this.kind === 'elite' ? 'battle3' : `battle${Math.min(3, this.act)}`, { intensity: this.kind === 'normal' ? 1 : 2, fade: 0.35 });
+    AudioSys.play(boss ? (['blaze', 'boss1', 'boss2', 'boss3', 'boss3'][this.act - 1] || 'blaze') : this.kind === 'elite' ? 'battle3' : `battle${Math.min(3, Math.ceil(this.act * 0.6))}`, { intensity: this.kind === 'normal' ? 1 : 2, fade: 0.35 });
     Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
     this.co = Co.run(this.intro(), this);
   }
   exit() { Co.stop(this.co); Game.worldToScreen = null; Juice.letterbox(false); }
   spawn(id, initial) {
     const e = Enemies.make(id, this.rng, this.act);
-    e.actor.y = STAGE_Y; e.actor.scale = e.def.boss ? 1.5 : ACTOR_SCALE; e.spawnT = initial ? 0 : 1;
+    e.actor.y = STAGE_Y; e.actor.scale = e.def.bossScale || (e.def.boss ? 1.5 : ACTOR_SCALE); e.spawnT = initial ? 0 : 1;
     this.enemies.push(e); if (!initial) this.layout();
     return e;
   }
@@ -137,7 +143,7 @@ class Combat {
     lead.actor.squash(0.2);
     const sub = this.advantage === 'ambush' ? 'YOU GOT THE JUMP ON IT'
       : this.advantage === 'ambushed' ? 'IT SAW YOU COMING'
-        : lead.def.boss ? 'THE BURNING ONE' : lead.def.elite ? 'ELITE'
+        : lead.def.boss ? (lead.def.title || 'BOSS') : lead.def.elite ? 'ELITE'
           : `${this.enemies.length} BEAST${this.enemies.length > 1 ? 'S' : ''}`;
     this.banner = { text: lead.name, sub, t: 0, life: lead.def.boss ? 2.4 : 1.5 };
     if (this.advantage === 'ambush') {
@@ -151,19 +157,35 @@ class Combat {
     this.cam.zoomTo(1); this.cam.lookAt(W / 2, 288 + CAM_DY);
     Juice.letterbox(false);
     yield 0.4;
+    // the ground you came in on
+    if (this.wetFeet && Relics.has('wet_feet')) Popups.add(W / 2, 200, 'WET FEET: NEXT LIGHTNING x2', '#6aa9ee', { world: false, scale: 1.4, life: 2.2 });
+    if (this.band.includes('bronk') && this.heroDef.id !== 'bronk') { this.gainBlock(8); Popups.add(this.me.x - 120, this.me.top - 20, 'BIG HUG', '#ff8a3a'); }
     yield* Relics.trigger('onCombatStart', this);
     yield* this.startTurn();
   }
   *startTurn() {
     this.turn++; this.phase = 'player'; this.played = 0; this.flags = {};
     if (this.turn > 1) this.player.block = 0;
-    this.energy = this.maxEnergy + Relics.mod('energy') + (this.powers.groove || 0);
+    this.energy = this.maxEnergy + Relics.mod('energy') + (this.powers.groove || 0) + (this.turn === 1 ? (this.energyBonus || 0) : 0);
     if (this.powers.anthem) this.addHype(this.powers.anthem);
     for (const e of this.alive()) e.intent = Enemies.pickMove(e, this, this.rng);
-    this.drawCards(5 + Relics.mod('draw'));
+    this.drawCards(this.handSize + Relics.mod('draw') + (this.turn === 1 ? (this.drawBonus || 0) : 0));
+    // last turn's horn blasts come back round the cave
+    for (const s of this.echoNext) {
+      if (this.hand.length >= 10) break;
+      const e = Cards.make(s.id, s.up); e.echoCopy = true; e.cost = 0;
+      if (!this.powers.fullEcho) for (const k of ['dmg', 'block', 'weak', 'vuln', 'draw', 'soak']) if (typeof e.v[k] === 'number' && e.v[k] > 1) e.v[k] = Math.ceil(e.v[k] / 2);
+      e.name = e.def.name + ' (echo)'; e.dealT = 0.4;
+      this.hand.push(e);
+    }
+    if (this.echoNext.length) { AudioSys.sfx('stun'); Popups.add(W / 2, H - 200, 'ECHO!', '#86e8d2', { world: false, scale: 1.6 }); }
+    this.echoNext = [];
     yield 0.18;
-    if (this.band.includes('vela')) { this.gainBlock(4); }
-    if (this.band.includes('pebble')) { const e = this.randomEnemy(); if (e) { yield 0.12; this.damageEnemy(e, 4 + this.act * 2, { src: 'band' }); AudioSys.sfx('hit'); yield 0.2; } }
+    if (this.powers.mother) this.gainBlock(this.powers.mother);
+    if (this.powers.rain) for (const e of this.alive()) this.applyEnemy(e, 'soak', this.powers.rain, true);
+    if (this.powers.bug) { const e = this.randomEnemy(); if (e) { this.damageEnemy(e, this.powers.bug, { src: 'band' }); AudioSys.sfx('hit'); yield 0.15; } }
+    if (this.band.includes('vela') && this.heroDef.id !== 'vela') { const e = this.randomEnemy(); if (e) this.applyEnemy(e, 'weak', 1); }
+    if (this.band.includes('pebble') && this.heroDef.id !== 'pebble') { const e = this.randomEnemy(); if (e) { yield 0.12; this.damageEnemy(e, 2 + this.act, { src: 'band' }); AudioSys.sfx('hit'); yield 0.2; } }
     yield* Relics.trigger('onTurnStart', this);
     this.checkDeaths();
     if (!this.alive().length) { yield* this.victory(); return; }
@@ -185,6 +207,7 @@ class Combat {
       yield* this.enemyAct(e);
       e.turnCount++; e.lastMove = e.intent ? e.intent.key : null;
       if (e.st.weak > 0) e.st.weak--; if (e.st.vuln > 0) e.st.vuln--;
+      if (e.st.soak > 0 && !this.powers.rain) e.st.soak = Math.max(0, e.st.soak - 1);
       if (this.hp <= 0) { yield* this.defeat(); return; }
       yield 0.22;
     }
@@ -201,12 +224,13 @@ class Combat {
     yield 0.25;
     if (m.block) { e.block += m.block; AudioSys.sfx('block'); Popups.add(e.actor.x, e.actor.y - 50, `+${m.block}`, '#6aa9ee'); e.actor.squash(0.12); yield 0.25; }
     if (m.str) { e.st.str += m.str; AudioSys.sfx('buff'); Popups.add(e.actor.x, e.actor.y - 60, `+${m.str} STR`, '#ef6a5e'); e.actor.stretch(0.16); yield 0.25; }
+    if (m.heal) { const h = Math.min(m.heal, e.maxHp - e.hp); e.hp += h; AudioSys.sfx('heal'); Popups.add(e.actor.x, e.actor.y - 70, `+${h}`, '#a8e878', { scale: 1.6 }); yield 0.3; }
     if (m.dmg) {
       const hits = m.hits || 1;
       for (let i = 0; i < hits; i++) {
         const home = e.actor.x;
         yield* Co.over(0.16, k => { e.actor.x = lerp(home, home - 90, Ease.inCubic(k)); }, null);
-        FX.slash(this.bronk.x + 30, this.bronk.cy, { flip: true, scale: 1.2 });
+        FX.slash(this.me.x + 30, this.me.cy, { flip: true, scale: 1.2 });
         this.damagePlayer(this.previewEnemyDamage(e, m.dmg), { from: e });
         if (this.player.st.thorns > 0 && e.alive) this.damageEnemy(e, this.player.st.thorns, { src: 'thorns' });
         yield* Co.over(0.22, k => { e.actor.x = lerp(home - 90, home, Ease.outCubic(k)); }, null);
@@ -228,27 +252,28 @@ class Combat {
     if (this.won) return; this.won = true;
     this.phase = 'won'; this.busy = true; this.selected = null;
     AudioSys.stop(0.7); AudioSys.sfx('victory');
-    this.bronk.play('play');
+    this.me.play('play');
     Juice.letterbox(true);
-    this.cam.lookAt(this.bronk.x + 40, 300 + CAM_DY * 0.5); this.cam.zoomTo(1.6);
+    this.cam.lookAt(this.me.x + 40, 300 + CAM_DY * 0.5); this.cam.zoomTo(1.6);
     for (let i = 0; i < 40; i++) { Particles.confetti(rnd(0, W), -10, 2); }
     yield 0.4;
     yield* Relics.trigger('onCombatEnd', this);
-    if (this.band.includes('roxy')) this.heal(5, true);
+    if (this.band.includes('roxy') && this.heroDef.id !== 'roxy') this.heal(5, true);
+    if (this.powers.hungry) this.heal(this.powers.hungry, true);
     this.banner = { text: 'ENCORE!', sub: 'the valley is still standing', t: 0, life: 1.6 };
     yield 1.5;
     Game.combatWon(this);
   }
   *defeat() {
     this.phase = 'lost'; this.busy = true; AudioSys.stop(0.8); AudioSys.sfx('defeat');
-    this.bronk.play('hurt');
-    Juice.letterbox(true); this.cam.zoomTo(1.6); this.cam.lookAt(this.bronk.x, 340);
+    this.me.play('hurt');
+    Juice.letterbox(true); this.cam.zoomTo(1.6); this.cam.lookAt(this.me.x, 340);
     this.banner = { text: 'DOWN', sub: 'the music stops', t: 0, life: 2.4 };
     yield 2.3;
     Game.go(new GameOverScene());
   }
   // --------------------------------------------------------------- card play
-  canPlay(c) { return !this.busy && this.phase === 'player' && c.cost <= this.energy; }
+  canPlay(c) { return !this.busy && this.phase === 'player' && c.cost <= this.energy && !this.flags.crashed; }
   tapCard(c) {
     if (Input.touch && this.preview !== c) { this.preview = c; AudioSys.sfx('card_deal'); return; }
     this.preview = null;
@@ -276,9 +301,13 @@ class Combat {
     if (card.def.riff) r = yield* this.riffCo(card, target);
     yield* card.def.effect(this, card, target, r);
     if (card.v.enchDraw) this.drawCards(card.v.enchDraw);           // the amber in it
+    if (card.def.echo && !card.echoCopy) this.echoNext.push({ id: card.id, up: card.up });
+    if (this.powers.rkid) this.gainBlock(this.powers.rkid);
+    if (Relics.has('skull_bongos') && this.played % 3 === 0) { const e = this.randomEnemy(); if (e) { this.flashRelic(RELICS.skull_bongos); this.damageEnemy(e, 4, { src: 'relic' }); AudioSys.sfx('hit'); } }
     if (card.def.type !== 'special') yield* Relics.trigger('onCardPlayed', this, card);
     this.playing = null;
     if (card.def.type === 'power' || card.def.type === 'special') { }
+    else if (card.echoCopy) { }
     else if (card.def.exhaust && !card.v.noExhaust) this.exhaust.push(card);
     else this.discard.push(card);
     this.checkDeaths();
@@ -292,23 +321,24 @@ class Combat {
     this.phase = 'riff';
     AudioSys.sfx('zoom_in');
     Juice.letterbox(true);
-    this.bronk.play('play');
+    this.me.play('play');
     const foe = target || this.alive()[0];
     // push in on Bronk, then settle so both performers are on screen
-    this.cam.zoomTo(1.55); this.cam.lookAt(this.bronk.x + 40, 330);
+    this.cam.zoomTo(1.55); this.cam.lookAt(this.me.x + 40, 330);
     Juice.punch(0.05);
     yield 0.34;
     Juice.letterbox(false);
     this.cam.zoomTo(1.06); this.cam.lookAt(W / 2, 372);
     const windowMul = 1 + Relics.mod('window') + (this.band.includes('roxy') ? 0.12 : 0) + (this.flags.tuned ? 0.75 : 0);
+    this.me.play(this.heroDef && SPRITES[this.heroDef.base + '_play'] ? 'play' : 'idle');
     this.flags.tuned = false;
     let done = false, result = null;
     this.riff = new Riff({
       bars: card.def.riff.bars, density: card.def.riff.density, callResponse: card.def.riff.callResponse,
       title: card.name.toUpperCase(), windowMult: windowMul, act: this.act, encore: card.id === 'encore',
       onNote: (rating, n) => {
-        if (!rating) { this.bronk.flash('#ef6a5e', 0.1); Juice.shake(3, 0.1); return; }
-        this.bronk.squash(0.12);
+        if (!rating) { this.me.flash('#ef6a5e', 0.1); Juice.shake(3, 0.1); return; }
+        this.me.squash(0.12);
         this.addHype(rating === RATINGS[0] ? 4 : 2);
         if (this.riff) Co.run(Relics.trigger('onCombo', this, this.riff.combo), this);
       },
@@ -324,7 +354,7 @@ class Combat {
     this.riff = null; this.phase = 'player';
     Juice.letterbox(false);
     this.cam.zoomTo(1); this.cam.lookAt(W / 2, 288 + CAM_DY);
-    this.bronk.play('idle');
+    this.me.play('idle');
     this.run.stats.notes += r.notes; this.run.stats.sick += r.sick;
     return r;
   }
@@ -341,35 +371,58 @@ class Combat {
     d += (card.v.sickBonus || 0) * r.sick + (this.powers.sick || 0) * r.sick;
     return d;
   }
-  previewDamage(base) { let d = base + this.player.st.str; if (this.player.st.weak > 0) d *= 0.75; if (this.powers.amp) d *= 1 + this.powers.amp; return Math.max(0, Math.floor(d)); }
-  calcDamage(base, t) { let d = this.previewDamage(base); if (t && t.st.vuln > 0) d = Math.floor(d * 1.5); return d; }
+  previewDamage(base) { let d = base + this.player.st.str + (this.rage || 0); if (this.player.st.weak > 0) d *= 0.75; if (this.powers.amp) d *= 1 + this.powers.amp; return Math.max(0, Math.floor(d)); }
+  calcDamage(base, t, o = {}) {
+    let d = this.previewDamage(base);
+    if (o.noRage) d -= this.rage || 0;
+    if (t && t.st.vuln > 0) d = Math.floor(d * 1.5);
+    if (o.el === 'lightning') {
+      if (this.powers.storm) d = Math.floor(d * (1 + this.powers.storm));
+      if (t && t.st.soak > 0) { d *= 2; t.st.soak--; Popups.add(t.actor.x, t.actor.top - 30, 'SOAKED x2', '#6aa9ee', { scale: 1.4 }); }
+      if (this.wetFeet && Relics.has('wet_feet')) { d *= 2; this.wetFeet = false; this.flashRelic(RELICS.wet_feet); Popups.add(this.me.x, this.me.top - 40, 'WET FEET x2', '#6aa9ee', { scale: 1.6 }); }
+    }
+    return Math.max(0, d);
+  }
+  // what the board did to you, for the cards that care
+  touchedAny(k) { return (this.touched[k] || 0) > 0 || this.terrain === k; }
+  gainRage(n, quiet) {
+    if (this.heroDef.id !== 'bronk' || n <= 0) return;
+    const was = this.rage; this.rage = Math.min(12, this.rage + n);
+    if (this.rage > was) {
+      if (!quiet) { Popups.add(this.me.x + 30, this.me.top - 10, `+${this.rage - was} RAGE`, '#ff6a4a', { scale: 1.5 }); AudioSys.sfx('buff'); }
+      this.me.flash('#ff6a4a', 0.12);
+      if (this.powers.unstop) this.gainBlock(this.powers.unstop * (this.rage - was));
+    }
+  }
+  selfHarm(n) { this.hp = Math.max(1, this.hp - n); Popups.add(this.me.x, this.me.cy - 20, `-${n}`, '#ef6a5e', { scale: 1.6 }); this.gainRage(n > 0 ? 1 : 0); }
   previewEnemyDamage(e, base) { let d = base + e.st.str; if (e.st.weak > 0) d *= 0.75; if (this.player.st.vuln > 0) d *= 1.5; d -= Relics.mod('reduce'); return Math.max(0, Math.floor(d)); }
   *dealDamage(t, amount, o = {}) {
     if (!t || !t.alive) { t = this.randomEnemy(); if (!t) return 0; }
-    const home = this.bronk.x;
+    const home = this.me.x;
     if (!o.projectile) {
-      yield* Co.over(o.quick ? 0.09 : 0.13, k => { this.bronk.x = lerp(home, t.actor.x - 90, Ease.inQuad(k)); });
+      yield* Co.over(o.quick ? 0.09 : 0.13, k => { this.me.x = lerp(home, t.actor.x - 90, Ease.inQuad(k)); });
     } else {
-      Particles.spawn(this.bronk.x + 30, this.bronk.cy, { n: 8, color: ['#9391a6', '#bdbccd'], angle: 0, spread: 0.25, speed: 520, gravity: 90, life: 0.25 });
+      Particles.spawn(this.me.x + 30, this.me.cy, { n: 8, color: ['#9391a6', '#bdbccd'], angle: 0, spread: 0.25, speed: 520, gravity: 90, life: 0.25 });
       yield 0.13;
     }
-    const dmg = this.calcDamage(amount, t);
+    const dmg = this.calcDamage(amount, t, o);
     this.damageEnemy(t, dmg, o);
+    if (o.el === 'lightning') { Juice.flash('#e8f4ff', 0.25, 6); AudioSys.sfx('zap'); }
     FX.slash(t.actor.x - 20, t.actor.cy, { scale: o.heavy ? 1.6 : 1.1, rot: rnd(-0.3, 0.3) });
     AudioSys.sfx(o.heavy ? 'bighit' : 'hit');
     Juice.stop(o.heavy ? 0.09 : 0.045);
     Juice.shake(o.heavy ? 11 : 6, 0.22);
     Juice.punch(o.heavy ? 0.05 : 0.025);
-    if (!o.projectile) yield* Co.over(0.2, k => { this.bronk.x = lerp(t.actor.x - 90, home, Ease.outBack(k)); });
-    this.bronk.x = home;
+    if (!o.projectile) yield* Co.over(0.2, k => { this.me.x = lerp(t.actor.x - 90, home, Ease.outBack(k)); });
+    this.me.x = home;
     yield o.quick ? 0.06 : 0.14;
     return dmg;
   }
   *dealAll(amount, o = {}) {
-    this.bronk.stretch(0.2);
+    this.me.stretch(0.2);
     FX.ring(W / 2, 300, { scale: 3, fps: 14 });
     yield 0.12;
-    for (const e of this.alive()) { this.damageEnemy(e, this.calcDamage(amount, e), o); FX.burst(e.actor.x, e.actor.cy, { scale: 1.3 }); }
+    for (const e of this.alive()) { this.damageEnemy(e, this.calcDamage(amount, e, o), o); FX.burst(e.actor.x, e.actor.cy, { scale: 1.3 }); }
     AudioSys.sfx('bighit'); Juice.shake(12, 0.4); Juice.stop(0.08); Juice.punch(0.06);
     yield 0.3;
   }
@@ -397,7 +450,7 @@ class Combat {
     AudioSys.sfx('die'); Juice.stop(0.1); Juice.shake(8, 0.3);
     FX.burst(e.actor.x, e.actor.cy, { scale: 2 });
     Particles.spawn(e.actor.x, e.actor.cy, { n: 30, color: ['#ffffff', '#ffe98a', '#a79bb4'], speed: 320, life: 0.7, size: 4 });
-    this.goldEarned += this.rng.int(e.def.gold[0], e.def.gold[1]);
+    this.gemsEarned += e.def.boss ? 6 : e.def.elite ? 3 : this.rng.chance(0.55) ? 1 : 0;
     this.run.stats.kills++;
     Co.run(Relics.trigger('onKill', this, e), this);
     this.addHype(6);
@@ -408,20 +461,22 @@ class Combat {
     let dmg = Math.max(0, Math.round(amount));
     if (this.player.block > 0) {
       const b = Math.min(this.player.block, dmg); this.player.block -= b; dmg -= b;
-      if (b > 0) { AudioSys.sfx('block'); Popups.add(this.bronk.x + 26, this.bronk.cy, `BLOCK ${b}`, '#6aa9ee'); FX.ring(this.bronk.x, this.bronk.cy, { scale: 1.1 }); }
+      if (b > 0) { AudioSys.sfx('block'); Popups.add(this.me.x + 26, this.me.cy, `BLOCK ${b}`, '#6aa9ee'); FX.ring(this.me.x, this.me.cy, { scale: 1.1 }); }
     }
     if (dmg > 0) {
       this.hp = Math.max(0, this.hp - dmg);
-      this.bronk.play('hurt'); this.bronk.flash('#ffffff', 0.14); this.bronk.squash(0.22);
-      setTimeout(() => { if (this.phase !== 'lost') this.bronk.play('idle'); }, 380);
+      if (this.hp > 0) this.gainRage(1);
+      if (SPRITES[this.heroDef.base + '_hurt']) this.me.play('hurt');
+      this.me.flash('#ffffff', 0.14); this.me.squash(0.22);
+      setTimeout(() => { if (this.phase !== 'lost') this.me.play('idle'); }, 380);
       AudioSys.sfx('hurt'); Juice.shake(Math.min(16, 5 + dmg / 2), 0.32); Juice.flash('#c2333c', 0.3, 4); Juice.stop(0.06);
-      Popups.add(this.bronk.x, this.bronk.cy - 20, `-${dmg}`, '#ef6a5e', { scale: 2.2, shake: 1.5 });
-      Particles.blood(this.bronk.x, this.bronk.cy, ['#c2333c', '#ef6a5e'], 12);
+      Popups.add(this.me.x, this.me.cy - 20, `-${dmg}`, '#ef6a5e', { scale: 2.2, shake: 1.5 });
+      Particles.blood(this.me.x, this.me.cy, ['#c2333c', '#ef6a5e'], 12);
       this.run.stats.taken += dmg;
-    } else Popups.add(this.bronk.x, this.bronk.cy - 20, '0', '#7a6d8a');
+    } else Popups.add(this.me.x, this.me.cy - 20, '0', '#7a6d8a');
   }
-  gainBlock(n) { if (n <= 0) return; this.player.block += Math.round(n); AudioSys.sfx('block'); Popups.add(this.bronk.x + 20, this.bronk.cy - 30, `+${Math.round(n)}`, '#6aa9ee'); FX.ring(this.bronk.x, this.bronk.cy, { scale: 0.9 }); }
-  heal(n, quiet) { const b = this.hp; this.hp = Math.min(this.maxHp, this.hp + n); const h = this.hp - b; if (h > 0) { if (!quiet) AudioSys.sfx('heal'); Popups.add(this.bronk.x, this.bronk.cy - 40, `+${h}`, '#a8e878'); Particles.sparkle(this.bronk.x, this.bronk.cy, 10, ['#a8e878', '#6cc95c']); } }
+  gainBlock(n) { if (n <= 0) return; this.player.block += Math.round(n); AudioSys.sfx('block'); Popups.add(this.me.x + 20, this.me.cy - 30, `+${Math.round(n)}`, '#6aa9ee'); FX.ring(this.me.x, this.me.cy, { scale: 0.9 }); }
+  heal(n, quiet) { const b = this.hp; this.hp = Math.min(this.maxHp, this.hp + n); const h = this.hp - b; if (h > 0) { if (!quiet) AudioSys.sfx('heal'); Popups.add(this.me.x, this.me.cy - 40, `+${h}`, '#a8e878'); Particles.sparkle(this.me.x, this.me.cy, 10, ['#a8e878', '#6cc95c']); } }
   gainEnergy(n) { this.energy += n; AudioSys.sfx('buff'); Popups.add(64, H - 120, `+${n} ENERGY`, '#86e8d2', { world: false }); }
   drawCards(n) {
     for (let i = 0; i < n; i++) {
@@ -442,15 +497,16 @@ class Combat {
   }
   applyEnemy(e, key, n, quiet) {
     if (!e.alive) return; e.st[key] = (e.st[key] || 0) + n;
-    if (!quiet) { AudioSys.sfx('debuff'); Popups.add(e.actor.x, e.actor.y - 46, `${key.toUpperCase()} +${n}`, key === 'burn' ? '#ffa832' : '#b177e6'); }
+    if ((key === 'weak' || key === 'vuln') && Relics.has('sabre_pendant')) { this.player.block += 2; this.flashRelic(RELICS.sabre_pendant); }
+    if (!quiet) { AudioSys.sfx(key === 'soak' ? 'splash' : 'debuff'); Popups.add(e.actor.x, e.actor.y - 46, `${key.toUpperCase()} +${n}`, key === 'burn' ? '#ffa832' : key === 'soak' ? '#6aa9ee' : '#b177e6'); }
   }
   applyPlayer(key, n, quiet) {
     this.player.st[key] = (this.player.st[key] || 0) + n;
     const good = ['str', 'thorns', 'regen'].includes(key);
-    if (!quiet) { AudioSys.sfx(good ? 'buff' : 'debuff'); Popups.add(this.bronk.x, this.bronk.cy - 50, `${good ? '+' : ''}${n} ${key.toUpperCase()}`, good ? '#ef6a5e' : '#b177e6'); }
+    if (!quiet) { AudioSys.sfx(good ? 'buff' : 'debuff'); Popups.add(this.me.x, this.me.cy - 50, `${good ? '+' : ''}${n} ${key.toUpperCase()}`, good ? '#ef6a5e' : '#b177e6'); }
   }
   stun(e, turns) { if (!e || !e.alive) return; e.st.stun += turns; e.intent = null; Popups.add(e.actor.x, e.actor.cy, 'STUNNED', '#ffe98a', { scale: 1.8 }); Particles.sparkle(e.actor.x, e.actor.top, 12, ['#ffe98a']); }
-  addPower(k, n) { this.powers[k] = (this.powers[k] || 0) + n; AudioSys.sfx('buff'); Popups.add(this.bronk.x, this.bronk.cy - 60, 'POWER!', '#b177e6', { scale: 1.6 }); FX.ring(this.bronk.x, this.bronk.cy, { scale: 1.4 }); }
+  addPower(k, n) { this.powers[k] = (this.powers[k] || 0) + n; AudioSys.sfx('buff'); Popups.add(this.me.x, this.me.cy - 60, 'POWER!', '#b177e6', { scale: 1.6 }); FX.ring(this.me.x, this.me.cy, { scale: 1.4 }); }
   flashRelic(r) { this.relicFlash[r.name] = 0.7; }
   bossPhase(e, text) {
     this.banner = { text, sub: '', t: 0, life: 1.8 };
@@ -487,7 +543,7 @@ class Combat {
       wallI >= 0 && { title: 'BLOCK', rect: () => this.handRect(wallI), text: 'Stone Wall gives BLOCK. Block soaks damage until your next turn, then it crumbles. Block up when a big hit is coming.' },
       { title: 'HYPE', rect: { x: 8, y: 128, w: 26, h: 234 }, text: 'Landed notes fill the Hype column. At full, ENCORE plays a free solo that hits every beast for every note you land.' },
       this.run.relics.length && { title: 'RELICS', rect: { x: 12, y: 70, w: this.run.relics.length * 34 - 4, h: 30 }, text: 'Relics are charms that work all run without being played. Point at one to read it. More drop from elites and bosses.' },
-      { title: 'END TURN', rect: { x: W - 180, y: H - 60, w: 168, h: 48 }, text: 'Out of energy? End the turn and the beasts act. Beat all of them to win the fight - and every beast you put down is raptor bait.' },
+      { title: 'END TURN', rect: { x: W - 180, y: H - 60, w: 168, h: 48 }, text: 'Out of energy? End the turn and the beasts act. Beat all of them to win the fight, and gems and a new card are yours.' },
     ];
   }
   update(dt) {
@@ -496,8 +552,8 @@ class Combat {
       this.coached = true;
       Game.overlay = new Coach(this.coachSteps(), () => { (Game.run.tips = Game.run.tips || {}).combat = true; Game.save(); });
     }
-    if (this.riff) { this.riff.update(dt); this.bronk.play(this.riff.chanting ? 'sing' : 'play'); }
-    this.bronk.update(dt);
+    if (this.riff) { this.riff.update(dt); this.me.play(this.riff.chanting ? 'sing' : 'play'); }
+    this.me.update(dt);
     for (const e of this.enemies) {
       e.actor.update(dt);
       e.hitT = Math.max(0, e.hitT - dt); e.shake = Math.max(0, e.shake - dt * 24);
@@ -549,7 +605,7 @@ class Combat {
       if (!e.alive && e.dieT > 0.75) continue;
       list.push({ y: e.actor.y, f: () => this.drawEnemy(e) });
     }
-    list.push({ y: this.bronk.y + 1, f: () => this.drawBronk() });
+    list.push({ y: this.me.y + 1, f: () => this.drawHeroActor() });
     list.sort((a, b) => a.y - b.y);
     for (const it of list) it.f();
     Particles.draw(Gfx.ctx, true);
@@ -558,6 +614,7 @@ class Combat {
     Popups.draw(true);
     this.cam.restore(Gfx.ctx);
     if (Settings.lighting !== false) gradeCombat(this);
+    Post.ui();
     Particles.draw(Gfx.ctx, false);
     FX.draw(false);
     if (this.riff) this.riff.draw();
@@ -567,22 +624,22 @@ class Combat {
     Popups.draw(false);
     if (this.banner) this.drawBanner();
   }
-  drawBronk() {
-    this.bronk.draw();
+  drawHeroActor() {
+    this.me.draw();
     const b = this.player.block;
     if (b > 0) {
-      Gfx.sprite('icon_shield', this.bronk.x - 34, this.bronk.y - 46, { anchor: 'c', scale: 1.2 });
-      Gfx.text(String(b), this.bronk.x - 34, this.bronk.y - 52, { color: '#ffffff', align: 'center', outline: true });
+      Gfx.sprite('icon_shield', this.me.x - 34, this.me.y - 46, { anchor: 'c', scale: 1.2 });
+      Gfx.text(String(b), this.me.x - 34, this.me.y - 52, { color: '#ffffff', align: 'center', outline: true });
     }
-    this.drawStatus(this.player.st, this.bronk.x - 40, this.bronk.y + 6);
+    this.drawStatus(this.player.st, this.me.x - 40, this.me.y + 6);
     // band members backing you up
-    let bx = this.bronk.x - 120;
+    let bx = this.me.x - 120;
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : this.t * 2;
     for (const m of this.band) {
-      const spr = m === 'vela' ? 'vela' : m === 'pebble' ? 'kid_a' : 'kid_b';
+      const spr = Heroes.get(m).base;
       const b = Math.abs(Math.sin(beat * Math.PI)) * 7;
-      Gfx.shadow(bx, this.bronk.y - 6, 40, 0.25);
-      Gfx.sprite(spr + '_idle', bx, this.bronk.y - 6 - b, { anchor: 'bc', frame: Math.floor(beat), scale: ACTOR_SCALE * 0.82 });
+      Gfx.shadow(bx, this.me.y - 6, 40, 0.25);
+      Gfx.sprite(spr + '_idle', bx, this.me.y - 6 - b, { anchor: 'bc', frame: Math.floor(beat), scale: ACTOR_SCALE * 0.82 });
       bx -= 74;
     }
   }
@@ -621,7 +678,7 @@ class Combat {
     } else if (e.st.stun > 0) Gfx.sprite('st_stun', a.x, top - 24, { anchor: 'c', frame: Math.floor(this.t * 8) });
   }
   drawStatus(st, x, y) {
-    const list = [['str', 'st_str', '#ef6a5e'], ['weak', 'st_weak', '#a79bb4'], ['vuln', 'st_vuln', '#b177e6'], ['burn', 'st_burn', '#ffa832'], ['stun', 'st_stun', '#ffe98a'], ['thorns', 'st_thorns', '#e8dfc6'], ['regen', 'st_regen', '#a8e878']];
+    const list = [['str', 'st_str', '#ef6a5e'], ['weak', 'st_weak', '#a79bb4'], ['vuln', 'st_vuln', '#b177e6'], ['burn', 'st_burn', '#ffa832'], ['soak', 'st_soak', '#6aa9ee'], ['stun', 'st_stun', '#ffe98a'], ['thorns', 'st_thorns', '#e8dfc6'], ['regen', 'st_regen', '#a8e878']];
     let cx = x;
     for (const [k, spr, col] of list) {
       if (!st[k]) continue;
@@ -636,7 +693,7 @@ class Combat {
     {
       const x = E, y = E, w = 262, h = 50;
       HUD.plate(x, y, w, h);
-      HUD.portrait(x + 25, y + 25, 19, 'bronk_idle', { scale: 0.8, frame: Math.floor(this.t * 2) % 2 });
+      HUD.portrait(x + 25, y + 25, 19, this.heroDef.base + '_idle', { scale: 0.8, ring: this.heroDef.color, frame: Math.floor(this.t * 2) % 2 });
       const bx = x + 52, bw = w - 64;
       this.hpGhost = damp(this.hpGhost ?? this.hp / this.maxHp, this.hp / this.maxHp, 3, Time.dt);
       HUD.bar(bx, y + 12, bw, 14, this.hp / this.maxHp, C.life, C.lifeDark, { ghost: this.hpGhost });
@@ -645,6 +702,14 @@ class Combat {
       if (this.player.block > 0) {
         Gfx.sprite('icon_shield', bx + 8, y + 38, { anchor: 'c', scale: 1 });
         HUD.text(`${this.player.block} BLOCK`, bx + 20, y + 33, { color: '#8ec8ff', scale: 1 });
+      }
+      // the hero's own number: Bronk's temper, Pebble's beat
+      const own = this.heroDef.id === 'bronk' ? ['RAGE', this.rage, '#ff6a4a'] : this.heroDef.id === 'pebble' ? ['BEAT', this.played, '#a8e878'] : null;
+      if (own) {
+        HUD.plate(x + w + 8, y, 74, 50, { gold: false, accent: own[2] });
+        HUD.text(own[0], x + w + 45, y + 7, { color: own[2], align: 'center', scale: 0.9 });
+        HUD.text(String(own[1]), x + w + 45, y + 22, { color: '#fffaea', align: 'center', scale: 2 });
+        if (UI.hovered(x + w + 8, y, 74, 50)) UI.tooltip(x + w + 8, y + 56, [this.heroDef.mechanic.name, this.heroDef.mechanic.desc], { width: 240 });
       }
       // relics: small, in a row, readable on hover
       let rx = x;
@@ -660,10 +725,11 @@ class Combat {
     // ---- top middle: the turn
     HUD.plate(W / 2 - 50, E, 100, 30, { gold: false });
     HUD.text(`TURN ${this.turn}`, W / 2, E + 9, { color: C.dim, align: 'center', scale: 1.2 });
-    // ---- top right: shells, gems, menu
+    // ---- top right: gems, what you walked through, the menu
     if (!this.riff) UI.iconButton(W - E - 36, E, 36, 30, 'icon_menu', () => Game.pause(), { scale: 1.1 });
-    HUD.chip(W - E - 36 - 8 - 84, E, 84, (x, y) => HUD.shell(x, y), this.run.gold, C.shell);
-    HUD.chip(W - E - 36 - 8 - 84 - 8 - 72, E, 72, (x, y) => HUD.gem(x, y), this.run.gems || 0, C.gem);
+    HUD.chip(W - E - 36 - 8 - 72, E, 72, (x, y) => HUD.gem(x, y), this.run.gems || 0, C.gem);
+    // what you walked through to get here
+    { let tx = W - E - 36 - 8 - 72 - 8; for (const k of Object.keys(this.touched).reverse()) { const T = TERRAIN[k]; if (!T || !this.touched[k]) continue; tx -= 44; HUD.plate(tx, E, 40, 30, { gold: false }); Gfx.rect(tx + 4, E + 5, 32, 20, HUD.C.ink); Gfx.rect(tx + 5, E + 6, 30, 18, T.dark); Gfx.rect(tx + 5, E + 6, 30, 5, T.col); HUD.text(`${T.name.slice(0, 5)}`, tx + 20, E + 7, { color: '#fffaea', align: 'center', scale: 0.62 }); HUD.text(`x${this.touched[k]}`, tx + 20, E + 14, { color: '#fffaea', align: 'center', scale: 0.9 }); if (UI.hovered(tx, E, 40, 30)) UI.tooltip(tx - 100, E + 36, [`${T.name}: touched ${this.touched[k]} this round`, T.desc], { width: 220 }); tx -= 4; } }
     if (this.riff) return;
     // ---- bottom left: energy, and the two piles
     const ex = 58, ey = H - 108;

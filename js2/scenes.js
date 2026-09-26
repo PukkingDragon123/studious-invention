@@ -160,6 +160,7 @@ class BootScene {
   draw() {
     drawTitleWorld(this.t);
     const st = titleStone(this.t);
+    Post.ui();
     Gfx.ctx.globalAlpha = 0.6 + 0.4 * Math.sin(this.t * 4);
     Gfx.text(Input.touch ? 'TAP TO BEGIN' : 'PRESS ANY KEY', st.cx, st.y + 300,
       { color: SKIN.ink, align: 'center', scale: 1.9 });
@@ -172,22 +173,23 @@ class BootScene {
 }
 
 class TitleScene {
-  constructor() { this.t = 0; }
+  constructor() { this.t = 0; this.saved = Game.hasSave(); }
   enter() { AudioSys.play('rest', { fade: 0.9 }); }
   exit() { }
   update(dt) {
     this.t += dt;
     bakeAhead();
-    if (Input.pressed('Enter')) { Game.hasSave() ? Game.continueRun() : Game.newRun(); }
+    if (Input.pressed('Enter')) { this.saved ? Game.continueRun() : Game.newRun(); }
   }
   draw() {
     drawTitleWorld(this.t);
     const st = titleStone(this.t);
+    Post.ui();
     // the menu, sized to fit whatever it holds: five entries with a save,
     // four without, and never off the bottom of the stone
     const items = [];
-    if (Game.hasSave()) items.push(['CONTINUE', () => Game.continueRun()]);
-    items.push([Game.hasSave() ? 'NEW STORY' : 'START', () => Game.newRun()]);
+    if (this.saved) items.push(['CONTINUE', () => Game.continueRun()]);
+    items.push([this.saved ? 'NEW STORY' : 'START', () => Game.newRun()]);
     items.push(['HOW TO PLAY', () => Game.overlay = new HowToOverlay()]);
     items.push(['SETTINGS', () => Game.overlay = new PauseOverlay(true)]);
     items.push(['CREDITS', () => Game.overlay = new CreditsOverlay()]);
@@ -195,86 +197,102 @@ class TitleScene {
     const bh = items.length > 4 ? 40 : 46, gap = bh + 8;
     let y = Math.max(st.y + 236, st.y + st.h - 26 - items.length * gap + 8);
     for (const [label, cb] of items) { UI.wbutton(bx, y, bw, bh, label, cb, { scale: 1.4 }); y += gap; }
-    Gfx.text(Input.touch ? 'tap the frets, save the family' : 'arrows or D F J K  -  save the family',
+    Gfx.text(Input.touch ? 'roll the bone, save the family' : 'roll the bone, save the family  -  SPACE rolls, D F J K plays',
       W / 2, H - 22, { color: '#c4b89a', align: 'center', outline: true });
   }
   click() { }
 }
 
-// --------------------------------------------------------- act transitions
+// --------------------------------------------------------- between the lands
+// The night after a boss: whoever was rescued at the fire, and a look at the
+// road ahead.
 const ACT_STORY = {
-  2: { rescued: 'pebble', who: 'PEBBLE', gift: 'drum_solo',
-    lines: [
-      ['BLAZE', "Enough. Keep the loud one. I only need the rest of you."],
-      ['PEBBLE', "DAD! Dad, I hit the rocks in time, like you said! It got confused!"],
-      ['BRONK', "You kept the beat while a burning raptor ran off with you. That's my boy."],
-      ['', "PEBBLE joins the band. Every turn he drums a random beast. New riff: {y}DRUM SOLO{/}."],
-    ] },
-  3: { rescued: 'roxy', who: 'ROXY', gift: 'flute_lullaby',
-    lines: [
-      ['BLAZE', "You are still following. Why are you still following?"],
-      ['ROXY', "Because you took his family, you enormous match."],
-      ['BRONK', "Roxy. Sweetheart. Give me the flute."],
-      ['', "ROXY joins the band. Riff windows are wider and you heal after every fight. New riff: {y}FLUTE LULLABY{/}."],
-    ] },
+  1: { boss: 'BLAZE', lines: (me, freed) => [
+    ['BLAZE', "Fine. FINE. Take them. Grandma never paid me anyway."],
+    freed && [Heroes.get(freed).name, Heroes.get(freed).rescued],
+    [me.name, "Where did she take the others?"],
+    ['BLAZE', "Through the jungle. Horace the triceratops owes her a favour. Bring an umbrella."],
+  ] },
+  2: { boss: 'HORACE', lines: (me, freed) => [
+    ['HORACE', "Hrrrm. I'm too old for this. Go on, take them. Tell Grandma I tried."],
+    freed && [Heroes.get(freed).name, Heroes.get(freed).rescued],
+    [me.name, "One more to go. She's heading for the mountain."],
+    ['HORACE', "Then you'll have to cross the badlands. Watch out for the tar. The tar watches back."],
+  ] },
+  3: { boss: 'THE TAR KING', lines: me => [
+    ['THE TAR KING', "Bloop... you have... unclogged me... bloop..."],
+    [me.name, "Right. Mountains next. Big cold ones."],
+    ['', "Past the badlands, the road climbs into the snow. Somewhere at the top, a very big lady is knitting."],
+  ] },
+  4: { boss: 'REXMOND', lines: me => [
+    ['REXMOND', "Gran's going to be so disappointed in me."],
+    [me.name, "We're sorry about your brother. We really didn't know."],
+    ['REXMOND', "...Smoke Mountain. Top floor. She'll have the kettle on. She always has the kettle on."],
+  ] },
 };
 
 class ActStory {
-  constructor(act, onDone) { this.act = act; this.onDone = onDone; this.i = 0; this.t = 0; this.chars = 0; this.data = ACT_STORY[act]; }
-  enter() { AudioSys.play('village', { fade: 0.8 }); }
+  constructor(biome, freed, onDone) {
+    this.biome = biome; this.freed = freed; this.onDone = onDone; this.i = 0; this.t = 0; this.chars = 0;
+    const me = Heroes.cur();
+    this.lines = ACT_STORY[biome].lines(me, freed).filter(Boolean);
+    if (freed) this.lines.push(['', `${Heroes.get(freed).name} joins you on the road. ${Heroes.get(freed).band.name}: ${Heroes.get(freed).band.desc}`]);
+    this.lines.push(['', `Next: {y}${BIOMES[biome + 1].name}{/}. ${BIOMES[biome + 1].sub}.`]);
+  }
+  enter() { AudioSys.play('rest', { fade: 0.8 }); }
   exit() { }
   update(dt) {
     this.t += dt;
-    const line = this.data.lines[this.i];
+    const line = this.lines[this.i];
     this.chars = Math.min(line[1].length, this.chars + dt * 46 * (Input.down ? 3 : 1));
     if (Input.clicks.length || Input.pressed('Space', 'Enter', 'KeyE')) {
       if (this.chars < line[1].length) this.chars = line[1].length;
-      else { this.i++; this.chars = 0; if (this.i >= this.data.lines.length) this.onDone(); }
+      else { this.i++; this.chars = 0; if (this.i >= this.lines.length) { this.i = this.lines.length - 1; if (!this.done) { this.done = true; this.onDone(); } } }
     }
   }
   draw() {
-    // the camp again, at night: the rescued one by the fire, the raptor at
-    // the edge of the light where it always is
+    // the camp again, at night: the family by the fire
     if (!this.cam) { this.cam = new Camera(); this.cam.zoom = this.cam.tzoom = VIEW; this.cam.lookAt(CAMP.fire + 20, 394, true); }
     this.cam.ox = Math.sin(this.t * 0.37) * 1.4; this.cam.oy = Math.sin(this.t * 0.29 + 2) * 1;
     Gfx.clear('#05040c');
     this.cam.apply(Gfx.ctx);
     const camX = this.cam.x - W / (2 * this.cam.zoom);
     World.camp(this.t, {}, camX);
-    const sprs = { pebble: 'kid_a_idle', roxy: 'kid_b_idle' };
-    Gfx.shadow(CAMP.fire - 120, GY + 2, 40, 0.3);
-    Gfx.sprite('bronk_idle', CAMP.fire - 120, GY + 2, { anchor: 'bc', frame: Math.floor(this.t * 2) % 2 });
-    Gfx.shadow(CAMP.fire - 76, GY + 2, 28, 0.3);
-    Gfx.sprite(sprs[this.data.rescued], CAMP.fire - 76, GY + 2, { anchor: 'bc', frame: Math.floor(this.t * 3) % 2 });
-    Gfx.sprite('blaze_idle', CAMP.fire + 190, GY + 4, { anchor: 'bc', frame: Math.floor(this.t * 6) % 2, flip: true });
-    if (chance(0.4)) Particles.fire(CAMP.fire + 190 + rnd(-20, 20), GY - 50, 1);
+    const fam = [Game.run.hero].concat(Game.run.band);
+    fam.forEach((id, i) => {
+      const x = CAMP.fire - 150 + i * 46;
+      Gfx.shadow(x, GY + 2, 34, 0.3);
+      Gfx.sprite(Heroes.spr(id), x, GY + 2, { anchor: 'bc', frame: Math.floor(this.t * 2 + i) % 2 });
+    });
     Particles.draw(Gfx.ctx, true);
-    if (Settings.lighting !== false) {
-      SetLight.run('camp', this.t, {}, camX);
-      Light.begin(0); Light.point(CAMP.fire + 190, GY - 40, 160, { color: '#e06a1b', glow: 0.16, flicker: 0.1 }); Light.end();
-    }
+    Light.begin(0.55, '#05040c'); Light.point(CAMP.fire, GY - 40, 260, { color: '#ffa832', flicker: 0.08, power: 0.8, glow: 0.3 });
     this.cam.restore(Gfx.ctx);
-    if (Settings.lighting !== false) { SetLight.post('camp', {}); Film.grain(); }
+    Post.set({ tint: '#ff9a4a', ta: 0.16, vig: 0.4 });
+    Post.ui();
     Particles.draw(Gfx.ctx, false);
-    const line = this.data.lines[this.i];
+    const line = this.lines[this.i];
     Gfx.panel(60, H - 150, W - 120, 120, { fill: '#1a1424' });
     if (line[0]) { const nw = Gfx.measure(line[0], 1.2) + 18; Gfx.round(80, H - 162, nw, 22, 4, '#120c16'); Gfx.text(line[0], 89, H - 157, { color: '#ffe98a', scale: 1.2 }); }
     Gfx.textWrap(line[1].slice(0, Math.floor(this.chars)), 84, H - 128, W - 170, { color: '#e8dfc6', scale: 1.1, lineHeight: 15 });
     if (this.chars >= line[1].length) Gfx.text('▶', W - 90, H - 56 + Math.sin(this.t * 6) * 2, { color: '#ffe98a', scale: 1.4 });
-    Gfx.text(`${this.i + 1}/${this.data.lines.length}`, W - 80, H - 168, { color: '#7a6d8a', align: 'right' });
+    Gfx.text(`${this.i + 1}/${this.lines.length}`, W - 80, H - 168, { color: '#7a6d8a', align: 'right' });
   }
   click() { }
 }
 
 class EndingScene {
-  constructor() { this.t = 0; this.stage = 0; this.chars = 0; this.lines = [
-    ['VELA', "You came all the way up a volcano. On foot. With that belly."],
-    ['BRONK', "I had help. Pebble kept time. Roxy kept everyone calm."],
-    ['BLAZE', "...you could have finished me. You had it. Why the collar?"],
-    ['BRONK', "Because six years is a long time to be a kitchen appliance. Go on. It's open."],
-    ['BLAZE', "...I do know a little percussion."],
-    ['', "And so the valley held its festival again, and the loudest band in the stone age had a new pyrotechnics section."],
-  ]; }
+  constructor() {
+    this.t = 0; this.stage = 0; this.chars = 0;
+    const me = Heroes.cur();
+    this.lines = [
+      ['GRANDMA REX', "...Oh, look at me. All this fuss. My glasses have gone all steamy."],
+      [me.name, "We're sorry about Rexford. We really are. We didn't know he was anybody's boy."],
+      ['GRANDMA REX', "He never did write. Never visited. Just ran about eating people's goats."],
+      ['VELA', "You could come to dinner. Properly. We'll do berries."],
+      ['GRANDMA REX', "...Berries? Well. I suppose I could bring a crumble."],
+      ['', "And so the Rockbottoms gave up eating dinosaurs, mostly, and every Sunday a very large grandmother came round for tea and knitted everybody jumpers."],
+    ];
+  }
   enter() { AudioSys.play('victory', { fade: 0.5 }); Game.clearSave(); }
   exit() { }
   update(dt) {
@@ -290,20 +308,18 @@ class EndingScene {
     if (this.stage >= this.lines.length && chance(dt * 30)) Particles.confetti(rnd(0, W), -10, 1);
   }
   draw() {
-    Gfx.bands(0, 0, W, 340, ['#120c16', '#281040', '#4b2070', '#a03a68', '#e06a9b']);
+    World.skyRamp(0, W, 0, 340, ['#120c16', '#281040', '#4b2070', '#a03a68', '#e06a9b', '#ffb0cf']);
     for (let i = 0; i < 50; i++) { const x = (i * 137) % W, y = (i * 61) % 260; Gfx.rectA(x, y, 2, 2, '#ffffff', 0.4 + 0.4 * Math.sin(this.t * 2 + i)); }
     Gfx.circle(820, 80, 40, '#fffaea');
     Gfx.rect(0, 330, W, H - 330, '#241c2e');
-    Gfx.sprite('v_stage', W / 2, 430, { anchor: 'bc', scale: 1.4 });
+    Gfx.sprite('h_table', W / 2 + 30, 436, { anchor: 'bc', scale: 2 });
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : this.t * 2;
-    const bob = i => Math.abs(Math.sin((beat + i * 0.25) * Math.PI)) * 6;
-    Gfx.sprite('bronk_play', W / 2 - 30, 392 - bob(0), { anchor: 'bc', frame: Math.floor(beat * 2) % 4, scale: 1.2 });
-    Gfx.sprite('vela_idle', W / 2 + 60, 392 - bob(1), { anchor: 'bc', frame: Math.floor(beat) % 2, scale: 1.2 });
-    Gfx.sprite('kid_a_idle', W / 2 - 110, 394 - bob(2), { anchor: 'bc', frame: Math.floor(beat) % 2, scale: 1.2 });
-    Gfx.sprite('kid_b_idle', W / 2 + 140, 394 - bob(3), { anchor: 'bc', frame: Math.floor(beat) % 2, scale: 1.2 });
-    Gfx.sprite('blaze_idle', W / 2 + 240, 430 - bob(4), { anchor: 'bc', frame: Math.floor(this.t * 6) % 2, scale: 1.1 });
-    for (let i = 0; i < 2; i++) if (chance(0.5)) Particles.fire(W / 2 + 240 + rnd(-24, 24), 380, 1);
-    for (let i = 0; i < 12; i++) Gfx.sprite(i % 2 ? 'villager_idle' : 'villager2_idle', 40 + i * 78, 500 - Math.abs(Math.sin((beat + i * 0.4) * Math.PI)) * 6, { anchor: 'bc', tint: '#120c16', tintAmount: 0.6, frame: Math.floor(beat + i) });
+    const bob = i => Math.abs(Math.sin((beat + i * 0.25) * Math.PI)) * 5;
+    const fam = HERO_ORDER;
+    fam.forEach((id, i) => Gfx.sprite(Heroes.spr(id), W / 2 - 200 + i * 70, 420 - bob(i), { anchor: 'bc', frame: Math.floor(beat) % 2, scale: 1.4 }));
+    Gfx.sprite(SPRITES.grandma_idle ? 'grandma_idle' : 'trex_idle', W / 2 + 250, 440 - bob(4) * 0.4, { anchor: 'bc', frame: Math.floor(this.t * 2) % 2, scale: 1.3, flip: true });
+    Post.set({ tint: '#ffb0cf', ta: 0.14, vig: 0.3 });
+    Post.ui();
     Particles.draw(Gfx.ctx, false);
     if (this.stage < this.lines.length) {
       const l = this.lines[this.stage];
@@ -313,7 +329,7 @@ class EndingScene {
     } else {
       Gfx.text('THE FAMILY IS HOME', W / 2, 40, { color: '#ffe98a', align: 'center', scale: 3.4, outline: true, outlineWidth: 2 });
       const s = Game.run.stats;
-      Gfx.text(`beasts out-played ${s.kills}    notes landed ${s.sick}/${s.notes}    damage taken ${s.taken}`, W / 2, 96, { color: '#d6cfe0', align: 'center', scale: 1.1 });
+      Gfx.text(`beasts beaten ${s.kills}    notes landed ${s.sick}/${s.notes}    damage taken ${s.taken}`, W / 2, 96, { color: '#d6cfe0', align: 'center', scale: 1.1 });
       UI.button(W / 2 - 110, H - 70, 220, 44, 'BACK TO THE TITLE', () => Game.go(new TitleScene()), { scale: 1.2 });
     }
   }
@@ -321,17 +337,18 @@ class EndingScene {
 }
 
 class GameOverScene {
-  constructor() { this.t = 0; this.stats = Game.run ? Game.run.stats : null; this.act = Game.run ? Game.run.act : 1; }
+  constructor() { this.t = 0; this.stats = Game.run ? Game.run.stats : null; this.biome = Game.run && Game.run.board ? Game.run.board.biome : 1; this.hero = Heroes.cur(); }
   enter() { AudioSys.play('gameover', { fade: 1 }); Game.clearSave(); }
   exit() { }
   update(dt) { this.t += dt; }
   draw() {
     Gfx.bands(0, 0, W, H, ['#120c16', '#241c2e', '#3f0e18', '#241c2e', '#120c16']);
-    Gfx.sprite('bronk_hurt', W / 2, 330, { anchor: 'bc', scale: 2, alpha: 0.9 });
-    Gfx.vignette(0.8);
+    Post.set({ amb: [0.8, 0.7, 0.75], tint: '#c2333c', ta: 0.2, vig: 0.5 });
+    const hurt = SPRITES[this.hero.base + '_hurt'] ? this.hero.base + '_hurt' : this.hero.base + '_idle';
+    Gfx.sprite(hurt, W / 2, 330, { anchor: 'bc', scale: 2, alpha: 0.9 });
     Gfx.text('THE MUSIC STOPS', W / 2, 70, { color: '#ef6a5e', align: 'center', scale: 3.4, outline: true, outlineWidth: 2 });
-    Gfx.text(`Bronk falls in ${['', 'the village', 'the jungle', 'the ash'][this.act] || 'the ash'}. Somewhere ahead, a chain rattles.`, W / 2, 370, { color: '#d6cfe0', align: 'center', scale: 1.2 });
-    if (this.stats) Gfx.text(`beasts out-played ${this.stats.kills}   notes landed ${this.stats.sick}/${this.stats.notes}   damage taken ${this.stats.taken}`, W / 2, 400, { color: '#7a6d8a', align: 'center' });
+    Gfx.text(`${this.hero.name} falls in ${BIOMES[this.biome].name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}. Far up the mountain, a kettle whistles.`, W / 2, 370, { color: '#d6cfe0', align: 'center', scale: 1.2 });
+    if (this.stats) Gfx.text(`beasts beaten ${this.stats.kills}   notes landed ${this.stats.sick}/${this.stats.notes}   damage taken ${this.stats.taken}`, W / 2, 400, { color: '#7a6d8a', align: 'center' });
     UI.button(W / 2 - 230, 450, 210, 46, 'TRY AGAIN', () => Game.newRun(), { scale: 1.2 });
     UI.button(W / 2 + 20, 450, 210, 46, 'TITLE', () => Game.go(new TitleScene()), { scale: 1.2 });
   }
@@ -400,7 +417,7 @@ class PauseOverlay {
       });
       y += 52;
       UI.checkbox(x + 2, y, 22, Settings.shake !== false, () => { Settings.shake = Settings.shake === false; Game.saveSettings(); }, { label: 'SCREEN SHAKE' });
-      UI.checkbox(x + 222, y, 22, Settings.lighting !== false, () => { Settings.lighting = Settings.lighting === false; Game.saveSettings(); }, { label: 'LIGHTING' });
+      UI.checkbox(x + 222, y, 22, Settings.lighting !== false, () => { Settings.lighting = Settings.lighting === false; Game.saveSettings(); if (Settings.lighting) Post.enable(); else Post.disable(); }, { label: 'LIGHTING' });
       y += 30;
       Gfx.textWrap('Notes landing late? Lower the offset. Early? Raise it.', x + 2, y, w - 210, { color: SKIN.textDim, lineHeight: 14 });
       UI.wbutton(W / 2 - 90, 56 + PH - 56, 180, 44, 'BACK', () => { if (this.settingsOnly) Game.overlay = null; else this.mode = 'menu'; });
@@ -419,18 +436,18 @@ class CreditsOverlay {
       { t: 'a stone age rock opera', s: 1.2, c: SKIN.textDim, gap: 30 },
 
       { t: 'THE BAND', s: 1.6, c: SKIN.red, gap: 8 },
-      { t: 'BRONK ROCKBOTTOM . . . . . . . rhythm, mostly', s: 1.1 },
-      { t: 'PEBBLE . . . . . . . . . . . . . . . . . . drums', s: 1.1 },
-      { t: 'ROXY . . . . . . . . . . . . . . . . . . . flute', s: 1.1 },
-      { t: 'VELA . . . . . . . . . . . . . . . . management', s: 1.1 },
-      { t: 'BLAZE . . . . . . . . . . . . . . . . percussion', s: 1.1, gap: 30 },
+      { t: 'BRONK ROCKBOTTOM . . . . . . . . rib-axe', s: 1.1 },
+      { t: 'PEBBLE . . . . . . . . . . . . . skull bongos', s: 1.1 },
+      { t: 'ROXY . . . . . . . . . . . . . . . . bone flute', s: 1.1 },
+      { t: 'VELA . . . . . . . . . . . . . . . . . tusk horn', s: 1.1 },
+      { t: 'GRANDMA REX . . . . . . . . . . . . . herself', s: 1.1, gap: 30 },
 
       { t: 'SUPPORTING', s: 1.6, c: SKIN.red, gap: 8 },
       { t: 'TRUNKS . . . . . . . . . . . . . . . . plumbing', s: 1.1 },
-      { t: 'THE FOREMAN . . . . . . . . . . . . . . . slate', s: 1.1 },
-      { t: 'THE CHAMELEON ON THE POLE . . . . . . . traffic', s: 1.1 },
-      { t: 'SUSAN . . . . . . . . . . . . . . . triceratops', s: 1.1 },
-      { t: 'A DODO . . . . . . . . . . . . . . . . flattened', s: 1.1, gap: 30 },
+      { t: 'BLAZE . . . . . . . . . . . . . . . the stove', s: 1.1 },
+      { t: 'HORACE . . . . . . . . . . . . . . . sitting', s: 1.1 },
+      { t: 'THE TAR KING . . . . . . . . . . . . . bloop', s: 1.1 },
+      { t: 'REXFORD . . . . . . . . . . . . . . . dinner', s: 1.1, gap: 30 },
 
       { t: 'MADE OF', s: 1.6, c: SKIN.red, gap: 8 },
       { t: 'one canvas, 960 by 540', s: 1.1 },
@@ -569,27 +586,19 @@ class HowToOverlay {
     Gfx.rectA(0, 0, W, H, '#120c16', 0.8);
     const r = UI.window(60, 30, W - 120, H - 60, 'HOW TO PLAY', { onClose: () => this.close() });
     const pages = [
-      ['{y}THE STORY{/}', 'A flaming raptor named BLAZE spent six years chained in your kitchen as the family stove. This morning he snapped the chain and took your wife and children. You are not fast. You are not fit. You are, however, extremely loud.', '',
-        '{y}THE VALLEY{/}', 'Walk with WASD, the arrows or the stick. SHIFT runs, and running burns stamina. Rest at campfires to heal. Hide in bushes. Every zone is split by two walls, and each wall has one gate in it.'],
-      ['{y}THE GATES{/}', 'The first gate is held by a {r}GATE GUARD{/}. It stands in the gateway, it is awake, and it cannot be crept past - you have to fight it.', '',
-        'The second is a {y}STONE GATE{/}: two plates in a ringed clearing off the road, and two boulders. Walk into a boulder to push it one tile. You can only push, never pull. A stone that reaches its plate drops in and stays. Cornered one? The stone with the circle on it resets them.', '',
-        'Past both walls: put down three beasts to make {r}RAPTOR BAIT{/}, then take the last gate.'],
-      ['{y}BEASTS{/}', 'Every beast wears a slate: skulls for how dangerous it is, {y}?{/} when it half-sees you, {r}!{/} when it has. Its cone shows where it is looking. Each kind behaves differently: dodos bolt, boars charge, compies call their friends, and a pterodactyl can see you in a bush.', '',
-        '{y}SNEAK ATTACK{/}', 'Get behind one without being seen and press ACT: you start the fight with an extra energy and every beast {o}Vulnerable{/}. Get caught, and they start it on you.'],
-      ['{y}A FIGHT{/}', 'You get {b}3 energy{/} a turn and draw five cards. Each card costs the number in its corner. When you are done, END TURN and the beasts act.', '',
-        '{y}INTENT{/}', 'The icon over a beast is what it will do next: a fang and a number is an attack for that much. Read it before you spend your energy.', '',
-        '{y}BLOCK{/}', 'Cards like Stone Wall give {b}Block{/}. Block soaks damage until the start of your next turn, then it crumbles.'],
-      ['{y}RIFF CARDS{/}', 'Cards marked ♪ are riffs. Play one and it cuts to the note field: hit each arrow as it reaches the line with the {p}LEFT{/} {c}DOWN{/} {g}UP{/} {r}RIGHT{/} arrows, D F J K, or the four pads on a phone.', '',
-        '{c}SICK{/} timing hits hardest, GOOD is fine, a MISS costs the crowd. Some riffs are duels: the beast plays a phrase, then you play it back.', '',
-        '{y}HYPE{/}', 'Landed notes fill the Hype column. At full, {p}ENCORE{/} plays a free solo that hits every beast for every note you land.'],
-      ['{y}RELICS{/}', 'Relics are charms that work for the whole run without being played - more energy, a heal after fights, wider timing windows. They sit in the gold slots at the top. Point at one to read it. You start with the Bone Pick; elites and bosses drop more.', '',
-        '{y}UPGRADES{/}', 'Rest at a campfire and you can {g}practice{/} instead: one riff gets permanently better, shown with a +.'],
-      ['{y}GEMS AND THE ALTAR{/}', 'Crystal outcrops grow all over the valley - two in every section. Walk up and press ACT to dig one out.', '',
-        'Take the gems to the {p}ALTAR{/} in the village square. Three gems press one enchantment into a card for the rest of the run:', '',
-        '{r}FLINT{/}  +3 damage      {b}GRANITE{/}  +4 block', '{g}FEATHER{/}  costs 1 less      {y}AMBER{/}  draws a card when played', '',
-        'One gem to a card. The gem shows in the bottom of the stone.'],
-      ['{y}THE MAMMOTH{/}', 'The shop walks. A mammoth loaded with other people\'s belongings wanders every zone, turning up and packing up on its own schedule. Find it, trade shells for riffs and relics, or pay it to eat a card you do not want.', '',
-        '{y}FOG{/}', 'Purple fog marks something strange: a choice, a trade, a fight or a gift. You never know which until you walk in.'],
+      ['{y}THE STORY{/}', 'The Rockbottoms were halfway through dinner - a whole roast T-Rex head - when a very large old lady knocked at the cave. It was Grandma Rex. The head was her grandson. She took three of the family and ran for her mountain. You were in the toilet.', '',
+        '{y}THE ROAD{/}', 'Five lands lie between the cave and her lair. Each is a board of stone tiles. Roll the bone die and move exactly that many tiles, forward OR back. Every tile you could land on glows: click one.'],
+      ['{y}FORKS AND DEAD ENDS{/}', 'The road splits into two lanes and joins again: one lane is usually easier, the other richer. Side trails climb to caves and secrets and stop dead - walk back down them next turn.', '',
+        '{y}THE TILES{/}', '{b}Blue{/} tiles help you: food, gems, cards, charms. {r}Red{/} ones hurt. {o}Orange{/} ones are fights. {p}Purple{/} ones are mysteries, strangers and crossroads. {y}Gold{/} ones are camps, the trader and the gem altar. Point at any tile to read it.'],
+      ['{y}THE GROUND{/}', 'Every tile has ground: grass, water, hot rock, stone, bone, ice, sand or cave. The ground you walk over each round is counted in the corner, and lots of cards and artifacts care. {b}Wet Feet{/} doubles your next lightning if you splashed through water on the way to the fight.', '',
+        'Hot ground stings when you stop on it. Ice makes you slide on. Tar pits stop you dead. Beasts cannot see you in grass.'],
+      ['{y}CHARMS AND THE DICE{/}', 'Charms are one-use tricks you carry, three at most. Most bend the dice: pick your number, roll two and choose, roll high, roll low, nudge it one, roll again. Some keep you out of fights.', '',
+        '{y}THE BEASTS{/}', 'Beasts roam the road between the tiles. After you move, they move. One that catches you gets the first hit; land on one yourself and you get the jump on it.'],
+      ['{y}A FIGHT{/}', 'You get {b}3 energy{/} a turn and draw your hand. Each card costs the number in its corner. END TURN and the beasts act. The icon over a beast is what it will do next.', '',
+        '{y}RIFF CARDS{/}', 'Cards marked ♪ are riffs: hit each note as it reaches the line with D F J K, the arrows, or the pads on a phone. Better timing, bigger hit. Landed notes fill Hype, and full Hype is a free ENCORE.'],
+      ['{y}THE FAMILY{/}', '{r}BRONK{/} gets angrier when hurt, and Rage adds to every hit. {p}VELA{/} plays horn cards that echo back next turn, and controls the fight. {g}PEBBLE{/} plays lots of cheap cards fast. {c}ROXY{/} soaks beasts with water and zaps them with lightning.', '',
+        'Every boss you beat hands back one of the family, and they fight beside you after that.'],
+      ['{y}GEMS{/}', 'Gems are the only money. Dig them out of gem tiles, win them in fights, find them in caves. Spend them with {y}Trunks the trader{/}, or press them into your cards at a {p}gem altar{/}: flint hits harder, granite blocks more, feather costs less, amber draws a card.'],
     ];
     let y = r.y + 10;
     for (const line of pages[this.page]) {

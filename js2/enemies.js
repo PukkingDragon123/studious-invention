@@ -37,8 +37,11 @@ const ENEMIES = {
   trex: { name: 'T-REX', base: 'trex', hp: [150, 150], gold: [60, 70], scale: 1, elite: true, roar: { pitch: 50, len: 1.4, vol: 1 },
     moves: { bite: { name: 'Bite', dmg: 22 }, tail: { name: 'Tail Whip', dmg: 15, weakP: 1 }, roar: { name: 'Roar', block: 14, str: 3 }, stomp: { name: 'Stomp', dmg: 12, vulnP: 1 } },
     pattern: ['roar', 'bite', 'stomp', 'tail', 'bite'] },
-  // ---- BLAZE, one boss fought three times, angrier each act
-  blaze: { name: 'BLAZE', base: 'blaze', hp: [140, 140], gold: [90, 90], scale: 1, boss: true, roar: { pitch: 150, len: 1.2, vol: 1 },
+  mammothw: { name: 'Wild Mammoth', base: 'mammoth', hp: [72, 80], gold: [20, 26], scale: 1, roar: { pitch: 80, len: 1, vol: 0.8 },
+    moves: { trample: { name: 'Trample', dmg: 16 }, tusk: { name: 'Tusk Toss', dmg: 10, vulnP: 1 }, trumpet: { name: 'Trumpet', block: 12, str: 2 } },
+    pattern: ['trumpet', 'trample', 'tusk', 'trample'] },
+  // ---- the bosses: one to a land, each holding the road for Grandma
+  blaze: { name: 'BLAZE', title: 'THE FAMILY COOK, GONE FERAL', base: 'blaze', hp: [150, 150], gold: [90, 90], scale: 1, boss: true, roar: { pitch: 150, len: 1.2, vol: 1 },
     moves: {
       rake: { name: 'Fire Rake', dmg: 15, burnP: 2 }, tail: { name: 'Burning Tail', dmg: 11, hits: 2 },
       flare: { name: 'Flare Up', block: 16, str: 3 }, inferno: { name: 'INFERNO', dmg: 26, burnP: 3 },
@@ -51,29 +54,70 @@ const ENEMIES = {
       return k;
     },
     onHurt: (e, c) => { if (!e.phase2 && e.hp <= e.maxHp * 0.45) { e.phase2 = true; e.st.str += 3; e.turnCount = 0; c.bossPhase(e, 'BLAZE IS BURNING WHITE'); } } },
+  horace: { name: 'HORACE', title: 'A TRICERATOPS WHO HAS HAD ENOUGH', base: 'tricera', hp: [210, 210], gold: [0, 0], scale: 1, boss: true, bossScale: 2.4, roar: { pitch: 70, len: 1.3, vol: 1 },
+    moves: {
+      charge: { name: 'Three-Horn Charge', dmg: 20 }, wall: { name: 'Frill Wall', block: 24 }, stomp: { name: 'Stomp', dmg: 11, weakP: 1 },
+      sit: { name: 'Sit On You', dmg: 30 }, graze: { name: 'Angry Grazing', heal: 16, str: 2 },
+    },
+    ai: (e, c) => (e.phase2 ? ['sit', 'stomp', 'charge', 'wall'] : ['wall', 'charge', 'stomp', 'graze'])[e.turnCount % 4],
+    onHurt: (e, c) => { if (!e.phase2 && e.hp <= e.maxHp * 0.5) { e.phase2 = true; e.st.str += 2; e.turnCount = 0; c.bossPhase(e, 'HORACE LOWERS HIS HORNS'); } } },
+  tarking: { name: 'THE TAR KING', title: 'HE ROSE OUT OF THE PIT AND NEVER STOPPED', base: 'tarblob', hp: [240, 240], gold: [0, 0], scale: 1, boss: true, bossScale: 3.6, roar: { pitch: 45, len: 1.5, vol: 1 },
+    moves: {
+      engulf: { name: 'Engulf', dmg: 15, weakP: 2 }, spawn: { name: 'Bloop Out Babies', summon: 'tarblob', summonN: 2 },
+      harden: { name: 'Set Hard', block: 22 }, wave: { name: 'Tar Wave', dmg: 8, hits: 3 },
+    },
+    ai: (e, c) => { let k = ['harden', 'engulf', 'wave', 'spawn', 'engulf'][e.turnCount % 5]; if (k === 'spawn' && c.alive().length >= 3) k = 'wave'; return k; },
+    onHurt: (e, c) => { if (!e.phase2 && e.hp <= e.maxHp * 0.4) { e.phase2 = true; e.st.str += 3; c.bossPhase(e, 'THE TAR KING BOILS'); } } },
+  rexmond: { name: 'REXMOND', title: "GRANDMA'S OTHER GRANDSON", base: 'trex', hp: [300, 300], gold: [0, 0], scale: 1, boss: true, bossScale: 2.2, roar: { pitch: 50, len: 1.5, vol: 1 },
+    moves: {
+      bite: { name: 'Big Bite', dmg: 26 }, tail: { name: 'Tail Whip', dmg: 15, weakP: 1 }, roar: { name: 'ROAR', block: 16, str: 3 },
+      stomp: { name: 'Stomp', dmg: 12, vulnP: 1 }, frenzy: { name: 'Frenzy', dmg: 9, hits: 4 },
+    },
+    ai: (e, c) => (e.phase2 ? ['frenzy', 'bite', 'stomp', 'roar', 'frenzy'] : ['roar', 'bite', 'stomp', 'tail', 'bite'])[e.turnCount % 5],
+    onHurt: (e, c) => { if (!e.phase2 && e.hp <= e.maxHp * 0.5) { e.phase2 = true; e.st.str += 3; e.turnCount = 0; c.bossPhase(e, 'REXMOND LOSES IT'); } } },
+  grandma: { name: 'GRANDMA REX', title: 'SHE ONLY WANTED HER BOY BACK', base: 'grandma', hp: [380, 380], gold: [0, 0], scale: 1, boss: true, bossScale: 2, roar: { pitch: 58, len: 1.6, vol: 1 },
+    moves: {
+      handbag: { name: 'Handbag Swing', dmg: 18 }, knit: { name: 'Knit One, Purl One', block: 20, str: 2 },
+      bite: { name: 'Grandma Bite', dmg: 30 }, tea: { name: 'Nice Cup of Tea', weakP: 2, vulnP: 1 },
+      cry: { name: 'A Good Cry', heal: 24 }, boys: { name: 'Call The Boys', summon: 'raptor', summonN: 2 },
+      slippers: { name: 'Slipper Stomp', dmg: 11, hits: 3 },
+    },
+    ai: (e, c) => {
+      let k = (e.phase2 ? ['bite', 'slippers', 'boys', 'bite', 'handbag', 'cry'] : ['knit', 'handbag', 'tea', 'bite', 'boys', 'cry'])[e.turnCount % 6];
+      if (k === 'boys' && c.alive().length >= 3) k = 'handbag';
+      if (k === 'cry' && e.hp > e.maxHp * 0.8) k = 'handbag';
+      return k;
+    },
+    onHurt: (e, c) => { if (!e.phase2 && e.hp <= e.maxHp * 0.5) { e.phase2 = true; e.st.str += 4; e.turnCount = 0; c.bossPhase(e, 'THE WIG COMES OFF'); } } },
 };
 
 const ENCOUNTERS = {
-  1: { easy: [['compy', 'compy'], ['dodo'], ['compy', 'compy', 'compy'], ['compy', 'dodo']],
-    normal: [['boar'], ['dodo', 'dodo'], ['raptor', 'compy'], ['boar', 'compy']],
-    elite: [['tricera']], boss: [['blaze']] },
-  2: { easy: [['raptor'], ['ptero'], ['tarblob'], ['compy', 'raptor']],
-    normal: [['raptor', 'raptor'], ['tarblob', 'ptero'], ['lizard', 'raptor'], ['stego']],
-    elite: [['tricera'], ['stego', 'raptor']], boss: [['blaze']] },
-  3: { easy: [['lizard', 'lizard'], ['brute'], ['stego']],
-    normal: [['brute', 'lizard'], ['stego', 'lizard'], ['brute', 'brute'], ['raptor', 'raptor', 'lizard']],
-    elite: [['trex']], boss: [['blaze']] },
+  1: { easy: [['compy', 'compy'], ['dodo'], ['compy', 'dodo']],
+    normal: [['boar'], ['dodo', 'dodo', 'compy'], ['raptor', 'compy'], ['boar', 'compy']],
+    elite: [['tricera'], ['boar', 'boar']], boss: [['blaze']] },
+  2: { easy: [['raptor'], ['ptero'], ['compy', 'compy', 'compy']],
+    normal: [['raptor', 'raptor'], ['ptero', 'raptor'], ['stego'], ['tarblob', 'compy']],
+    elite: [['stego', 'raptor'], ['raptor', 'raptor', 'raptor']], boss: [['horace']] },
+  3: { easy: [['lizard'], ['tarblob'], ['brute']],
+    normal: [['brute', 'lizard'], ['tarblob', 'tarblob'], ['raptor', 'lizard'], ['brute', 'brute']],
+    elite: [['tricera'], ['brute', 'brute', 'lizard']], boss: [['tarking']] },
+  4: { easy: [['ptero', 'ptero'], ['raptor', 'compy']],
+    normal: [['mammothw'], ['raptor', 'raptor', 'ptero'], ['stego', 'ptero'], ['brute', 'raptor']],
+    elite: [['mammothw', 'raptor'], ['trex']], boss: [['rexmond']] },
+  5: { easy: [['lizard', 'lizard'], ['raptor', 'lizard']],
+    normal: [['lizard', 'lizard', 'raptor'], ['brute', 'lizard'], ['tarblob', 'lizard', 'lizard'], ['raptor', 'raptor', 'brute']],
+    elite: [['trex', 'lizard'], ['mammothw', 'brute']], boss: [['grandma']] },
 };
 
 const Enemies = {
   def(id) { return ENEMIES[id]; },
   make(id, rng, act = 1) {
     const d = ENEMIES[id] || ENEMIES.compy;
-    const scale = 1 + (act - 1) * 0.22;
-    const hp = Math.round(rng.int(d.hp[0], d.hp[1]) * (d.boss ? 1 + (act - 1) * 0.42 : scale));
+    const scale = 1 + (act - 1) * 0.17;
+    const hp = Math.round(rng.int(d.hp[0], d.hp[1]) * (d.boss ? 1 : scale));
     return {
       id, def: d, name: d.name, hp, maxHp: hp, block: 0, alive: true, act,
-      st: { str: d.boss ? (act - 1) * 2 : 0, weak: 0, vuln: 0, burn: 0, stun: 0 },
+      st: { str: d.boss ? 0 : Math.floor((act - 1) / 2), weak: 0, vuln: 0, burn: 0, stun: 0, soak: 0 },
       turnCount: 0, lastMove: null, intent: null, phase2: false,
       actor: new Actor({ base: d.base, x: 0, y: 0, scale: 1, facing: -1, clip: d.boss ? 'boss' : 'idle' }),
       hitT: 0, dieT: 0, spawnT: 0, shake: 0,
@@ -100,7 +144,7 @@ const Enemies = {
     return out;
   },
   encounter(act, kind, rng, exclude = []) {
-    const pool = (ENCOUNTERS[act] || ENCOUNTERS[3])[kind] || ENCOUNTERS[1].easy;
+    const pool = (ENCOUNTERS[act] || ENCOUNTERS[5])[kind] || ENCOUNTERS[1].easy;
     const ok = pool.filter(p => !exclude.includes(p.join(',')));
     return rng.pick(ok.length ? ok : pool);
   },

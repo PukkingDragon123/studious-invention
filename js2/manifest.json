@@ -1,171 +1,136 @@
 {
  "bronk_idle": {
-  "w": 52,
-  "h": 76,
+  "w": 66,
+  "h": 88,
   "frames": 2,
-  "note": "BRONK the dad: burly caveman, black spiky hair, big nose, stubble, orange hide tunic with black spots, one shoulder strap, big round belly, bare feet. Frame 1 breathes: belly wider, head 1px lower.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "BRONK the dad: burly caveman, black spiky hair, big nose, stubble, orange hide tunic with black spots, one shoulder strap, big round belly, bare feet. Frame 1 breathes: belly wider, head 1px lower."
  },
  "bronk_walk": {
-  "w": 52,
-  "h": 76,
+  "w": 66,
+  "h": 88,
   "frames": 4,
-  "note": "walk cycle: contact/down/pass/up. Legs alternate, arms swing opposite, belly lags and bounces, hair shifts.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "walk cycle: contact/down/pass/up. Legs alternate, arms swing opposite, belly lags and bounces, hair shifts."
  },
  "bronk_eat": {
-  "w": 52,
-  "h": 76,
+  "w": 66,
+  "h": 88,
   "frames": 4,
-  "note": "holding a giant meat leg to his mouth, chomping. F0 leg up mouth open wide, F1 bite down cheeks bulging, F2 chew squashed, F3 head back swallowing. Messy: keep room for the engine to add crumb particles.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "holding a giant meat leg to his mouth, chomping. F0 leg up mouth open wide, F1 bite down cheeks bulging, F2 chew squashed, F3 head back swallowing. Messy: keep room for the engine to add crumb particles."
  },
  "bronk_play": {
-  "w": 52,
-  "h": 76,
+  "w": 66,
+  "h": 88,
   "frames": 4,
-  "note": "rocking out with a bone guitar across his chest, mouth open singing. F0 neutral, F1 strum arm down + lean back, F2 big strum + one leg up, F3 head thrown back howling.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "rocking out with a bone guitar across his chest, mouth open singing. F0 neutral, F1 strum arm down + lean back, F2 big strum + one leg up, F3 head thrown back howling."
  },
  "bronk_shock": {
-  "w": 52,
-  "h": 76,
+  "w": 66,
+  "h": 88,
   "frames": 2,
-  "note": "terrified: jaw dropped to chest, eyes huge white circles, arms up, hair standing up. F1 even more extreme.",
-  "file": "art_chars"
- },
- "bronk_drive": {
-  "w": 52,
-  "h": 56,
-  "frames": 2,
-  "note": "seated in the foot-powered car, gripping a steering bone, legs hidden below the sprite bottom, leaning forward. F1 leaning harder, hair back.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "terrified: jaw dropped to chest, eyes huge white circles, arms up, hair standing up. F1 even more extreme."
  },
  "bronk_hurt": {
-  "w": 52,
-  "h": 76,
+  "w": 66,
+  "h": 88,
   "frames": 1,
-  "note": "knocked back, eyes X-ed out, arms flailing.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "knocked back, eyes X-ed out, arms flailing."
  },
  "vela_idle": {
-  "w": 50,
-  "h": 76,
+  "w": 54,
+  "h": 96,
   "frames": 2,
-  "note": "VELA the mum: tall, big orange-red hair piled up, bone hairpin, single-strap leopard-spot dress (use pink/red ramp), strong arms, sandals. F1 breathes.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "VELA the mum: tall, big orange-red hair piled up, bone hairpin, single-strap leopard-spot dress (use pink/red ramp), strong arms, sandals. F1 breathes."
  },
  "vela_walk": {
-  "w": 50,
-  "h": 76,
+  "w": 54,
+  "h": 96,
   "frames": 4,
-  "note": "walk cycle, hair and dress hem swing.",
-  "file": "art_chars"
- },
- "vela_cook": {
-  "w": 50,
-  "h": 76,
-  "frames": 4,
-  "note": "stirring a stone pot with a huge bone spoon, one hand on hip. Arm circles across the 4 frames.",
-  "file": "art_chars"
- },
- "vela_cry": {
-  "w": 50,
-  "h": 76,
-  "frames": 2,
-  "note": "captured and yelling, arms reaching out, hair wild.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "walk cycle, hair and dress hem swing."
  },
  "kid_a_idle": {
-  "w": 34,
-  "h": 50,
+  "w": 46,
+  "h": 62,
   "frames": 2,
-  "note": "PEBBLE the son: small, wild brown hair, one-shoulder hide, bare feet, cheeky grin.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "PEBBLE the son: small, wild brown hair, one-shoulder hide, bare feet, cheeky grin."
  },
  "kid_a_walk": {
-  "w": 34,
-  "h": 50,
+  "w": 46,
+  "h": 62,
   "frames": 4,
-  "note": "bouncy kid walk, big strides.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "bouncy kid walk, big strides."
  },
  "kid_a_eat": {
-  "w": 34,
-  "h": 50,
+  "w": 46,
+  "h": 62,
   "frames": 4,
-  "note": "gnawing a small meat bone, face covered in sauce.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "gnawing a small meat bone, face covered in sauce."
  },
  "kid_b_idle": {
-  "w": 34,
-  "h": 50,
+  "w": 48,
+  "h": 82,
   "frames": 2,
-  "note": "ROXY the daughter: pigtails tied with bone rings, teal hide dress, holding a pet lizard toy.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "ROXY the daughter: pigtails tied with bone rings, teal hide dress, holding a pet lizard toy."
  },
  "kid_b_walk": {
-  "w": 34,
-  "h": 50,
+  "w": 48,
+  "h": 82,
   "frames": 4,
-  "note": "bouncy kid walk.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "bouncy kid walk."
  },
  "kid_b_eat": {
-  "w": 34,
-  "h": 50,
+  "w": 48,
+  "h": 82,
   "frames": 4,
-  "note": "two-handed chomping on a rib, cheeks stuffed.",
-  "file": "art_chars"
- },
- "villager_idle": {
-  "w": 52,
-  "h": 76,
-  "frames": 2,
-  "note": "generic tribesman: brown hair, plain hide wrap, worried face.",
-  "file": "art_chars"
- },
- "villager_walk": {
-  "w": 52,
-  "h": 76,
-  "frames": 4,
-  "note": "walk cycle.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "two-handed chomping on a rib, cheeks stuffed."
  },
  "villager2_idle": {
-  "w": 52,
-  "h": 76,
+  "w": 46,
+  "h": 64,
   "frames": 2,
-  "note": "generic tribeswoman: dark hair in a bun, green hide wrap, carrying a basket.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "generic tribeswoman: dark hair in a bun, green hide wrap, carrying a basket."
  },
  "villager2_walk": {
-  "w": 52,
-  "h": 76,
+  "w": 46,
+  "h": 64,
   "frames": 4,
-  "note": "walk cycle.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "walk cycle."
  },
  "elder_idle": {
   "w": 52,
-  "h": 76,
+  "h": 80,
   "frames": 2,
-  "note": "village elder: white beard to the waist, bone-skull headdress, purple robe, leaning on a gnarled staff. F1 the staff taps.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "village elder: white beard to the waist, bone-skull headdress, purple robe, leaning on a gnarled staff. F1 the staff taps."
  },
  "brute_idle": {
-  "w": 58,
-  "h": 80,
+  "w": 62,
+  "h": 84,
   "frames": 2,
-  "note": "enemy raider: bald with a bone nose-ring, war paint stripes, thick club over one shoulder, heavy gut, angry.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "enemy raider: bald with a bone nose-ring, war paint stripes, thick club over one shoulder, heavy gut, angry."
  },
  "brute_walk": {
-  "w": 58,
-  "h": 80,
+  "w": 62,
+  "h": 84,
   "frames": 4,
-  "note": "heavy stomping walk, club swings.",
-  "file": "art_chars"
+  "file": "art_chars",
+  "note": "heavy stomping walk, club swings."
  },
  "blaze_idle": {
   "w": 76,
@@ -1014,26 +979,12 @@
   "note": "a bold question mark for suspicion.",
   "file": "art_ui"
  },
- "bronk_dash": {
-  "w": 52,
-  "h": 76,
-  "frames": 4,
-  "note": "sprinting flat out, body thrown forward, speed lines behind.",
-  "file": "art_chars"
- },
  "bronk_sleep": {
-  "w": 80,
-  "h": 36,
-  "frames": 4,
-  "note": "flat on his back and properly asleep: four frames of one slow breath, the belly and the fur rising, the jaw dropping wider on the out-breath, a foot twitching at the top of it.",
-  "file": "art_chars"
- },
- "bronk_sing": {
-  "note": "generated caveman",
+  "w": 88,
+  "h": 51,
+  "frames": 2,
   "file": "art_chars",
-  "w": 52,
-  "h": 76,
-  "frames": 4
+  "note": "flat on his back and properly asleep: four frames of one slow breath, the belly and the fur rising, the jaw dropping wider on the out-breath, a foot twitching at the top of it."
  },
  "v_tree": {
   "w": 88,
@@ -1440,5 +1391,523 @@
   "frames": 1,
   "file": "art_valley",
   "note": "valley scenery"
+ },
+ "ti_berries": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_meat": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_gem": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_card": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_charm": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_trap": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_rocks": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_tar": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_battle": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_dino": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_npc": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_choice": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_event": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_cave": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_secret": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_camp": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_trader": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_altar": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_vine": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_geyser": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_totem": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_boss": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_home": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ti_sign": {
+  "w": 18,
+  "h": 18,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_knuckle": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_twin": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_feather": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_pebble": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_nudge": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_rattle": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_smoke": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_moss": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_map": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "ch_honey": {
+  "w": 20,
+  "h": 20,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_rib_axe": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_sabre": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_bongos": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_wet_feet": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_moss_boots": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_sandals": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_rattle": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_crystal": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_skates": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_sand": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_dodo_foot": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_map": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_leaf": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_thunder": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_glasses": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_crown": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_horace": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_ember": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "relic_frostfang": {
+  "w": 22,
+  "h": 22,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "st_soak": {
+  "w": 16,
+  "h": 16,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "grandma_idle": {
+  "w": 124,
+  "h": 150,
+  "frames": 2,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "grandma_walk": {
+  "w": 124,
+  "h": 150,
+  "frames": 4,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "grandma_cry": {
+  "w": 124,
+  "h": 150,
+  "frames": 2,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "grandma_roar": {
+  "w": 124,
+  "h": 150,
+  "frames": 2,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "vela_play": {
+  "w": 54,
+  "h": 96,
+  "frames": 4,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "vela_eat": {
+  "w": 54,
+  "h": 96,
+  "frames": 4,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "vela_shock": {
+  "w": 54,
+  "h": 96,
+  "frames": 2,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "vela_hurt": {
+  "w": 54,
+  "h": 96,
+  "frames": 1,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "vela_sleep": {
+  "w": 96,
+  "h": 32,
+  "frames": 2,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "kid_a_play": {
+  "w": 46,
+  "h": 62,
+  "frames": 4,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "kid_a_shock": {
+  "w": 46,
+  "h": 62,
+  "frames": 2,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "kid_a_hurt": {
+  "w": 46,
+  "h": 62,
+  "frames": 1,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "kid_a_sleep": {
+  "w": 62,
+  "h": 31,
+  "frames": 2,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "kid_b_play": {
+  "w": 48,
+  "h": 82,
+  "frames": 4,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "kid_b_shock": {
+  "w": 48,
+  "h": 82,
+  "frames": 2,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "kid_b_hurt": {
+  "w": 48,
+  "h": 82,
+  "frames": 1,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "kid_b_sleep": {
+  "w": 82,
+  "h": 26,
+  "frames": 2,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "kid_npc_idle": {
+  "w": 38,
+  "h": 52,
+  "frames": 2,
+  "file": "art_chars",
+  "note": "person"
+ },
+ "h_rexhead": {
+  "w": 78,
+  "h": 50,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
+ },
+ "h_outhouse": {
+  "w": 58,
+  "h": 96,
+  "frames": 2,
+  "file": "art_board",
+  "note": "board game art"
  }
 }

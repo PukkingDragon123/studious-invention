@@ -1,17 +1,18 @@
 // ---------------------------------------------------------------------------
-// main.js - run state, routing between the village and everything else,
+// main.js - run state, routing between the board and everything else,
 //           save/load, and the frame loop
 // ---------------------------------------------------------------------------
 'use strict';
 
 const Settings = { music: 0.8, sfx: 0.9, noteSpeed: 1.15, difficulty: 'normal', offset: 0, shake: true, lighting: true };
-const SAVE_KEY = 'ongabonga_v2_save', SET_KEY = 'ongabonga_v2_settings';
+const SAVE_KEY = 'ongabonga_v3_save', SET_KEY = 'ongabonga_v2_settings';
 
 const Game = {
-  scene: null, overlay: null, run: null, last: 0, t: 0, mini: null, worldToScreen: null,
+  scene: null, overlay: null, run: null, last: 0, t: 0, worldToScreen: null,
   init() {
     Gfx.init(); Input.init(Gfx.canvas);
     this.loadSettings();
+    if (Settings.lighting !== false) Post.enable();
     this.go(new BootScene());
     requestAnimationFrame(ts => this.loop(ts));
   },
@@ -19,7 +20,7 @@ const Game = {
   goWith(kind, factory, hold) { Transition.start(kind, () => this.go(factory()), hold); },
   go(scene) {
     if (this.scene && this.scene.exit) this.scene.exit();
-    UI.locked = false; this.overlay = null; this.mini = null;
+    UI.locked = false; this.overlay = null;
     Co.clear(); Tweens.clear(); Particles.clear(); Popups.clear(); FX.clear(); Emotes.clear(); Floaters.clear();
     Juice.reset(); Dialogue.clear();
     this.scene = scene;
@@ -29,95 +30,79 @@ const Game = {
   loadSettings() { try { const s = JSON.parse(localStorage.getItem(SET_KEY)); if (s) Object.assign(Settings, s); } catch (e) { } AudioSys.settings.music = Settings.music; AudioSys.settings.sfx = Settings.sfx; },
   saveSettings() { try { localStorage.setItem(SET_KEY, JSON.stringify(Settings)); } catch (e) { } },
   // --------------------------------------------------------------------- run
-  newRun() {
+  // A new story starts at the hero select; picking one starts the run.
+  newRun(hero) {
+    if (!hero) { this.goWith('iris', () => new HeroSelectScene()); return; }
+    const H = Heroes.get(hero);
     const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
-    const deck = ['power_chord', 'power_chord', 'power_chord', 'power_chord', 'power_chord',
-      'stone_wall', 'stone_wall', 'stone_wall', 'stone_wall', 'crowd_surf'].map(id => Cards.make(id));
     this.run = {
-      seed, hp: 76, maxHp: 76, stamina: 100, maxStamina: 100, gold: 40,
-      deck, relics: ['bone_pick'], band: [], act: 1, fights: 0, startHype: 0,
-      zone: null, pos: null, seenEvents: [], seenFights: [],
-      bait: 0, baitNeed: 3, riffsPlayed: 0, campSeen: 0,
-      gems: 0, solved: {}, tips: {},
-      stats: { kills: 0, notes: 0, sick: 0, taken: 0 },
+      seed, hero, hp: H.hp, maxHp: H.hp, gems: 2,
+      deck: H.deck.map(id => Cards.make(id)), relics: [H.relic], band: [],
+      fights: 0, riffsPlayed: 0, seenEvents: [], seenFights: [], tips: {},
+      stats: { kills: 0, notes: 0, sick: 0, taken: 0, rolls: 0 },
+      board: this.freshBoard(1),
     };
-    this.go(new CutsceneScene(introScript, { onSkip: () => this.startVillage() }));
+    this.go(new CutsceneScene(introScript, { onSkip: () => this.startBoard() }));
   },
-  startVillage() { this.run.zone = null; this.run.pos = null; this.goWith('iris', () => new VillageScene(this.run.act)); },
-  hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } },
+  freshBoard(b, carry = {}) { return { biome: b, pos: null, used: {}, revealed: {}, wet: {}, touched: {}, charms: carry.charms || [], round: 0 }; },
+  startBoard() { this.save(); this.goWith('iris', () => new BoardScene()); },
+  toBoard(kind = 'slats') { this.save(); this.goWith(kind, () => new BoardScene()); },
+  hasSave() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); return !!(d && d.hero && d.board); } catch (e) { return false; } },
   save() {
     const r = this.run; if (!r) return;
-    const data = {
-      seed: r.seed, hp: r.hp, maxHp: r.maxHp, stamina: r.stamina, maxStamina: r.maxStamina,
-      gold: r.gold, relics: r.relics, band: r.band, act: r.act, fights: r.fights,
-      startHype: r.startHype, seenEvents: r.seenEvents, stats: r.stats, pos: r.pos,
-      bait: r.bait, baitNeed: r.baitNeed, riffsPlayed: r.riffsPlayed, campSeen: r.campSeen || 0,
-      gems: r.gems || 0, solved: r.solved || {}, tips: r.tips || {},
-      deck: r.deck.map(c => Cards.toSave(c)),
-    };
+    const data = Object.assign({}, r, { deck: r.deck.map(c => Cards.toSave(c)) });
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { }
   },
   continueRun() {
     try {
-      const d = JSON.parse(localStorage.getItem(SAVE_KEY)); if (!d) return this.newRun();
+      const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (!d || !d.hero || !d.board) return this.newRun();
       d.deck = d.deck.map(s => Cards.fromSave(s));
-      d.zone = null; d.gems = d.gems || 0; d.solved = d.solved || {}; d.tips = d.tips || {};
+      d.tips = d.tips || {}; d.band = d.band || []; d.seenFights = d.seenFights || [];
       this.run = d;
-      this.go(new VillageScene(d.act));
+      this.go(new BoardScene());
     } catch (e) { console.error(e); this.newRun(); }
   },
   clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } },
   // ------------------------------------------------------------------ routing
-  enterBattle(prowler, act, advantage) {
-    const r = this.run; r.fights++;
-    const rng = new RNG(r.seed + r.fights * 7 + act * 101);
-    const kind = prowler.elite ? 'elite' : (prowler.kind === 'compy' || prowler.kind === 'dodo') ? 'easy' : 'normal';
-    let ids;
-    if (prowler.elite) ids = Enemies.encounter(act, 'elite', rng);
-    else {
-      ids = Enemies.encounter(act, kind, rng, r.seenFights);
-      if (!ids.includes(prowler.kind)) ids = [prowler.kind].concat(ids.slice(0, 1));
-      r.seenFights.push(ids.join(',')); if (r.seenFights.length > 4) r.seenFights.shift();
-    }
-    this.pendingProwler = prowler;
-    this.save();
-    this.goWith('claw', () => new Combat(ids, { kind: prowler.elite ? 'elite' : 'normal', act, advantage }), 0.18);
+  enterFight(ids, kind, o = {}) {
+    this.run.fights++;
+    this.goWith('claw', () => new Combat(ids, Object.assign({ kind: kind || 'normal', act: this.run.board.biome }, o)), 0.18);
   },
-  enterFight(ids, kind) { this.run.fights++; this.goWith('claw', () => new Combat(ids, { kind: kind || 'normal', act: this.run.act }), 0.18); },
-  enterBoss() { this.run.fights++; this.pendingProwler = null; this.bossFight = true; this.save(); this.goWith('claw', () => new Combat(['blaze'], { kind: 'boss', act: this.run.act }), 0.3); },
-  enterEvent() { this.goWith('iris', () => new FogEvent()); },
-  leaveEvent() { this.goWith('iris', () => new VillageScene(this.run.act)); },
-  openShop() { this.goWith('slats', () => new MammothShop()); },
-  leaveShop() { this.goWith('slats', () => new VillageScene(this.run.act)); },
   combatWon(c) {
-    const r = this.run;
+    const r = this.run, bd = r.board, win = bd.win || {};
     const rng = new RNG(r.seed + r.fights * 991);
-    const cards = Cards.randomReward(rng, 3);
+    const cards = Cards.randomReward(rng, 3, [], r.hero, c.kind === 'elite' ? 0.12 : c.kind === 'boss' ? 0.3 : 0);
     let relics = [];
-    if (c.kind === 'elite') { const x = Relics.randomReward(rng, ['common', 'uncommon', 'uncommon', 'rare']); if (x) relics = [x]; }
-    if (c.kind === 'boss') { const ex = []; for (let i = 0; i < 2; i++) { const x = Relics.randomReward(rng, ['rare', 'boss', 'uncommon'], ex); if (x) { relics.push(x); ex.push(x); } } }
-    // the beast that chased you in the village is gone for good, and its
-    // carcass is one of the three you need to draw the raptor out
-    if (this.pendingProwler) {
-      this.pendingProwler.dead = true; this.pendingProwler = null;
-      if (r.bait < r.baitNeed) r.bait++;
-    }
-    this.goWith('slats', () => new RewardScene({ gold: c.goldEarned, cards, relics, kind: c.kind }));
+    if (c.kind === 'boss') { const ex = []; for (let i = 0; i < 2; i++) { const x = Relics.randomReward(rng, i ? ['rare'] : ['boss'], ex); if (x) { relics.push(x); ex.push(x); } } }
+    else if (c.kind === 'elite' || win.relicWin) { const x = Relics.randomReward(rng, win.relicWin || ['common', 'uncommon', 'uncommon', 'rare']); if (x) relics = [x]; }
+    if (win.roam != null) { const d = (bd.dinos || []).find(d => d.n === win.roam); if (d) d.alive = false; }
+    if (win.dino != null) bd.used[win.dino] = 1;
+    if (win.boss) bd.bossDown = true;
+    const gems = (c.gemsEarned || 0) + (win.bonusGems || 0) + (c.kind === 'normal' ? 1 : 0);
+    bd.win = null;
+    this.save();
+    this.goWith('slats', () => new RewardScene({ gems, cards, relics, kind: c.kind, boss: c.kind === 'boss' ? BIOMES[bd.biome].boss.name : null }));
   },
   afterReward(o) {
     const r = this.run;
-    if (o.kind !== 'boss') { this.save(); this.goWith('slats', () => new VillageScene(r.act)); return; }
+    if (o.kind !== 'boss') { this.toBoard(); return; }
+    // a land is won: whoever the boss was holding comes home
+    const b = r.board.biome, B = BIOMES[b];
     r.hp = Math.min(r.maxHp, r.hp + Math.round(r.maxHp * 0.3));
-    r.stamina = r.maxStamina;
-    if (r.act === 1) { r.band.push('pebble'); r.deck.push(Cards.make('drum_solo')); this.go(new ActStory(2, () => this.nextAct(2))); }
-    else if (r.act === 2) { r.band.push('roxy'); r.deck.push(Cards.make('flute_lullaby')); this.go(new ActStory(3, () => this.nextAct(3))); }
-    else { r.band.push('vela'); this.go(new EndingScene()); }
-  },
-  nextAct(act) {
-    const r = this.run;
-    r.act = act; r.zone = null; r.pos = null; r.seenFights = [];
+    const caps = Heroes.captives(r.hero);
+    let freed = null;
+    if (B.boss.final) { for (const id of caps) if (!r.band.includes(id)) r.band.push(id); this.save(); this.go(new EndingScene()); return; }
+    if (B.boss.rescue) { freed = caps.find(id => !r.band.includes(id)) || null; if (freed) r.band.push(freed); }
     this.save();
-    this.goWith('iris', () => new VillageScene(act));
+    this.go(new ActStory(b, freed, () => this.nextBiome(b + 1)));
+  },
+  nextBiome(b) {
+    const r = this.run;
+    r.board = this.freshBoard(b, { charms: r.board.charms });
+    r.seenFights = [];
+    this.save();
+    this.goWith('iris', () => new BoardScene());
   },
   // -------------------------------------------------------------------- loop
   loop(ts) {
@@ -143,6 +128,9 @@ const Game = {
         this.scene.update(sdt);
         Time.dt = dt;
       }
+      // the world goes to the game canvas; everything after the scene says it
+      // is done with the world goes on the interface layer, over the lighting
+      Post.begin();
       const ctx = Gfx.ctx;
       UI.begin();
       UI.locked = !!this.overlay;
@@ -151,10 +139,12 @@ const Game = {
       Gfx.clear();
       this.scene.draw();
       ctx.restore();
-      Juice.drawOverlay(ctx);
-      Transition.draw(ctx);
+      Post.ui();
+      Juice.drawOverlay(Gfx.ctx);
+      Transition.draw(Gfx.ctx);
       if (this.overlay) { UI.locked = false; this.overlay.draw(); }
       UI.drawTips();
+      Post.end();
       Gfx.canvas.style.cursor = Input.touch ? 'none' : (UI.hoverAny ? 'pointer' : 'default');
       if (Input.clicks.length) AudioSys.resume();
       for (const c of Input.clicks) {

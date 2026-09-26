@@ -27,23 +27,19 @@ function defClips(base, table) {
   }
 }
 
-defClips('bronk', {
-  idle: { fps: 2.4 }, walk: { fps: 10 }, run: { spr: 'bronk_walk', fps: 16 },
-  eat: { fps: 7 }, play: { fps: 8 }, shock: { fps: 6 }, drive: { fps: 8 },
-  sing: { spr: 'bronk_sing', fps: 5 }, sleep: { spr: 'bronk_sleep', fps: 1.2 },
-  dash: { spr: 'bronk_dash', fps: 15 }, kick: { spr: 'bronk_dash', fps: 12 },
-  hurt: { spr: 'bronk_hurt', fps: 1, loop: false },
+// the family: every one of them can walk, play, eat, flinch and sleep
+for (const b of ['bronk', 'vela', 'kid_a', 'kid_b']) defClips(b, {
+  idle: { fps: 2.4 }, walk: { fps: 10 }, run: { spr: b + '_walk', fps: 16 }, dash: { spr: b + '_walk', fps: 18 },
+  play: { fps: 8 }, sing: { spr: b + '_play', fps: 6 }, eat: { fps: 7 }, shock: { fps: 6 },
+  sleep: { fps: 1.2 }, hurt: { fps: 1, loop: false }, kick: { spr: b + '_walk', fps: 12 },
 });
-defClips('vela', { idle: { fps: 2.2 }, walk: { fps: 10 }, cook: { fps: 6 }, cry: { fps: 5 } });
-defClips('kid_a', { idle: { fps: 2.6 }, walk: { fps: 11 }, eat: { fps: 8 } });
-defClips('kid_b', { idle: { fps: 2.6 }, walk: { fps: 11 }, eat: { fps: 8 } });
-defClips('villager', { idle: { fps: 2 }, walk: { fps: 9 } });
-defClips('villager2', { idle: { fps: 2 }, walk: { fps: 9 } });
 defClips('elder', { idle: { fps: 1.4 } });
+defClips('villager2', { idle: { fps: 2 }, walk: { fps: 9 } });
 defClips('brute', { idle: { fps: 2 }, walk: { fps: 8 } });
+defClips('kid_npc', { idle: { fps: 2.6 } });
 defClips('blaze', { idle: { fps: 7 }, walk: { fps: 10 }, roar: { fps: 7 }, boss: { fps: 6 } });
 defClips('trex', { idle: { fps: 1.8 }, walk: { fps: 7 }, roar: { fps: 5 } });
-// dream only
+defClips('grandma', { idle: { fps: 1.8 }, walk: { fps: 6 }, cry: { fps: 4 }, roar: { fps: 5 }, boss: { spr: 'grandma_idle', fps: 1.8 } });
 defClips('mammoth', { idle: { fps: 1.6 }, walk: { fps: 6 }, trader: { fps: 1.6 }, shower: { fps: 5 } });
 for (const b of ['compy', 'dodo', 'boar', 'raptor', 'tricera', 'lizard', 'stego']) defClips(b, { idle: { fps: 2.4 }, walk: { fps: 9 } });
 defClips('ptero', { idle: { spr: 'ptero_fly', fps: 8 }, walk: { spr: 'ptero_fly', fps: 10 }, fly: { fps: 8 } });

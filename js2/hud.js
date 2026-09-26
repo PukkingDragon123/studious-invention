@@ -8,7 +8,7 @@
 //   - everything sits on an 8px grid, 12px in from the screen edge
 //   - one plate per job, never stacked, never more than three corners used
 //   - text on glass is always light; colour carries meaning (red life,
-//     green breath, blue energy, gold money, purple gems, pink hype)
+//     green breath, blue energy, purple gems, pink hype)
 // ---------------------------------------------------------------------------
 'use strict';
 
@@ -93,14 +93,13 @@ const HUD = {
     UI.hit(x, y, w, h, cb, { disabled: o.disabled });
     return hov;
   },
-  // the two icons we draw by hand rather than from the sheet
+  // the gem, drawn by hand rather than from the sheet: the only money there is
   gem(x, y, s = 1) {
     const c = Gfx.ctx;
     c.fillStyle = HUD.C.ink; c.beginPath(); c.moveTo(x, y - 9 * s); c.lineTo(x + 7 * s, y); c.lineTo(x, y + 9 * s); c.lineTo(x - 7 * s, y); c.fill();
     c.fillStyle = '#7c3eb2'; c.beginPath(); c.moveTo(x, y - 7 * s); c.lineTo(x + 5 * s, y); c.lineTo(x, y + 7 * s); c.lineTo(x - 5 * s, y); c.fill();
     c.fillStyle = HUD.C.gem; c.beginPath(); c.moveTo(x, y - 7 * s); c.lineTo(x - 5 * s, y); c.lineTo(x, y); c.fill();
   },
-  shell(x, y) { Gfx.sprite('icon_coin', x, y, { anchor: 'c', scale: 1 }); },
   // A face in a round frame: whose status this is.
   portrait(cx, cy, r, spr, o = {}) {
     const c = Gfx.ctx;

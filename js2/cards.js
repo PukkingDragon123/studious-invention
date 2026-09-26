@@ -263,12 +263,19 @@ const Cards = {
   toSave(c) { return c.ench ? { id: c.id, up: !!c.up, ench: c.ench } : { id: c.id, up: !!c.up }; },
   dmg(base, c) { return c ? String(c.previewDamage(base)) : String(base); },
   desc(c, combat) { const d = c.def.desc(c.v, combat || null); return c.v.enchDraw ? `${d} {g}Draw ${c.v.enchDraw}.{/}` : d; },
-  pool(rarity) { return Object.keys(CARDS).filter(k => CARDS[k].rarity === rarity); },
-  randomReward(rng, n = 3, exclude = []) {
+  // the cards a hero can be dealt: the family's shared ones and their own
+  pool(rarity, hero) { return Object.keys(CARDS).filter(k => CARDS[k].rarity === rarity && (!CARDS[k].hero || CARDS[k].hero === hero)); },
+  randomReward(rng, n = 3, exclude = [], hero, boost = 0) {
+    hero = hero || (Game.run && Game.run.hero) || 'bronk';
     const out = []; let guard = 0;
-    while (out.length < n && guard++ < 120) {
-      const r = rng.next(); const rar = r < 0.08 ? 'rare' : r < 0.42 ? 'uncommon' : 'common';
-      const id = rng.pick(this.pool(rar));
+    while (out.length < n && guard++ < 200) {
+      const r = rng.next(); const rar = r < 0.08 + boost ? 'rare' : r < 0.42 + boost ? 'uncommon' : 'common';
+      let pool = this.pool(rar, hero);
+      // two offers in three are the hero's own
+      const own = pool.filter(k => CARDS[k].hero === hero);
+      if (own.length && rng.chance(0.62)) pool = own;
+      if (!pool.length) continue;
+      const id = rng.pick(pool);
       if (out.includes(id) || exclude.includes(id)) continue;
       out.push(id);
     }
@@ -386,6 +393,8 @@ const Cards = {
     Gfx.textWrap(this.desc(c, o.combat), x + 9, ty - 1, w - 18, { color: '#fffaea', lineHeight: 11 });
     ctx.restore();
     if (c.def.exhaust && !c.v.noExhaust) Gfx.sprite('icon_fire', x + w - 16, y + h - 20, { anchor: 'c', scale: 0.8, tint: '#ffa832', tintAmount: 0.5 });
+    if (c.def.terrain && TERRAIN[c.def.terrain]) { const T = TERRAIN[c.def.terrain]; Gfx.rect(x + 6, y + h - 14, 22 * s, 8, STONE.ink); Gfx.rect(x + 7, y + h - 13, 20 * s, 6, T.col); }
+    if (c.echoCopy) { ctx.globalAlpha = (o.alpha ?? 1) * 0.28; this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.fillStyle = '#86e8d2'; ctx.fill(); ctx.globalAlpha = o.alpha ?? 1; }
     // an enchanted card has its gem set into the bottom edge, and it glints
     if (c.ench && ENCHANTS[c.ench]) {
       const E = ENCHANTS[c.ench], gx = x + w / 2, gy = y + h - 7;

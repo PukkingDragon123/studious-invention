@@ -13,6 +13,11 @@ const SPEAKER_STYLE = {
   BLAZE: { fill: '#2a1410', name: '#ffa832', text: '#ffe08a', portrait: 'blaze_idle' },
   ELDER: { fill: '#f6f0ff', name: '#4b2070', portrait: 'elder_idle' },
   MAMMOTH: { fill: '#fff6e6', name: '#85562f', portrait: 'mammoth_trader', portraitDX: -52 },
+  'GRANDMA REX': { fill: '#f6f0ff', name: '#7c3eb2', portrait: 'grandma_idle' },
+  HORACE: { fill: '#f0fff0', name: '#27632f', portrait: 'tricera_idle' },
+  'TAR KING': { fill: '#1a1420', name: '#b177e6', text: '#e8dfc6', portrait: 'tarblob_idle' },
+  'THE TAR KING': { fill: '#1a1420', name: '#b177e6', text: '#e8dfc6', portrait: 'tarblob_idle' },
+  REXMOND: { fill: '#fff0e8', name: '#9c3510', portrait: 'trex_idle' },
   '': { fill: '#fffaea', name: '#3b3048' },
 };
 
@@ -30,7 +35,7 @@ const Dialogue = {
     };
     this.active = b;
     let waited = 0;
-    const pitch = { BRONK: -120, VELA: 120, PEBBLE: 260, ROXY: 300, BLAZE: -200, ELDER: -80, MAMMOTH: -170 }[speaker] || 0;
+    const pitch = { BRONK: -120, VELA: 120, PEBBLE: 260, ROXY: 300, BLAZE: -200, ELDER: -80, MAMMOTH: -170, 'GRANDMA REX': -260, HORACE: -230, 'TAR KING': -300, 'THE TAR KING': -300, REXMOND: -250 }[speaker] || 0;
     while (true) {
       yield 0;
       b.t += Time.dt; waited += Time.dt;

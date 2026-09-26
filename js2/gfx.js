@@ -342,8 +342,8 @@ const Gfx = {
     const scale = o.scale || 1;
     // two tag palettes: one for dark backgrounds, one for the parchment panels
     const cols = o.onLight
-      ? { y: '#7d1d2b', g: '#27632f', r: '#c2333c', c: '#18706a', o: '#9c3510', w: '#14331e', p: '#a03a68', b: '#1d3d72', d: '#574a66', s: '#3b3048' }
-      : { y: '#ffe98a', g: '#a8e878', r: '#ef6a5e', c: '#86e8d2', o: '#ffa832', w: '#ffffff', p: '#ffb0cf', b: '#6aa9ee', d: '#7a6d8a', s: '#bdbccd' };
+      ? { y: '#7d1d2b', g: '#27632f', r: '#c2333c', c: '#18706a', o: '#9c3510', w: '#14331e', p: '#a03a68', b: '#1d3d72', d: '#574a66', s: '#3b3048', v: '#4b2070' }
+      : { y: '#ffe98a', g: '#a8e878', r: '#ef6a5e', c: '#86e8d2', o: '#ffa832', w: '#ffffff', p: '#ffb0cf', b: '#6aa9ee', d: '#7a6d8a', s: '#bdbccd', v: '#c28cff' };
     const base = o.color || '#e8dfc6';
     const segs = []; let re = /\{([^}]*)\}/g, last = 0, m, col = base;
     while ((m = re.exec(str))) {

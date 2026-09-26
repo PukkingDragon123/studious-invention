@@ -28,7 +28,7 @@ def rex_foot(cv, W, s, ax, ay, tx, gy_row, ramp, back=12.0, lift=0.0):
         shade(cv, cl, BONE, grad=False)
     return f
 
-def rex_head(cv, s, HX, jaw, rng, scar=True):
+def rex_head(cv, s, HX, jaw, rng, scar=True, paint=True, eye=True):
     JX = rot_xf(HX, jaw * 0.66, 90.5, 30.6)     # positive: the tip drops
     skull = [(88, 33), (88.5, 23), (91, 15.6), (96, 10.4), (102.5, 7.8), (109, 8.4),
              (113.6, 11.6), (115.0, 15.8), (118.4, 16.6), (122.2, 19.4), (124.6, 23.4),
@@ -91,12 +91,12 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
             mx = (LT[i][0] + LT[i + 1][0]) / 2
             for dy in (0.0, 1.0, 2.0, 3.0): cv.setif(*JX(mx, 33.4 - dy), 'D', '!@#$')
     # two bars daubed across the snout, in the same ochre as the flank
-    for (bx0, bx1) in ((103.4, 106.0), (110.2, 112.4)):
+    for (bx0, bx1) in (((103.4, 106.0), (110.2, 112.4)) if paint else ()):
         bar = poly(PL(HX, [(bx0, 12.5), (bx1, 12.5), (bx1 - 0.8, 25.5), (bx0 - 0.8, 25.5)])) & sk
         flat(cv, bar, 'z')
         bar2 = poly(PL(HX, [(bx0 + 0.6, 13.4), (bx1 - 0.5, 13.4), (bx1 - 1.3, 24.6), (bx0 - 0.2, 24.6)])) & sk
         flat(cv, bar2, 'A')
-    for (dx, dy) in ((99.0, 18.0), (96.5, 25.0)):                        # and a thumbprint or two
+    for (dx, dy) in (((99.0, 18.0), (96.5, 25.0)) if paint else ()):     # and a thumbprint or two
         shade(cv, disc(*HX(dx, dy), 1.5 * s) & sk, ['!', '@', '#', '$'], grad=False)
     # nostril
     shade(cv, poly(PL(HX, [(121.4, 21.6), (124.4, 23.0), (123.4, 25.4), (120.6, 24.0)])),
@@ -104,9 +104,10 @@ def rex_head(cv, s, HX, jaw, rng, scar=True):
     # eye: one black dot, and a brow ridge you could shelter under
     ey = ell(*HX(106.4, 19.4), 3.4 * s, 3.2 * s)
     flat(cv, dilate(ey, max(1.0, 1.0 * s)) - ey, 't')
-    flat(cv, ey, '0')
-    flat(cv, ell(*HX(105.4, 18.4), 1.2 * s, 1.1 * s), '7')          # a catchlight
-    flat(cv, ell(*HX(107.6, 20.6), 0.7 * s, 0.6 * s), '6')
+    if eye:
+        flat(cv, ey, '0')
+        flat(cv, ell(*HX(105.4, 18.4), 1.2 * s, 1.1 * s), '7')          # a catchlight
+        flat(cv, ell(*HX(107.6, 20.6), 0.7 * s, 0.6 * s), '6')
     br = ell(*HX(106.0, 13.6), 3.8 * s, 1.1 * s)   # a shelf, not a scowl
     flat(cv, dilate(br, max(1.0, 1.0 * s)) - br, 't')
     flat(cv, br, 't')
