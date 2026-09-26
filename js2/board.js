@@ -179,33 +179,36 @@ class BoardScene {
   }
   heal(n) {
     const r = this.run, b = r.hp; r.hp = Math.min(r.maxHp, r.hp + Math.round(n)); const h = r.hp - b;
-    if (h > 0) { Popups.add(this.me.x, this.me.top - 10, `+${h}`, '#a8e878', { scale: 1.6 }); Particles.sparkle(this.me.x, this.me.cy, 10, ['#a8e878', '#6cc95c']); AudioSys.sfx('heal'); }
+    if (h > 0) { if (!this.stage) { Popups.add(this.me.x, this.me.top - 10, `+${h}`, '#a8e878', { scale: 1.6 }); Particles.sparkle(this.me.x, this.me.cy, 10, ['#a8e878', '#6cc95c']); } AudioSys.sfx('heal'); }
     return h;
   }
   hurt(n) {
     const r = this.run; n = Math.round(n);
     r.hp = Math.max(0, r.hp - n); r.stats.taken += n;
-    Popups.add(this.me.x, this.me.top - 10, `-${n}`, '#ef6a5e', { scale: 1.8, shake: 1.2 });
-    Particles.blood(this.me.x, this.me.cy, ['#c2333c', '#ef6a5e'], 10);
-    this.me.flash('#ffffff', 0.14); this.me.squash(0.2); AudioSys.sfx('hurt'); Juice.flash('#c2333c', 0.25, 4);
+    if (!this.stage) {
+      Popups.add(this.me.x, this.me.top - 10, `-${n}`, '#ef6a5e', { scale: 1.8, shake: 1.2 });
+      Particles.blood(this.me.x, this.me.cy, ['#c2333c', '#ef6a5e'], 10);
+      this.me.flash('#ffffff', 0.14); this.me.squash(0.2);
+    } else Particles.blood(this.stage.hero.x, this.stage.hero.cy, ['#c2333c', '#ef6a5e'], 10);
+    AudioSys.sfx('hurt'); Juice.flash('#c2333c', 0.25, 4);
     if (r.hp <= 0) { this.leaving = true; this.phase = 'busy'; Co.run(this.fall(), this); }
   }
   *fall() { yield 0.8; Game.goWith('fade', () => new GameOverScene(), 0.4); }
   foodHeal(n) { let k = n; if (this.run.hero === 'bronk') k *= 2; return k; }
   addGems(n) {
     this.run.gems = (this.run.gems || 0) + n;
-    Popups.add(this.me.x, this.me.top - 18, `+${n} GEM${n > 1 ? 'S' : ''}`, '#c28cff', { scale: 1.5 });
+    if (!this.stage) Popups.add(this.me.x, this.me.top - 18, `+${n} GEM${n > 1 ? 'S' : ''}`, '#c28cff', { scale: 1.5 });
     this.gemFly = { n, t: 0 };
     AudioSys.sfx('gem');
   }
-  burst(col) { Particles.spawn(this.me.x, this.me.cy, { n: 18, color: [col, '#ffffff'], speed: 160, life: 0.7, size: 3, sizeEnd: 0, gravity: 120 }); }
-  popup(word, col = '#ffe98a') { Popups.add(this.me.x, this.me.top - 16, word, col, { scale: 1.5, life: 1.3 }); }
+  burst(col) { if (this.stage) return; Particles.spawn(this.me.x, this.me.cy, { n: 18, color: [col, '#ffffff'], speed: 160, life: 0.7, size: 3, sizeEnd: 0, gravity: 120 }); }
+  popup(word, col = '#ffe98a') { if (this.stage) { Toon.word(this.stage.hero.x, this.stage.hero.top - 12, word, { size: 1.6, col }); return; } Popups.add(this.me.x, this.me.top - 16, word, col, { scale: 1.5, life: 1.3 }); }
   toast(text, col = '#ffe98a') { this.toasts.push({ text, col, t: 0, life: 2.4 }); }
   giveRelic(id) {
     if (!id || this.hasRelic(id)) return;
     Relics.give(id);
     this.toast(`NEW ARTIFACT: ${RELICS[id].name.toUpperCase()}`, '#ffe98a');
-    Particles.sparkle(this.me.x, this.me.cy, 20);
+    if (!this.stage) Particles.sparkle(this.me.x, this.me.cy, 20);
   }
   randomRelic(tiers) { return Relics.randomReward(this.rng, tiers); }
   addCharm(id) {
@@ -264,8 +267,8 @@ class BoardScene {
   // a quick roll: the die tumbles in the open panel, or over your head
   *quickRoll() {
     const v = this.rollValue();
-    const d = this.panel ? (this.panel.die = new Dice3D.Die(0, 0, 20)) : this.die;
-    if (!this.panel) { this.dieShow = 1; this.placeDie(); }
+    const d = this.stage ? (this.stage.die = new Dice3D.Die(STAGE.W / 2, STAGE.GY - 84, 24)) : this.panel ? (this.panel.die = new Dice3D.Die(0, 0, 20)) : this.die;
+    if (!this.panel && !this.stage) { this.dieShow = 1; this.placeDie(); }
     d.roll(v, 1.0); AudioSys.sfx('dice_roll');
     yield () => !d.busy;
     AudioSys.sfx('dice_land');
@@ -277,9 +280,10 @@ class BoardScene {
     const was = this.panel; this.panel = null;
     if (!AudioSys.song) AudioSys.play('event', { fade: 0.3 });
     this.riff = new Riff({ bars: cfg.bars, density: cfg.density, title: cfg.title, act: this.bd.biome, windowMult: 1 + Relics.mod('window'), onDone: r => { res = r; done = true; } });
-    this.me.play(Heroes.has(this.run.hero, 'play') ? 'play' : 'idle');
+    const who = this.stage ? this.stage.hero : this.me;
+    who.play(Heroes.has(this.run.hero, 'play') ? 'play' : 'idle');
     yield () => done;
-    this.riff = null; this.me.play('idle');
+    this.riff = null; who.play('idle');
     this.run.riffsPlayed = (this.run.riffsPlayed || 0) + 1;
     Popups.add(W / 2, 200, `${res.grade}  ${Math.round(res.acc * 100)}%`, res.grade[0] === 'S' ? '#ffe98a' : '#ffffff', { world: false, scale: 2.4, life: 1.2 });
     yield 0.8;
@@ -290,6 +294,7 @@ class BoardScene {
   // An event is a tablet on the right of the screen: a picture, some words,
   // and two or three things to do. panelChoose waits for a choice.
   *panelChoose(ev) {
+    if (this.stage) return yield* this.stage.choose(ev);
     const P = this.panel = { ev, title: ev.title, text: ev.text, spr: ev.spr, icon: ev.icon, scale: ev.scale || 1, choices: ev.choices, pick: -1, t: 0, mode: 'choose' };
     AudioSys.sfx('card_deal');
     yield () => P.pick >= 0;
@@ -298,6 +303,7 @@ class BoardScene {
     return P.pick;
   }
   *panelResult(text, button = 'CARRY ON') {
+    if (this.stage) { yield* this.stage.result(text, button); return; }
     const P = this.panel || (this.panel = { title: '', text: '', choices: [], t: 0 });
     P.mode = 'result'; P.result = text; P.button = button; P.done = false; P.t = Math.max(P.t, 0.3);
     yield () => P.done;
@@ -307,18 +313,46 @@ class BoardScene {
     const list = BOARD_EVENTS[pool];
     return (t && t.ev && list.find(e => e.id === t.ev)) || this.rng.pick(list);
   }
-  *runEvent(ev) {
+  // Cut from the road to a close-up film of whatever is happening, run the
+  // body inside it, and cut back.
+  *cinema(ev, body, o = {}) {
+    if (this.stage || this.leaving) { yield* body(); return; }
+    const was = this.phase; this.phase = 'busy';
+    Juice.letterbox(true); AudioSys.sfx('zoom_in', { vol: 0.5 });
+    this.cam.zoomRate = 7; this.cam.tzoom = BZ * 1.7;
+    yield 0.32;
+    const St = this.stage = new EventStage(this, ev, o);
+    Game.worldToScreen = (x, y) => St.cam.toScreen(x, y);
+    this.cam.zoom = this.cam.tzoom = BZ;
+    St.flash = 0.9; Juice.punch(0.04);
+    yield* St.enter();
+    yield* body(St);
+    if (this.leaving || this.stage !== St) return;
+    yield* St.leave();
+    St.flash = 1;
+    yield 0.05;
+    this.stage = null; Toon.clear(); Dialogue.clear();
+    Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
+    Juice.letterbox(false);
+    this.phase = was;
+  }
+  *runEvent(ev, pool) {
     if (!ev) return;
     const r = this.run; r.seenEvents = r.seenEvents || []; r.seenEvents.push(ev.id);
-    const S = { result: null, fight: null, after: null, bonusGems: 0, relicWin: null };
-    const pickable = ev.choices.map(c => Object.assign({}, c, { ok: !c.cond || c.cond(this) }));
-    const k = yield* this.panelChoose(Object.assign({}, ev, { choices: pickable }));
-    const ch = ev.choices[k];
-    yield* ch.act(this, S);
-    if (this.leaving) return;
-    yield* this.panelResult(S.result || '...', S.fight ? 'FIGHT!' : 'CARRY ON');
-    if (S.after) yield* S.after();
-    if (S.fight) yield* this.fight(S.fight, { kind: S.relicWin ? 'elite' : 'normal', relicWin: S.relicWin, bonusGems: S.bonusGems });
+    yield* this.cinema(ev, function* () {
+      const S = { result: null, fight: null, after: null, bonusGems: 0, relicWin: null };
+      const pickable = ev.choices.map(c => Object.assign({}, c, { ok: !c.cond || c.cond(this) }));
+      const k = yield* this.panelChoose(Object.assign({}, ev, { choices: pickable }));
+      const ch = ev.choices[k];
+      yield* ch.act(this, S);
+      if (this.leaving) return;
+      if (S.fight && this.stage) { yield* this.stage.react(); yield* this.stage.squareUp(S.fight); }
+      yield* this.panelResult(S.result || '...', S.fight ? 'FIGHT!' : 'CARRY ON');
+      if (S.after) this.pendingAfter = S.after;
+      if (S.fight) yield* this.fight(S.fight, { kind: S.relicWin ? 'elite' : 'normal', relicWin: S.relicWin, bonusGems: S.bonusGems });
+    }.bind(this), { pool });
+    // moves happen back on the road, where you can see them
+    if (this.pendingAfter && !this.leaving) { const a = this.pendingAfter; this.pendingAfter = null; yield* a(); }
   }
   // ------------------------------------------------------------- fights
   *startFight(t, kind) {
@@ -337,6 +371,7 @@ class BoardScene {
   }
   *fight(ids, o = {}) {
     const bd = this.bd;
+    if (this.stage) Juice.letterbox(false);
     bd.resume = o.resume || 'world';
     bd.win = { relicWin: o.relicWin || null, bonusGems: o.bonusGems || 0, roam: o.roam ?? null, boss: o.kind === 'boss', dino: o.dino ?? null };
     this.leaving = true; this.phase = 'busy';
@@ -345,6 +380,10 @@ class BoardScene {
     yield 0;
   }
   *dinoTile(t) {
+    const D0 = DINO_TILES[this.bd.biome][t.dino || 0];
+    yield* this.cinema({ title: D0.name, spr: D0.spr }, () => this.dinoFilm(t), { sleeping: true, pool: 'dino', ids: D0.ids });
+  }
+  *dinoFilm(t) {
     const D = DINO_TILES[this.bd.biome][t.dino || 0];
     const ev = {
       title: D.name, spr: D.spr, scale: 0.9,
@@ -356,10 +395,11 @@ class BoardScene {
       ],
     };
     const k = yield* this.panelChoose(ev);
-    if (k === 0) { yield* this.panelResult('You square up to it. It stands. And stands. And keeps standing.', 'FIGHT!'); yield* this.fight(D.ids.slice(), { kind: 'elite', relicWin: ['rare', 'uncommon'], dino: t.id }); return; }
+    if (k === 0) { if (this.stage) yield* this.stage.squareUp(D.ids); yield* this.panelResult('You square up to it. It stands. And stands. And keeps standing.', 'FIGHT!'); yield* this.fight(D.ids.slice(), { kind: 'elite', relicWin: ['rare', 'uncommon'], dino: t.id }); return; }
     if (k === 1) {
       const v = yield* this.quickRoll();
       if (v >= 4) { this.addGems(2); yield* this.panelResult(`A ${v}. You tiptoe past on the very tips of your toes. {v}+2 gems{/} from its nest.`); return; }
+      if (this.stage) yield* this.stage.squareUp(D.ids);
       yield* this.panelResult(`A ${v}. You tread on its tail.`, 'RUN? NO. FIGHT!');
       yield* this.fight(D.ids.slice(), { kind: 'elite', relicWin: ['uncommon'], advantage: 'ambushed', dino: t.id });
       return;
@@ -382,6 +422,9 @@ class BoardScene {
   *secretTile(t) {
     this.bd.revealed[t.id] = 1;
     Particles.sparkle(t.x, t.y - 8, 30);
+    yield* this.cinema({ title: 'A SECRET', spr: 'ti_secret', scale: 3 }, () => this.secretFilm(t), { secret: true });
+  }
+  *secretFilm(t) {
     const r = this.rng.int(0, 2);
     if (r === 0) {
       const id = this.randomRelic(['rare', 'uncommon']);
@@ -396,6 +439,9 @@ class BoardScene {
     }
   }
   *campTile(t) {
+    yield* this.cinema({ title: 'CAMPFIRE' }, () => this.campFilm(t), { camp: true });
+  }
+  *campFilm(t) {
     const heal = Math.round(this.run.maxHp * 0.3);
     const k = yield* this.panelChoose({ title: 'CAMPFIRE', spr: 'v_campfire', scale: 2, text: 'Warm stones, a spit, and the stars. Nothing is chasing you, for now.',
       choices: [
@@ -680,6 +726,7 @@ class BoardScene {
     for (const D of this.dinoActors) D.a.update(dt);
     this.die.update(dt); if (this.die2) this.die2.update(dt);
     if (this.panel && this.panel.die) this.panel.die.update(dt);
+    if (this.stage && this.stage.die) this.stage.die.update(dt);
     if (this.panel) this.panel.t += dt;
     if (this.banner) { this.banner.t += dt; if (this.banner.t > this.banner.life) this.banner = null; }
     for (const o of this.toasts) o.t += dt;
@@ -727,7 +774,8 @@ class BoardScene {
       for (const k of Input.keys) if (/^Digit[1-4]$/.test(k.code)) { const i = +k.code.slice(5) - 1; const c = this.panel.choices[i]; if (c && c.ok !== false) this.panel.pick = i; }
     } else if (this.panel && this.panel.mode === 'result' && Input.pressed('Space', 'Enter') && this.panel.t > 0.4) this.panel.done = true;
     // hover: what tile is under the pointer
-    this.hoverT = !this.panel && !Game.overlay ? this.tileAt(Input.mx, Input.my) : null;
+    this.hoverT = !this.panel && !Game.overlay && !this.stage ? this.tileAt(Input.mx, Input.my) : null;
+    if (this.stage) this.stage.update(dt);
   }
   tileAt(sx, sy) {
     const w = this.cam.toWorld(sx, sy);
@@ -761,6 +809,19 @@ class BoardScene {
   // -------------------------------------------------------------------- draw
   draw() {
     const ctx = Gfx.ctx, cam = this.cam;
+    if (this.stage) {
+      this.stage.draw();
+      Post.ui();
+      Toon.draw(true);
+      Particles.draw(Gfx.ctx, false);
+      if (this.riff) { this.riff.draw(); Popups.draw(false); return; }
+      this.stage.drawUI();
+      if (this.dieChoice) this.drawDiePick();
+      this.drawToasts();
+      Popups.draw(false);
+      Dialogue.draw();
+      return;
+    }
     Gfx.clear(this.B.sky[0]);
     cam.apply(ctx);
     const L = cam.x - W / (2 * BZ) - 40, R = cam.x + W / (2 * BZ) + 40, camL = cam.x - W / (2 * BZ);

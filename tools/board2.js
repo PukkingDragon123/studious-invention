@@ -83,6 +83,8 @@ require('fs').mkdirSync(OUT, { recursive: true });
         if (n === 'ActStory') { s.onDone(); return 'story'; }
         if (n !== 'BoardScene') return n;
         if (s.riff) { s.riff.o.onDone({ grade: 'A', acc: 0.8, hits: 10, notes: 10, sick: 5, fc: false, mult: 1 }); s.riff = null; return 'riff'; }
+        if (s.stage && s.stage.choices) { if (s.stage.choiceT > 0.4) { const i = s.stage.choices.findIndex(c => c.ok !== false); s.stage.pick = Math.max(0, i); } return 'panel-stage'; }
+        if (s.stage) return 'stage';
         if (s.panel) {
           const P = s.panel;
           if (P.mode === 'choose') { const i = (P.choices || []).findIndex(c => c.ok !== false); P.pick = Math.max(0, i); return 'panel'; }

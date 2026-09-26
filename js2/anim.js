@@ -239,6 +239,15 @@ const Toon = {
           ctx.globalAlpha = fade * (1 - q);
           Gfx.sprite('icon_heart', h.x + Math.sin(e.t * 3 + j * 2) * 12 + (j - 1.5) * 6, h.y - 18 - q * 40, { anchor: 'c', scale: 0.6 + q * 0.4 });
         }
+      } else if (e.kind === 'zzz') {
+        // a sleeper's Zs, drifting up and growing
+        ctx.globalAlpha = 1;
+        const top = a.top + (a.y - a.top) * 0.3;
+        for (let j = 0; j < 3; j++) {
+          const q = ((e.t * 0.45) + j / 3) % 1, al = Math.sin(q * Math.PI);
+          ctx.globalAlpha = al;
+          Gfx.text('Z', a.x + (a.facing || 1) * -18 - q * 20 + Math.sin(q * 6) * 3, top - q * 34, { color: '#fffaea', scale: 1 + q * 1.4, outline: true });
+        }
       } else if (e.kind === 'rain') {
         // a little grey cloud of its own, raining on one sad head
         const cx = h.x, cy = h.y - 34 + Math.sin(e.t * 2) * 1.5;
@@ -249,7 +258,7 @@ const Toon = {
       } else if (e.kind === 'word') {
         // a sound word, punched in with a burst behind it, then wobbling off
         // the same size on screen however close the camera has come
-        const cz = Game.scene && Game.scene.cam ? Game.scene.cam.zoom / VIEW : 1;
+        const sc0 = Game.scene && (Game.scene.stage ? Game.scene.stage.cam : Game.scene.cam), cz = sc0 ? sc0.zoom / VIEW : 1;
         const g = Ease.outBack(clamp(k * 4, 0, 1)), sc = e.size * (0.4 + 0.6 * g) / Math.max(1, cz);
         const x = e.x, y = e.y - k * 14, n = 12, R = Gfx.measure(e.text, sc) * 0.62 + 10;
         ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(e.seed + e.t * 9) * 0.06 + (e.tilt || -0.08));
