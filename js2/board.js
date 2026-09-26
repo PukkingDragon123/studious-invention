@@ -719,22 +719,25 @@ class BoardScene {
       for (const k of Input.keys) if (/^Digit[1-4]$/.test(k.code)) { const i = +k.code.slice(5) - 1; const c = this.panel.choices[i]; if (c && c.ok !== false) this.panel.pick = i; }
     } else if (this.panel && this.panel.mode === 'result' && Input.pressed('Space', 'Enter') && this.panel.t > 0.4) this.panel.done = true;
     // hover: what tile is under the pointer
-    this.hoverT = null;
-    if (!this.panel && !Game.overlay) {
-      const w = this.cam.toWorld(Input.mx, Input.my);
-      let best = null, bd = 1e9;
-      for (const t of this.T) {
-        const dx = t.x - w.x, dy = (t.y - w.y) * 1.9, d = dx * dx + dy * dy;
-        if (d < (t.big ? 36 * 36 : 28 * 28) && d < bd) { bd = d; best = t; }
-      }
-      this.hoverT = best;
+    this.hoverT = !this.panel && !Game.overlay ? this.tileAt(Input.mx, Input.my) : null;
+  }
+  tileAt(sx, sy) {
+    const w = this.cam.toWorld(sx, sy);
+    let best = null, bd = 1e9;
+    for (const t of this.T) {
+      const dx = t.x - w.x, dy = (t.y - w.y) * 1.9, d = dx * dx + dy * dy;
+      if (d < (t.big ? 36 * 36 : 28 * 28) && d < bd) { bd = d; best = t; }
     }
+    return best;
   }
   click(x, y, button) {
     if (this.riff || this.panel) return;
     if (button === 2) { this.pan = 0; return; }
-    if (this.phase === 'choose' && this.hoverT && this.reach.has(this.hoverT.id)) {
-      this.chosen = this.reach.get(this.hoverT.id);
+    // where the click landed, not where the pointer was last seen: a quick
+    // tap lifts the finger before the next frame looks for it
+    const t = this.tileAt(x, y);
+    if (this.phase === 'choose' && t && this.reach.has(t.id)) {
+      this.chosen = this.reach.get(t.id);
       AudioSys.sfx('select');
     }
   }

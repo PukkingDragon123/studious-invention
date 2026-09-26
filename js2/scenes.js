@@ -197,7 +197,7 @@ class TitleScene {
     const bh = items.length > 4 ? 40 : 46, gap = bh + 8;
     let y = Math.max(st.y + 236, st.y + st.h - 26 - items.length * gap + 8);
     for (const [label, cb] of items) { UI.wbutton(bx, y, bw, bh, label, cb, { scale: 1.4 }); y += gap; }
-    Gfx.text(Input.touch ? 'roll the bone, save the family' : 'roll the bone, save the family  -  SPACE rolls, D F J K plays',
+    Gfx.text(Input.touch ? 'roll the bone, save the family' : 'roll the bone, save the family  -  SPACE rolls, A S D F strums',
       W / 2, H - 22, { color: '#c4b89a', align: 'center', outline: true });
   }
   click() { }

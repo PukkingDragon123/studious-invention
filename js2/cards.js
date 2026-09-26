@@ -362,12 +362,16 @@ const Cards = {
     ctx.strokeStyle = STONE.ink; ctx.lineWidth = 2; ctx.stroke();
     ctx.restore();
 
-    // ---- the carved picture window, pigment rubbed into the recess
-    const ax = x + 7, ay = y + 25, aw = w - 14, ah = Math.round(52 * s);
+    // ---- the carved picture window, pigment rubbed into the recess; it
+    // gives up height to the rules when there are a lot of them
+    const L = this.layout(c, s, o.combat);
+    const ax = x + 7, ay = y + 25, aw = w - 14, ah = L.ah;
     this.carve(ax, ay, aw, ah, T.wash);
     for (let i = 0; i < 18; i++)                              // chisel marks inside it
       Gfx.rectA(ax + 2 + jit(i + 60) * (aw - 4), ay + 2 + jit(i + 90) * (ah - 4), 2, 1, T.pig, 0.34);
+    ctx.save(); ctx.beginPath(); ctx.rect(ax + 1, ay + 1, aw - 2, ah - 2); ctx.clip();
     Gfx.sprite(c.def.art || 'art_note', ax + aw / 2, ay + ah / 2 + 2, { anchor: 'c', scale: Math.max(1, Math.round(s * 1.2)) });
+    ctx.restore();
 
     // ---- the cost: a coloured pebble set into the corner
     Gfx.circle(x + 13, y + 14, 13, STONE.ink);
@@ -388,12 +392,16 @@ const Cards = {
 
     // ---- the rules, chalked onto the rough part of the face
     const ty = y + ah + 51;
-    ctx.save(); ctx.beginPath(); ctx.rect(x + 5, ty - 2, w - 10, h - (ty - y) - 8); ctx.clip();
-    Gfx.textWrap(this.desc(c, o.combat), x + 9, ty, w - 18, { color: '#241c2e', lineHeight: 11, onLight: true });
-    Gfx.textWrap(this.desc(c, o.combat), x + 9, ty - 1, w - 18, { color: '#fffaea', lineHeight: 11 });
+    ctx.save(); ctx.beginPath(); ctx.rect(x + 5, ty - 2, w - 10, h - (ty - y) - 4); ctx.clip();
+    L.lines.forEach((ln, i) => {
+      Gfx.rich(ln, x + 9, ty + i * L.lh, { color: '#241c2e', onLight: true, font: L.font });
+      Gfx.rich(ln, x + 9, ty - 1 + i * L.lh, { color: '#fffaea', font: L.font, tags: { s: '#ffdcb0' } });   // conditions stand off the grey rock
+    });
     ctx.restore();
-    if (c.def.exhaust && !c.v.noExhaust) Gfx.sprite('icon_fire', x + w - 16, y + h - 20, { anchor: 'c', scale: 0.8, tint: '#ffa832', tintAmount: 0.5 });
-    if (c.def.terrain && TERRAIN[c.def.terrain]) { const T = TERRAIN[c.def.terrain]; Gfx.rect(x + 6, y + h - 14, 22 * s, 8, STONE.ink); Gfx.rect(x + 7, y + h - 13, 20 * s, 6, T.col); }
+    // tucked into the corners of the picture, clear of the rules: the flame
+    // for a card that burns up, the swatch of ground it cares about
+    if (c.def.exhaust && !c.v.noExhaust) Gfx.sprite('icon_fire', ax + aw - 9, ay + 10, { anchor: 'c', scale: 0.8, tint: '#ffa832', tintAmount: 0.5 });
+    if (c.def.terrain && TERRAIN[c.def.terrain]) { const T = TERRAIN[c.def.terrain]; Gfx.rect(ax + 3, ay + ah - 10, 22 * s, 7, STONE.ink); Gfx.rect(ax + 4, ay + ah - 9, 20 * s, 5, T.col); }
     if (c.echoCopy) { ctx.globalAlpha = (o.alpha ?? 1) * 0.28; this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.fillStyle = '#86e8d2'; ctx.fill(); ctx.globalAlpha = o.alpha ?? 1; }
     // an enchanted card has its gem set into the bottom edge, and it glints
     if (c.ench && ENCHANTS[c.ench]) {
@@ -408,6 +416,18 @@ const Cards = {
     else if (o.playable) { ctx.save(); this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.globalAlpha = (o.alpha ?? 1) * 0.75; ctx.strokeStyle = '#a8e878'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
     if (o.alpha !== undefined) ctx.globalAlpha = 1;
     return { x, y, w, h };
+  },
+  // How tall the picture can be and which letters the rules are cut in: the
+  // big letters and the full picture if they fit, then a shorter picture,
+  // then the small letters.
+  layout(c, s = 1, combat) {
+    const w = Math.round(CARD_W * s), h = Math.round(CARD_H * s), desc = this.desc(c, combat), tw = w - 18;
+    const full = Math.round(52 * s), least = Math.round(30 * s);
+    const room = ah => h - (ah + 51) - 5;
+    let lines = Gfx.wrap(desc, tw, 1), lh = 11, font;
+    if (lines.length * lh > room(least)) { lines = Gfx.wrap(desc, tw, 1, 'small'); lh = 9; font = 'small'; }
+    const ah = clamp(full - Math.max(0, lines.length * lh - room(full)), least, full);
+    return { ah, lines, lh, font, fits: lines.length * lh <= room(ah) };
   },
   zoom(c, cx, cy, o = {}) {
     const s = 1.5, w = CARD_W * s, h = CARD_H * s;

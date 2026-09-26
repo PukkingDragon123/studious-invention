@@ -145,7 +145,7 @@ Object.assign(CARDS, {
     effect: function* (c, card, t, r) { Juice.flash('#ffa832', 0.5, 3); yield* c.dealDamage(t, c.riffDamage(card, r, card.v.dmg + card.v.per * c.rage), { heavy: true }); } },
   dad_joke: { hero: 'bronk', name: 'Dad Joke', type: 'skill', cost: 0, rarity: 'rare', art: 'art_crowd', target: 'all', exhaust: true,
     v: { stun: 1 }, up: v => { v.noExhaust = true; },
-    desc: v => `Tell it. Every beast is {c}Stunned{/} for a turn, out of pure embarrassment.${v.noExhaust ? '' : ' Exhaust.'}`,
+    desc: v => `Every beast is {c}Stunned{/} for a turn, from pure embarrassment.${v.noExhaust ? '' : ' Exhaust.'}`,
     effect: function* (c, card) { for (const e of c.alive()) c.stun(e, card.v.stun); AudioSys.sfx('stun'); yield 0.4; } },
 
   // ================================================================= VELA
