@@ -28,8 +28,11 @@ brings a berry crumble.
 
 ## Four heroes
 
-Pick any of the family. The other three are the ones she takes, and you win
-them back one land at a time. Each hero has their own instrument, board
+Your first story is always Bronk's: he wakes up and goes to dinner. Bring the
+family home and the next of them (Vela, then Pebble, then Roxy) gets a seat
+at the table; once there is a choice, you pick who you are by clicking their
+chair at dinner, and the story starts from there. The other three are the ones
+Grandma takes, and you win them back one land at a time. Each hero has their own instrument, board
 ability, fight mechanic, starting artifact and cards, and plays differently.
 
 | Hero | Instrument | On the board | In a fight |
@@ -67,6 +70,12 @@ heals you after the fight.
   throw again. Others heal, reveal secrets, or make you slip away from a fight.
   Artifacts are permanent: a die that never rolls a 1, tar that cannot stop
   you, glasses that show every tile on the board.
+- **Events are little films.** Landing on a stranger, a mystery, a
+  crossroads, a cave, a big dino, a secret or a campfire cuts to a close-up
+  set in that land: the family walks on, the stranger walks on from the far
+  side or the dino snores, they talk in bubbles, you choose from big carved
+  buttons, and whatever happens is acted out (the bite, the heal, gems flying
+  across, a relic held up, beasts running on to square up).
 - **Fights are a deck of cards.** Three energy a turn, Block, statuses and
   enemy intents you can read ahead of time. Cards marked RIFF cut to the
   Rock-Axe: rune-stones slide down four strings into a bone strum bar, you
@@ -97,8 +106,9 @@ sprite a pixel at a time, with shaded forms, dithered tones and automatic
 outlines, and write them into `js2/art_*.js` as rows of palette characters.
 All four heroes and the neighbours come from one figure builder
 (`tools/chars/family.py`), each with their own body shape, outfit and
-instrument. The dinosaurs, Grandma Rex, the board tiles, charms, artifacts and
-props each have their own generator.
+instrument. The nine combat beasts come from `tools/dinos/zoo.py`, with walk
+cycles that plant every foot; the T-Rex, Blaze, Grandma Rex, the board tiles,
+charms, artifacts and props each have their own generator.
 
 The board's ground is baked per pixel from tiling noise with Bayer dithering, a
 chunk at a time just ahead of the camera. Light and colour are done in a WebGL
@@ -142,6 +152,7 @@ js2/tiles.js      terrain, tile kinds, charms, board events
 js2/boardgen.js   the five lands, the board generator, the ground bake
 js2/dice.js       the bone die, rolled in 3D
 js2/board.js      the board game itself
+js2/stage.js      events on the road, played as close-up films
 js2/boardui.js    the sky, hero select and the board's panels
 js2/hud.js        the in-play interface
 js2/world.js      the cave home and the yard
