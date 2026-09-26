@@ -417,3 +417,116 @@ function* introScript(S) {
   yield* S.titleCard('THE CHASE', 'five lands to Grandma Rex\'s lair', 2.6);
   Game.startBoard();
 }
+
+// ---------------------------------------------------------------------------
+// THE ENDING
+//
+// A week later, a Sunday, the same table. There is no T-Rex on it this time:
+// Grandma has brought a crumble, and she has had to duck to get in again.
+// ---------------------------------------------------------------------------
+function* endingScript(S) {
+  const me = Game.run.hero;
+  const NAME = id => Heroes.get(id).name;
+  const can = (a, clip) => !!SPRITES[a.base + '_' + clip];
+  const pose = (a, clip, o) => a.play(can(a, clip) ? clip : 'idle', o);
+  const kid = id => id === 'pebble' || id === 'roxy';
+  S.set = 'home'; S.setOpt = { night: true, fire: 1, gran: true };
+  AudioSys.play('home', { fade: 1.2 });
+  const SEAT = { bronk: HOME.table - 94, pebble: HOME.table - 50, roxy: HOME.table + 52, vela: HOME.table + 96 };
+  const A = {};
+  for (const id of HERO_ORDER) {
+    const a = S.add(id, { base: Heroes.get(id).base, x: SEAT[id], y: kid(id) ? GY - 24 : GY - 6, scale: 1, facing: SEAT[id] < HOME.table ? 1 : -1 });
+    a.shadow = false; pose(a, 'eat'); a.t = Math.random() * 4; a.manual = true;
+    A[id] = a;
+  }
+  const blaze = S.add('blaze', { base: 'blaze', x: HOME.stove + 4, y: GY - 6, scale: 0.9, facing: -1 });
+  S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 58, scale: 0.8, facing: -1 });
+  const granny = S.add('granny', { base: 'grandma', x: HOME.table + 6, y: GY - 10, scale: 1, facing: -1 });
+  granny.manual = true;
+  const hearts = [];
+  const heart = (x, y) => hearts.push({ x: x + rnd(-10, 10), y, t: 0, life: rnd(1.4, 2), ph: rnd(0, 6) });
+  // back to front: Grandma behind the table, the family on their stools
+  // round it, then the table and the pudding in front of all of them
+  S.overlay = world => {
+    if (!world) return;
+    granny.manual = false; granny.draw(); granny.manual = true;
+    for (const id of HERO_ORDER) { const a = A[id]; a.manual = false; a.draw(); a.manual = true; }
+    Gfx.sprite('h_table', HOME.table, GY + 2, { anchor: 'bc' });
+    for (let i = 0; i < 4; i++) {
+      const sx = HOME.table - 54 + i * 36;
+      Gfx.round(sx - 10, GY - 52, 20, 4, 2, '#8a7f68');
+      Gfx.round(sx - 9, GY - 53, 18, 3, 1, '#e8dfc6');
+      Gfx.rect(sx - 4, GY - 55, 8, 2, '#b177e6');                  // a spoonful each
+    }
+    Gfx.sprite('h_crumble', HOME.table + 2, GY - 50, { anchor: 'bc' });
+    if (chance(0.16)) Particles.spawn(HOME.table + rnd(-14, 16), GY - 72, { n: 1, color: ['#fffaea', '#d6cfe0'], speed: 10, angle: -Math.PI / 2, spread: 0.3, gravity: -30, life: 1.4, size: 4, sizeEnd: 0 });
+    for (let i = hearts.length - 1; i >= 0; i--) {
+      const h = hearts[i]; h.t += Time.dt;
+      if (h.t > h.life) { hearts.splice(i, 1); continue; }
+      const k = h.t / h.life;
+      Gfx.ctx.globalAlpha = Math.min(1, (1 - k) * 2);
+      Gfx.sprite('icon_heart', h.x + Math.sin(h.t * 3 + h.ph) * 4, h.y - k * 46, { anchor: 'c', scale: 0.7 + k * 0.3 });
+      Gfx.ctx.globalAlpha = 1;
+    }
+  };
+
+  S.cam.lookAt(HOME.table + 20, 330, true);
+  yield 0.8;
+  yield* S.say('', 'A week later. Sunday dinner at the Rockbottoms\'. There is no T-Rex on the table.', { at: null });
+  yield* S.say('GRANDMA REX', 'Berry crumble, my dears. No goats in it. No anybody in it.', { at: granny });
+  yield* S.say(NAME('pebble'), 'Grandma, what a big CRUMBLE you have.', { at: A.pebble });
+  for (let i = 0; i < 5; i++) heart(granny.x - 20, granny.top + 30);
+  yield* S.say('GRANDMA REX', 'All the better to share with you, my dear.', { at: granny });
+  yield* S.say(NAME(me), me === 'pebble' ? 'We are sorry about Rexford, Grandma. Really really sorry.' : 'We are sorry about Rexford, Grandma. We really are.', { at: A[me] });
+  pose(granny, 'cry');
+  yield* S.say('GRANDMA REX', 'I know, dear. He never did write. Just ran about eating people\'s goats.', { at: granny });
+  pose(granny, 'idle');
+  for (let i = 0; i < 3; i++) { AudioSys.sfx('chomp'); for (const id of HERO_ORDER) A[id].squash(0.08); granny.squash(0.05); yield 0.35; }
+  yield* S.say(NAME('roxy'), '...Okay. This is actually really good.', { at: A.roxy });
+  yield* S.say('BLAZE', 'I could do custard. I am very good with hot things.', { at: blaze });
+  yield* S.say(NAME('bronk'), 'Pass the crumble, Gran.', { at: A.bronk });
+  for (let i = 0; i < 6; i++) heart(granny.x - 20, granny.top + 30);
+  yield* S.say('', 'And so the Rockbottoms gave up eating dinosaurs, mostly, and every Sunday a very large grandmother came round for tea and knitted everybody jumpers.', { at: null });
+  yield* S.glide(HOME.table + 20, 324, 1.2);
+  yield* S.titleCard('THE END', 'the family is home', 3);
+  yield* endingCredits(S);
+}
+
+// The last word: the table stays lit behind a carved slab with the tally on it.
+function* endingCredits(S) {
+  S.o.noBars = true; S.o.onSkip = null; Dialogue.clear();
+  AudioSys.play('ending', { fade: 0.6 });
+  const s = Game.run.stats || {};
+  const rows = [['LANDS CROSSED', 5], ['DICE THROWN', s.rolls || 0], ['BEASTS BEATEN', s.kills || 0], ['DAMAGE TAKEN', s.taken || 0]];
+  let t = 0;
+  S.hud = () => {
+    t += Time.dt;
+    const k = Ease.outBack(clamp(t / 0.6, 0, 1));
+    const tw = 520, th = 176, tx = W / 2 - tw / 2, ty = 30 - (1 - k) * 60;
+    UI.slab(tx, ty, tw, th, { r: 6, shadow: true });
+    const carve = (txt, x, y, sc, col, al = 'center') => {
+      Gfx.text(txt, x, y + 3, { color: SKIN.faceHi, align: al, scale: sc });
+      Gfx.text(txt, x + 1, y + 1, { color: '#3a2415', align: al, scale: sc });
+      Gfx.text(txt, x, y, { color: col, align: al, scale: sc });
+    };
+    carve('THE FAMILY IS HOME', W / 2, ty + 20, 3.2, '#9c3510');
+    carve(`${Heroes.cur().name} brought everybody back`, W / 2, ty + 60, 1.2, '#3a2415');
+    rows.forEach(([label, v], i) => {
+      const cx = tx + 70 + i * 127;
+      carve(String(v), cx, ty + 92, 2.2, '#241c2e');
+      carve(label, cx, ty + 124, 0.9, '#5c3a20');
+    });
+    if (chance(Time.dt * 20)) Particles.confetti(rnd(0, W), -10, 1);
+    UI.button(W / 2 - 230, H - 70, 210, 46, 'BACK TO THE TITLE', () => Game.go(new TitleScene()), { scale: 1.2 });
+    UI.button(W / 2 + 20, H - 70, 210, 46, 'PLAY AGAIN', () => Game.newRun(), { scale: 1.2 });
+  };
+  yield () => false;
+}
+
+class EndingScene extends CutsceneScene {
+  constructor() {
+    super(endingScript, {});
+    this.o.onSkip = () => { Co.stop(this.co); Dialogue.clear(); this.title = null; this.co = Co.run(endingCredits(this), this); };
+  }
+  enter() { Game.clearSave(); super.enter(); }
+}

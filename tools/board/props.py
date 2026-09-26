@@ -123,8 +123,60 @@ def outhouse(open_):
     return cv
 
 
+def crumble():
+    """What Grandma brings on Sundays: a clay dish of berry crumble, the jam
+    boiling up through the top and down the sides, a spoon stood in it."""
+    W, H = 44, 26
+    cv = Cv(W, H)
+    rng = random.Random(21)
+    STONE = ['o', 'p', 'q', 'r', 's']
+    CRUST = ['i', 'm', 'n', '8', '9']
+    JAM = ['Q', 'R', 'S', 'T']
+    # the spoon first, so the crumble swallows the end of it
+    spoon = limb([(36, 0.5, 1.0), (31, 9, 1.2)], n=5)
+    shade(cv, spoon, ['k', 'l', 'm', 'n'], bias=0.3, band=1)
+    # the dish: a shallow bowl pecked out of a river stone, lipped at the rim
+    bowl = poly([(3, 13), (41, 13), (37, 24), (7, 24)]) | ell(22, 13, 19.5, 2.4)
+    shade(cv, bowl, STONE, bias=0.0, band=1)
+    for x in range(7, 38):
+        if x % 4 == 0: cv.set(x, 18, 'p'); cv.set(x + 1, 19, 'o')
+    for _ in range(14):
+        x = rng.randint(6, 38); y = rng.randint(15, 23)
+        if (x, y) in bowl: cv.set(x, y, rng.choice(['p', 'r']))
+    for x in range(8, 37): cv.set(x, 24, 'o')
+    # the crumble, heaped up over the rim, lumpy
+    top = set(p for p in ell(22, 12, 17.5, 8) if p[1] <= 12) | ell(22, 12.5, 17.5, 1.8)
+    for (x, y, r) in [(9, 8, 2.4), (16, 5.5, 2.6), (29, 5, 2.6), (35, 8, 2.2)]:
+        top |= disc(x, y, r)
+    shade(cv, top, CRUST, bias=0.1, band=1)
+    for _ in range(46):
+        x = rng.randint(6, 38); y = rng.randint(3, 13)
+        if (x, y) in top and (x + 1, y) in top:
+            c = rng.choice(['n', '8', '9', 'i', 'm'])
+            cv.set(x, y, c)
+            if c in 'n89': cv.set(x + 1, y + 1, 'i')
+    # jam boiling up through it, and running over the lip
+    for (x, y, r) in [(12, 10, 2.4), (25, 8, 2.0), (33, 11, 1.8)]:
+        pool = disc(x, y, r) & top
+        shade(cv, pool, JAM, bias=0.1, band=1)
+        rim(cv, pool, 'Q', d=(0, 1))
+    for (x, y0, L) in [(8, 13, 4), (15, 14, 3), (29, 14, 5), (35, 13, 3)]:
+        for k in range(L): cv.set(x, y0 + k, 'R' if k < L - 1 else 'Q')
+        cv.set(x + 1, y0, 'S')
+    # berries sat on top, and a sprig of leaves
+    for (x, y, r) in [(18.5, 3.8, 2.5), (23.5, 4.2, 2.3), (14, 6.5, 2.1)]:
+        b = disc(x, y, r)
+        shade(cv, b, JAM, bias=0.35, band=1)
+        rim(cv, b, 'Q', d=(1, 1))
+        cv.set(x - 1, y - 1, '7'); cv.set(x, y - 1, 'T')
+    shade(cv, ell(27, 2.4, 2.8, 1.3), ['u', 'v', 'w'], band=1)
+    shade(cv, ell(22, 1.2, 1.8, 1), ['u', 'v', 'w'], band=1)
+    return cv
+
+
 def build():
     return {
+        'h_crumble': [crumble().rows()],
         'h_rexhead': [rexhead().rows()],
         'h_outhouse': [outhouse(False).rows(), outhouse(True).rows()],
     }

@@ -1232,6 +1232,35 @@ SPRITES.st_soak = { outline: true, frames: [
 '.......HHH......',
 '................']]};
 
+SPRITES.h_crumble = { outline: true, frames: [
+[
+'....................................m.......',
+'.....................wwv...........nm.......',
+'.................7TTQvuuTwwwwv.....ml.......',
+'................9TTSS.7TSvvuuu8...n.........',
+'..............99TTSRQQTSRQ.9988m..ml........',
+'.............7TT9SSQQ8TSQQ9988nn.m..........',
+'........9989TTSSQ8QQn8nQQTn88nnnn9.8........',
+'.......m999iTSSQQn8n8ninTTSnnnnnin888.......',
+'.......9898TTQQQnn88nnnQTSQQnnnnm8mnnn......',
+'......9988TTTRRnnn8ii8nnQQQnnnnnnninnmm.....',
+'.....9998iTTRRQnninnnninnQinnnnnTTRnmnii....',
+'.....99988QSRQQninnnnnnnnnmnnnnnTSRmiimi....',
+'.....98nnnnQQQnnnnnnmnnnnnnnmimmQQQmiiii....',
+'...sssnmRSmmnmnm9nnmmm9mmm88mm8iiiiRSiipqp..',
+'...srsrrRrqrqmiRSiiiiiiiiiiiiRSiqqpRpqppoo..',
+'....srrrRrrqrrrRrqqqqpqqqqqqqRqqqqrQqpqoo...',
+'....srqrQrqrqqqQqqqqqqqqqqqqqRqqpqpqpropo...',
+'....srrprqrqrqqqqqqqqqqqqqqqqRqqqpqpqppoo...',
+'.....sqrprqqpqqppqqqpqqqpqqqpQpqpqppppoo....',
+'.....srqrorqroqqqoqqqoqqqoqqqoqpqoqpqooo....',
+'......rrqqqqqqqqqqqqqqqqqqqqpqpqpppppoo.....',
+'......sqrqqqqqqqrqqqqqqqqqqqqpqpqpqppoo.....',
+'......rqpqppppppppppppppppppppopopooooo.....',
+'.......ppppopoporooooooooooooooooooopo......',
+'........ooooooooooooooooooooooooooooo.......',
+'............................................']]};
+
 SPRITES.h_rexhead = { outline: true, frames: [
 [
 '..............................................................................',

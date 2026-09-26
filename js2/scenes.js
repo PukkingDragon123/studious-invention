@@ -252,18 +252,31 @@ class ActStory {
   }
   draw() {
     // the camp again, at night: the family by the fire
-    if (!this.cam) { this.cam = new Camera(); this.cam.zoom = this.cam.tzoom = VIEW; this.cam.lookAt(CAMP.fire + 20, 394, true); }
+    if (!this.cam) { this.cam = new Camera(); this.cam.zoom = this.cam.tzoom = VIEW; this.cam.lookAt(CAMP.fire, 394, true); }
     this.cam.ox = Math.sin(this.t * 0.37) * 1.4; this.cam.oy = Math.sin(this.t * 0.29 + 2) * 1;
     Gfx.clear('#05040c');
     this.cam.apply(Gfx.ctx);
     const camX = this.cam.x - W / (2 * this.cam.zoom);
     World.camp(this.t, {}, camX);
-    const fam = [Game.run.hero].concat(Game.run.band);
+    // the family on the near side of the fire, whoever was just freed at
+    // your elbow and bouncing; the beast you beat across it, seeing stars
+    const fam = [Game.run.hero].concat(Game.run.band.filter(id => id !== this.freed));
+    if (this.freed) fam.splice(1, 0, this.freed);
     fam.forEach((id, i) => {
-      const x = CAMP.fire - 150 + i * 46;
+      const x = CAMP.fire - 92 - i * 42;
+      const hop = id === this.freed ? Math.abs(Math.sin(this.t * 5)) * 4 : 0;
       Gfx.shadow(x, GY + 2, 34, 0.3);
-      Gfx.sprite(Heroes.spr(id), x, GY + 2, { anchor: 'bc', frame: Math.floor(this.t * 2 + i) % 2 });
+      Gfx.sprite(Heroes.spr(id), x, GY + 2 - hop, { anchor: 'bc', frame: Math.floor(this.t * 2 + i) % 2 });
     });
+    const B = BIOMES[this.biome].boss, bs = { tarblob_idle: 1.6, tricera_idle: 1.1 }[B.spr] || 1, sp = Gfx.spr(B.spr);
+    const bx = CAMP.fire + 150, top = GY + 2 - sp.h * bs;
+    Gfx.shadow(bx, GY + 2, sp.w * bs * 0.45, 0.3);
+    Gfx.sprite(B.spr, bx, GY + 2, { anchor: 'bc', frame: Math.floor(this.t * 2) % 2, scale: bs, flip: true, sy: 1 - Math.abs(Math.sin(this.t * 1.3)) * 0.02 });
+    for (let k = 0; k < 3; k++) {
+      const a = this.t * 3 + k * 2.09, sx = bx - sp.w * bs * 0.18 + Math.cos(a) * 16, sy = top + 4 + Math.sin(a) * 4;
+      const c = Math.sin(a) > 0 ? '#ffe98a' : '#e0b93a';
+      Gfx.rect(sx - 1, sy - 3, 2, 6, c); Gfx.rect(sx - 3, sy - 1, 6, 2, c);
+    }
     Particles.draw(Gfx.ctx, true);
     Light.begin(0.55, '#05040c'); Light.point(CAMP.fire, GY - 40, 260, { color: '#ffa832', flicker: 0.08, power: 0.8, glow: 0.3 });
     this.cam.restore(Gfx.ctx);
@@ -276,62 +289,6 @@ class ActStory {
     Gfx.textWrap(line[1].slice(0, Math.floor(this.chars)), 84, H - 128, W - 170, { color: '#e8dfc6', scale: 1.1, lineHeight: 15 });
     if (this.chars >= line[1].length) Gfx.text('▶', W - 90, H - 56 + Math.sin(this.t * 6) * 2, { color: '#ffe98a', scale: 1.4 });
     Gfx.text(`${this.i + 1}/${this.lines.length}`, W - 80, H - 168, { color: '#7a6d8a', align: 'right' });
-  }
-  click() { }
-}
-
-class EndingScene {
-  constructor() {
-    this.t = 0; this.stage = 0; this.chars = 0;
-    const me = Heroes.cur();
-    this.lines = [
-      ['GRANDMA REX', "...Oh, look at me. All this fuss. My glasses have gone all steamy."],
-      [me.name, "We're sorry about Rexford. We really are. We didn't know he was anybody's boy."],
-      ['GRANDMA REX', "He never did write. Never visited. Just ran about eating people's goats."],
-      ['VELA', "You could come to dinner. Properly. We'll do berries."],
-      ['GRANDMA REX', "...Berries? Well. I suppose I could bring a crumble."],
-      ['', "And so the Rockbottoms gave up eating dinosaurs, mostly, and every Sunday a very large grandmother came round for tea and knitted everybody jumpers."],
-    ];
-  }
-  enter() { AudioSys.play('victory', { fade: 0.5 }); Game.clearSave(); }
-  exit() { }
-  update(dt) {
-    this.t += dt;
-    if (this.stage < this.lines.length) {
-      const l = this.lines[this.stage];
-      this.chars = Math.min(l[1].length, this.chars + dt * 44 * (Input.down ? 3 : 1));
-      if (Input.clicks.length || Input.pressed('Space', 'Enter')) {
-        if (this.chars < l[1].length) this.chars = l[1].length;
-        else { this.stage++; this.chars = 0; if (this.stage === this.lines.length) AudioSys.play('ending', { fade: 0.4 }); }
-      }
-    }
-    if (this.stage >= this.lines.length && chance(dt * 30)) Particles.confetti(rnd(0, W), -10, 1);
-  }
-  draw() {
-    World.skyRamp(0, W, 0, 340, ['#120c16', '#281040', '#4b2070', '#a03a68', '#e06a9b', '#ffb0cf']);
-    for (let i = 0; i < 50; i++) { const x = (i * 137) % W, y = (i * 61) % 260; Gfx.rectA(x, y, 2, 2, '#ffffff', 0.4 + 0.4 * Math.sin(this.t * 2 + i)); }
-    Gfx.circle(820, 80, 40, '#fffaea');
-    Gfx.rect(0, 330, W, H - 330, '#241c2e');
-    Gfx.sprite('h_table', W / 2 + 30, 436, { anchor: 'bc', scale: 2 });
-    const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : this.t * 2;
-    const bob = i => Math.abs(Math.sin((beat + i * 0.25) * Math.PI)) * 5;
-    const fam = HERO_ORDER;
-    fam.forEach((id, i) => Gfx.sprite(Heroes.spr(id), W / 2 - 200 + i * 70, 420 - bob(i), { anchor: 'bc', frame: Math.floor(beat) % 2, scale: 1.4 }));
-    Gfx.sprite(SPRITES.grandma_idle ? 'grandma_idle' : 'trex_idle', W / 2 + 250, 440 - bob(4) * 0.4, { anchor: 'bc', frame: Math.floor(this.t * 2) % 2, scale: 1.3, flip: true });
-    Post.set({ tint: '#ffb0cf', ta: 0.14, vig: 0.3 });
-    Post.ui();
-    Particles.draw(Gfx.ctx, false);
-    if (this.stage < this.lines.length) {
-      const l = this.lines[this.stage];
-      Gfx.panel(60, H - 140, W - 120, 112, { fill: '#1a1424' });
-      if (l[0]) { const nw = Gfx.measure(l[0], 1.2) + 18; Gfx.round(80, H - 152, nw, 22, 4, '#120c16'); Gfx.text(l[0], 89, H - 147, { color: '#ffe98a', scale: 1.2 }); }
-      Gfx.textWrap(l[1].slice(0, Math.floor(this.chars)), 84, H - 120, W - 170, { color: '#e8dfc6', scale: 1.1, lineHeight: 15 });
-    } else {
-      Gfx.text('THE FAMILY IS HOME', W / 2, 40, { color: '#ffe98a', align: 'center', scale: 3.4, outline: true, outlineWidth: 2 });
-      const s = Game.run.stats;
-      Gfx.text(`beasts beaten ${s.kills}    notes landed ${s.sick}/${s.notes}    damage taken ${s.taken}`, W / 2, 96, { color: '#d6cfe0', align: 'center', scale: 1.1 });
-      UI.button(W / 2 - 110, H - 70, 220, 44, 'BACK TO THE TITLE', () => Game.go(new TitleScene()), { scale: 1.2 });
-    }
   }
   click() { }
 }

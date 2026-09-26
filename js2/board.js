@@ -556,6 +556,7 @@ class BoardScene {
     const bd = this.bd;
     this.phase = 'roll'; this.adjusted = false; this.dieChoice = null;
     bd.touched = {}; bd.round = (bd.round || 0) + 1;
+    if (this.run.stats) this.run.stats.rolls = (this.run.stats.rolls || 0) + 1;
     if (bd.abilityCd > 0) bd.abilityCd--;
     // what is going to come up, before anything is thrown
     const armed = this.pending; this.pending = null;
@@ -913,13 +914,12 @@ class BoardScene {
     {
       const x = E, y = E, w = 268, h = 52;
       HUD.plate(x, y, w, h, { accent: this.hero.color });
-      HUD.portrait(x + 27, y + 26, 20, Heroes.spr(r.hero), { scale: 0.8, ring: this.hero.color, frame: Math.floor(this.t * 2) % 2 });
+      HUD.portrait(x + 27, y + 26, 20, Heroes.spr(r.hero), { ring: this.hero.color, frame: Math.floor(this.t * 2) % 2 });
       HUD.text(this.hero.name, x + 54, y + 8, { color: this.hero.color, scale: 1.1 });
       const bx = x + 54, bw = w - 66;
       this.hpGhost = damp(this.hpGhost ?? r.hp / r.maxHp, r.hp / r.maxHp, 3, Time.dt);
       HUD.bar(bx, y + 26, bw, 14, r.hp / r.maxHp, C.life, C.lifeDark, { ghost: this.hpGhost });
-      HUD.text(`${r.hp}`, bx + 5, y + 28, { scale: 1 });
-      HUD.text(`/${r.maxHp}`, bx + bw - 4, y + 28, { scale: 0.9, color: C.dim, align: 'right' });
+      HUD.text(`${r.hp}/${r.maxHp}`, bx + 5, y + 28, { scale: 1 });
       let rx = x; const ry = y + h + 8;
       for (const id of r.relics) {
         if (!RELICS[id]) continue;
@@ -930,7 +930,7 @@ class BoardScene {
       }
       // the family you have got back, in little frames
       let fx = x + w + 8;
-      for (const id of r.band || []) { HUD.portrait(fx + 16, y + 26, 14, Heroes.spr(id), { scale: 0.55, ring: Heroes.get(id).color }); fx += 34; }
+      for (const id of r.band || []) { HUD.portrait(fx + 16, y + 26, 14, Heroes.spr(id), { ring: Heroes.get(id).color, face: 20 }); fx += 34; }
     }
     // ---- the journey: this land, and how far you are through it
     {

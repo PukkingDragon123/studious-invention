@@ -94,7 +94,9 @@ class Fig:
 
 
 def cap(a, b, ra, rb):
-    return limb([(a[0], a[1], ra), (b[0], b[1], rb)], n=6)
+    # enough stamps that a long thin stick is a line, not a row of dots
+    n = max(6, int(math.ceil(math.hypot(b[0] - a[0], b[1] - a[1]) / max(0.8, min(ra, rb)))))
+    return limb([(a[0], a[1], ra), (b[0], b[1], rb)], n=n)
 
 
 def chain(pts):

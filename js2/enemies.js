@@ -75,7 +75,7 @@ const ENEMIES = {
     },
     ai: (e, c) => (e.phase2 ? ['frenzy', 'bite', 'stomp', 'roar', 'frenzy'] : ['roar', 'bite', 'stomp', 'tail', 'bite'])[e.turnCount % 5],
     onHurt: (e, c) => { if (!e.phase2 && e.hp <= e.maxHp * 0.5) { e.phase2 = true; e.st.str += 3; e.turnCount = 0; c.bossPhase(e, 'REXMOND LOSES IT'); } } },
-  grandma: { name: 'GRANDMA REX', title: 'SHE ONLY WANTED HER BOY BACK', base: 'grandma', hp: [380, 380], gold: [0, 0], scale: 1, boss: true, bossScale: 2, roar: { pitch: 58, len: 1.6, vol: 1 },
+  grandma: { name: 'GRANDMA REX', title: 'SHE ONLY WANTED HER BOY BACK', base: 'grandma', hp: [380, 380], gold: [0, 0], scale: 1, boss: true, bossScale: 1.5, roar: { pitch: 58, len: 1.6, vol: 1 },
     moves: {
       handbag: { name: 'Handbag Swing', dmg: 18 }, knit: { name: 'Knit One, Purl One', block: 20, str: 2 },
       bite: { name: 'Grandma Bite', dmg: 30 }, tea: { name: 'Nice Cup of Tea', weakP: 2, vulnP: 1 },

@@ -11,7 +11,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
   const errs = [];
   const missing = new Set();
-  page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') { const t = m.text().split('\n')[0]; if (t.startsWith('missing sprite')) { missing.add(t.slice(15)); return; } if (!t.includes('404') && !t.includes('GL Driver')) errs.push(m.type() + ': ' + t); } });
+  page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') { const t = m.text().split('\n')[0]; if (t.startsWith('missing sprite')) { missing.add(t.slice(15)); return; } if (!t.includes('404') && !t.includes('GL Driver') && !t.includes('software WebGL')) errs.push(m.type() + ': ' + t); } });
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message + ' | ' + (e.stack || '').split('\n').slice(1, 3).join(' ')));
   await page.goto('http://127.0.0.1:8765/index.html');
   await page.waitForFunction(() => typeof Game !== 'undefined' && Game.scene);

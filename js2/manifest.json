@@ -1909,5 +1909,12 @@
   "frames": 2,
   "file": "art_board",
   "note": "board game art"
+ },
+ "h_crumble": {
+  "w": 44,
+  "h": 26,
+  "frames": 1,
+  "file": "art_board",
+  "note": "board game art"
  }
 }

@@ -107,9 +107,10 @@ const HUD = {
     Gfx.circle(cx, cy, r + 1, o.ring || HUD.C.goldDim);
     Gfx.circle(cx, cy, r - 1, o.bg || '#2a2034');
     c.save(); c.beginPath(); c.arc(cx, cy, r - 1, 0, Math.PI * 2); c.clip();
-    const s = Gfx.spr(spr);
-    // frame the head: the top third of the sprite
-    Gfx.sprite(spr, cx, cy + s.h * (o.scale || 1) * 0.36, { anchor: 'bc', scale: o.scale || 1, frame: o.frame || 0 });
+    const s = Gfx.spr(spr), k = o.scale || 1;
+    // frame the face: every one of the family has theirs about 22 pixels
+    // down from the top of the sprite, whatever the hair is doing above it
+    Gfx.sprite(spr, cx, cy + (s.h - (o.face ?? 22)) * k, { anchor: 'bc', scale: k, frame: o.frame || 0 });
     c.restore();
   },
   // A banner across the middle of the screen: the name of a place, a turn.

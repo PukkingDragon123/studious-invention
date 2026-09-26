@@ -78,7 +78,8 @@ class Combat {
     this.rage = 0; this.echoNext = []; this.wetFeet = this.touchedAny('wet');
     this.player = { st: { str: 0, weak: 0, vuln: 0, thorns: 0, regen: 0 }, block: 0 };
     this.cam = new Camera(); this.cam.zoom = 1; this.cam.lookAt(W / 2, 288 + CAM_DY, true);
-    this.me = new Actor({ base: this.heroDef.base, x: 210, y: STAGE_Y, scale: ACTOR_SCALE, facing: 1 });
+    // with the whole family behind you the stage needs a step more room
+    this.me = new Actor({ base: this.heroDef.base, x: 210 + 26 * Math.max(0, Math.min(3, this.band.length) - 1), y: STAGE_Y, scale: ACTOR_SCALE, facing: 1 });
     this.banner = null; this.won = false; this.gemsEarned = 0; this.handSlide = 0; this.zoomed = 0;
     this.hitStop = 0; this.beatPulse = 0;
   }
@@ -108,7 +109,11 @@ class Combat {
   exit() { Co.stop(this.co); Game.worldToScreen = null; Juice.letterbox(false); }
   spawn(id, initial) {
     const e = Enemies.make(id, this.rng, this.act);
-    e.actor.y = STAGE_Y; e.actor.scale = e.def.bossScale || (e.def.boss ? 1.5 : ACTOR_SCALE); e.spawnT = initial ? 0 : 1;
+    e.actor.y = STAGE_Y; e.spawnT = initial ? 0 : 1;
+    // as big as it is meant to be, unless that would push its head (and what
+    // it is about to do) up under the top bar
+    const room = this.cam.toScreen(0, STAGE_Y).y - 84;
+    e.actor.scale = Math.min(e.def.bossScale || (e.def.boss ? 1.5 : ACTOR_SCALE), room / Gfx.spr(e.actor.sprite).h);
     this.enemies.push(e); if (!initial) this.layout();
     return e;
   }
@@ -625,6 +630,7 @@ class Combat {
     if (this.banner) this.drawBanner();
   }
   drawHeroActor() {
+    this.drawBand();
     this.me.draw();
     const b = this.player.block;
     if (b > 0) {
@@ -632,15 +638,28 @@ class Combat {
       Gfx.text(String(b), this.me.x - 34, this.me.y - 52, { color: '#ffffff', align: 'center', outline: true });
     }
     this.drawStatus(this.player.st, this.me.x - 40, this.me.y + 6);
-    // band members backing you up
-    let bx = this.me.x - 120;
+  }
+  // The family backing you up: one at your shoulder, the broadest a step
+  // further back, the last at the edge of the light - so all three fit.
+  bandSlots() {
+    if (this._slots) return this._slots;
+    const S = [[-104, 8, 0.8], [-152, -26, 0.66], [-198, 6, 0.74]];
+    const m = this.band.slice(0, 3);
+    if (m.length > 1) {
+      const w = id => Gfx.spr(Heroes.get(id).base + '_idle').w;
+      let bi = 0; m.forEach((id, i) => { if (w(id) > w(m[bi])) bi = i; });
+      m.splice(1, 0, m.splice(bi, 1)[0]);
+    }
+    return this._slots = m.map((id, i) => ({ id, dx: S[i][0], dy: S[i][1], s: S[i][2], ph: i * 0.37 }))
+      .sort((a, b) => a.dy - b.dy);
+  }
+  drawBand() {
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : this.t * 2;
-    for (const m of this.band) {
-      const spr = Heroes.get(m).base;
-      const b = Math.abs(Math.sin(beat * Math.PI)) * 7;
-      Gfx.shadow(bx, this.me.y - 6, 40, 0.25);
-      Gfx.sprite(spr + '_idle', bx, this.me.y - 6 - b, { anchor: 'bc', frame: Math.floor(beat), scale: ACTOR_SCALE * 0.82 });
-      bx -= 74;
+    for (const m of this.bandSlots()) {
+      const x = this.me.x + m.dx, y = this.me.y + m.dy - 6;
+      const hop = Math.abs(Math.sin((beat + m.ph) * Math.PI)) * 7 * m.s;
+      Gfx.shadow(x, y, 46 * m.s, 0.25);
+      Gfx.sprite(Heroes.get(m.id).base + '_idle', x, y - hop, { anchor: 'bc', frame: Math.floor(beat + m.ph), scale: ACTOR_SCALE * m.s });
     }
   }
   drawEnemy(e) {
@@ -693,12 +712,11 @@ class Combat {
     {
       const x = E, y = E, w = 262, h = 50;
       HUD.plate(x, y, w, h);
-      HUD.portrait(x + 25, y + 25, 19, this.heroDef.base + '_idle', { scale: 0.8, ring: this.heroDef.color, frame: Math.floor(this.t * 2) % 2 });
+      HUD.portrait(x + 25, y + 25, 19, this.heroDef.base + '_idle', { ring: this.heroDef.color, frame: Math.floor(this.t * 2) % 2 });
       const bx = x + 52, bw = w - 64;
       this.hpGhost = damp(this.hpGhost ?? this.hp / this.maxHp, this.hp / this.maxHp, 3, Time.dt);
       HUD.bar(bx, y + 12, bw, 14, this.hp / this.maxHp, C.life, C.lifeDark, { ghost: this.hpGhost });
-      HUD.text(`${this.hp}`, bx + 5, y + 14, { scale: 1 });
-      HUD.text(`/${this.maxHp}`, bx + bw - 4, y + 14, { scale: 0.9, color: C.dim, align: 'right' });
+      HUD.text(`${this.hp}/${this.maxHp}`, bx + 5, y + 14, { scale: 1 });
       if (this.player.block > 0) {
         Gfx.sprite('icon_shield', bx + 8, y + 38, { anchor: 'c', scale: 1 });
         HUD.text(`${this.player.block} BLOCK`, bx + 20, y + 33, { color: '#8ec8ff', scale: 1 });
