@@ -23,10 +23,16 @@ require('fs').mkdirSync(OUT, { recursive: true });
   ok('post pass', true, await ev(() => Post.on ? 'webgl on' : 'off (' + (Post.failed ? 'unavailable' : 'disabled') + ')'));
   await page.screenshot({ path: `${OUT}/02_title.png` });
   await page.keyboard.press('Enter'); await page.waitForTimeout(1200);
-  ok('hero select from START', await scene() === 'HeroSelectScene');
-  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight'); await page.waitForTimeout(400);
+  ok('START goes straight to Bronk waking up', await scene() === 'CutsceneScene' && await ev(() => Game.run.hero === 'bronk'));
+  // with the others unlocked, NEW STORY opens the dinner table to pick from
+  await ev(() => { Settings.unlocked = ['vela', 'pebble', 'roxy']; Game.newRun(); });
+  await page.waitForTimeout(1500);
+  ok('the dinner table pick', await ev(() => Game.scene.scriptFn && Game.scene.scriptFn.name === 'pickScript'));
+  // it opens on the newest face (Roxy): three to the right is Pebble
+  for (let i = 0; i < 3; i++) { await page.keyboard.press('ArrowRight'); await page.waitForTimeout(150); }
+  await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT}/03_heroes.png` });
-  await page.keyboard.press('Enter'); await page.waitForTimeout(1500);
+  await page.keyboard.press('Enter'); await page.waitForTimeout(2200);
   ok('the opening starts with the chosen hero', await scene() === 'CutsceneScene' && await ev(() => Game.run.hero) === 'pebble');
   await page.screenshot({ path: `${OUT}/04_opening.png` });
   await ev(() => { Game.run.tips = { board: true, combat: true }; Game.startBoard(); });

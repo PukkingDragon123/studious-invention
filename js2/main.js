@@ -31,8 +31,13 @@ const Game = {
   saveSettings() { try { localStorage.setItem(SET_KEY, JSON.stringify(Settings)); } catch (e) { } },
   // --------------------------------------------------------------------- run
   // A new story starts at the hero select; picking one starts the run.
-  newRun(hero) {
-    if (!hero) { this.goWith('iris', () => new HeroSelectScene()); return; }
+  // The first story is always Bronk's. Once somebody else has a seat, you
+  // pick who you are from round the dinner table, and the story starts there.
+  newRun(hero, o = {}) {
+    if (!hero) {
+      if (Heroes.unlocked().length < 2) hero = 'bronk';
+      else { this.goWith('iris', () => new CutsceneScene(pickScript, { noBars: true })); return; }
+    }
     const H = Heroes.get(hero);
     const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
     this.run = {
@@ -42,7 +47,7 @@ const Game = {
       stats: { kills: 0, notes: 0, sick: 0, taken: 0, rolls: 0 },
       board: this.freshBoard(1),
     };
-    this.go(new CutsceneScene(introScript, { onSkip: () => this.startBoard() }));
+    this.go(new CutsceneScene(introScript, { atTable: !!o.atTable, onSkip: () => this.startBoard() }));
   },
   freshBoard(b, carry = {}) { return { biome: b, pos: null, used: {}, revealed: {}, wet: {}, touched: {}, charms: carry.charms || [], round: 0 }; },
   startBoard() { this.save(); this.goWith('iris', () => new BoardScene()); },
@@ -124,7 +129,7 @@ const Game = {
       else {
         Time.dt = sdt;
         Co.update(sdt); Tweens.update(sdt);
-        Particles.update(sdt); Popups.update(sdt); FX.update(sdt); Emotes.update(sdt); Floaters.update(sdt);
+        Particles.update(sdt); Popups.update(sdt); FX.update(sdt); Emotes.update(sdt); Floaters.update(sdt); Toon.update(sdt);
         this.scene.update(sdt);
         Time.dt = dt;
       }

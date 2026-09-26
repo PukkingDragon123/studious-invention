@@ -338,8 +338,8 @@ const Gfx = {
     return lines.length * lh;
   },
   // inline colour tags: {y}gold{/} {g}green{/} {r}red{/} {c}cyan{/} {p}pink{/} {b}blue{/} {o}orange{/} {w}white{/} {d}dim{/}
-  rich(str, x, y, o = {}) {
-    const scale = o.scale || 1;
+  // a string with colour tags, cut into runs of one colour
+  richSegs(str, o = {}) {
     // two tag palettes: one for dark backgrounds, one for the parchment panels
     const cols = Object.assign(o.onLight
       ? { y: '#7d1d2b', g: '#27632f', r: '#c2333c', c: '#18706a', o: '#9c3510', w: '#14331e', p: '#a03a68', b: '#1d3d72', d: '#574a66', s: '#3b3048', v: '#4b2070' }
@@ -352,6 +352,11 @@ const Gfx = {
       last = re.lastIndex;
     }
     if (last < str.length) segs.push({ t: str.slice(last), c: col });
+    return segs;
+  },
+  rich(str, x, y, o = {}) {
+    const scale = o.scale || 1;
+    const segs = this.richSegs(str, o);
     const f = this.fontOf(o.font);
     const total = segs.reduce((a, s) => a + f.width(s.t, scale), 0);
     if (o.align === 'center') x -= total / 2; else if (o.align === 'right') x -= total;

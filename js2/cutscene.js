@@ -23,7 +23,7 @@ class CutsceneScene {
     Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
     this.co = Co.run(this.scriptFn.call(this, this), this);
   }
-  exit() { Game.worldToScreen = null; Juice.letterbox(false); Dialogue.clear(); }
+  exit() { Game.worldToScreen = null; Juice.letterbox(false); Dialogue.clear(); Toon.clear(); }
   // ---------------------------------------------------------------- helpers
   add(key, o) { const a = new Actor(o); this.actors[key] = a; return a; }
   get(key) { return this.actors[key]; }
@@ -44,6 +44,18 @@ class CutsceneScene {
     this.set = set; this.setOpt = opt;
     if (at) this.cam.lookAt(at[0], at[1], true);
     yield 0;
+  }
+  // Push in (or pull back) over a moment, on a point.
+  *zoom(mul, dur = 0.5, x, y) {
+    const m0 = this.zoomMul, x0 = this.cam.x, y0 = this.cam.y;
+    let t = 0;
+    while (t < dur) {
+      t += Time.dt; const k = Ease.inOutQuad(clamp(t / dur, 0, 1));
+      this.zoomMul = lerp(m0, mul, k);
+      if (x !== undefined) this.cam.lookAt(lerp(x0, x, k), lerp(y0, y, k), true);
+      yield 0;
+    }
+    this.zoomMul = mul;
   }
   // Move the camera without changing how big anything is.
   *pan(x, y, hold = 0) { this.cam.lookAt(x, y); if (hold) yield hold; else yield 0; }
@@ -121,10 +133,12 @@ class CutsceneScene {
     Emotes.draw();
     Floaters.draw();
     if (this.overlay) this.overlay(true);
+    Toon.draw(false);
     if (Settings.lighting !== false) SetLight.run(this.set, this.t, this.setOpt, this.camX(), this.lights);
     this.cam.restore(Gfx.ctx);
     if (Settings.lighting !== false) { SetLight.post(this.set, this.setOpt); Film.grain(); }
     Post.ui();
+    Toon.draw(true);
     Particles.draw(Gfx.ctx, false);
     FX.draw(false);
     Popups.draw(false);
@@ -202,20 +216,20 @@ function* introScript(S) {
   const hero = A[me];
   const blaze = S.add('blaze', { base: 'blaze', x: HOME.stove + 4, y: GY - 6, scale: 0.9, facing: -1 });
   const dodo = S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 58, scale: 0.8, facing: -1 });
-  // the hero starts in bed
-  hero.x = HOME.bed + 6; hero.y = GY - 14; hero.facing = 1; pose(hero, 'sleep');
-  if (!can(hero, 'sleep')) { hero.rot = -Math.PI / 2; hero.y = GY - 22; }
+  // the hero starts in bed - unless they were picked sitting at the table
+  const atTable = !!S.o.atTable;
+  if (!atTable) {
+    hero.x = HOME.bed + 6; hero.y = GY - 14; hero.facing = 1; pose(hero, 'sleep');
+    if (!can(hero, 'sleep')) { hero.rot = -Math.PI / 2; hero.y = GY - 22; }
+  }
 
   // drawn over the people: the table and what is on it, so the family sits
   // behind it; the snores; the rain at the door; the tears
-  let snore = 1, rain = 0, steam = 1, tears = 0, headGone = false, green = 0;
+  let snore = atTable ? 0 : 1, rain = 0, steam = 1, tears = 0, headGone = false;
   const grabbed = [];
   let granny = null;
   S.overlay = world => {
-    if (!world) {
-      if (green > 0.01) Gfx.rectA(0, 0, W, H, '#6cc95c', green * 0.08);
-      return;
-    }
+    if (!world) return;
     const T = Time.t;
     // Grandma, drawn here so she stands over the pit and behind the table
     if (granny && granny.visible) {
@@ -253,20 +267,28 @@ function* introScript(S) {
   };
 
   // ============================================== 0. WAKING UP
-  S.cam.lookAt(HOME.bed + 70, 330, true);
-  yield 0.6;
-  yield* S.titleCard('ONGA BONGA', 'a stone age board game saga', 3.2);
-  const caller = me === 'vela' ? 'bronk' : 'vela';
-  yield* S.say(NAME(caller), me === 'vela' ? 'VELA! Dinner! I made gravy!' : `${NAME(me)}! DINNER!`, { at: { x: HOME.bed + 150, top: GY - 110 } });
-  AudioSys.sfx('gasp'); snore = 0;
-  hero.rot = 0; hero.y = GY; pose(hero, 'shock'); hero.stretch(0.4);
-  Juice.punch(0.06); Particles.sparkle(hero.x, GY - 50, 14, ['#ffe98a', '#ffffff']);
-  yield 0.5;
-  yield* S.say(NAME(me), { bronk: 'Dinner. DINNER. Is it the thing? Tell me it is the thing.', vela: 'Gravy? Since when do YOU make gravy?', pebble: 'FOOD. FOOD FOOD FOOD.', roxy: 'Ugh. Fine. I am getting up.' }[me], { at: hero });
-  Co.run(S.glide(HOME.table, 330, 3.4), S);
-  pose(hero, 'walk');
-  while (!hero.moveTo(SEAT[me], GY, Time.dt, 120)) yield 0;
-  hero.y = kid(me) ? GY - 24 : GY - 6; hero.facing = SEAT[me] < HOME.table ? 1 : -1; pose(hero, 'eat');
+  if (!atTable) {
+    S.cam.lookAt(HOME.bed + 40, 350, true); S.zoomMul = 1.35;
+    yield 0.6;
+    yield* S.titleCard('ONGA BONGA', 'a stone age board game saga', 3.2);
+    const caller = me === 'vela' ? 'bronk' : 'vela';
+    yield* S.say(NAME(caller), me === 'vela' ? 'VELA! Dinner! I made gravy!' : `${NAME(me)}! DINNER!`, { at: { x: HOME.bed + 150, top: GY - 110 } });
+    AudioSys.sfx('gasp'); snore = 0;
+    hero.rot = 0; hero.y = GY; pose(hero, 'shock'); hero.stretch(0.4);
+    Toon.shock(hero); Toon.word(hero.x + 30, hero.top - 18, 'HUH?!', { size: 2, col: '#fffaea', burst: '#e06a9b' });
+    Juice.punch(0.06); Particles.sparkle(hero.x, GY - 50, 14, ['#ffe98a', '#ffffff']);
+    yield 0.6;
+    yield* S.say(NAME(me), { bronk: 'Dinner. DINNER. Is it the thing? Tell me it is the thing.', vela: 'Gravy? Since when do YOU make gravy?', pebble: 'FOOD. FOOD FOOD FOOD.', roxy: 'Ugh. Fine. I am getting up.' }[me], { at: hero });
+    Co.run(S.zoom(1, 1.2), S);
+    Co.run(S.glide(HOME.table, 330, 3.4), S);
+    pose(hero, SPRITES[hero.base + '_run'] ? 'run' : 'walk');
+    let hop = 0;
+    while (!hero.moveTo(SEAT[me], GY, Time.dt, 150)) { hop += Time.dt; if (hop > 0.28) { hop = 0; Particles.dust(hero.x - hero.facing * 6, GY, 2); } yield 0; }
+    hero.y = kid(me) ? GY - 24 : GY - 6; hero.facing = SEAT[me] < HOME.table ? 1 : -1; pose(hero, 'eat');
+    hero.squash(0.25); Toon.hearts(hero, 1.2);
+  } else {
+    S.cam.lookAt(HOME.table + 10, 330, true);
+  }
 
   // ============================================== 1. DINNER
   yield 0.4;
@@ -276,13 +298,23 @@ function* introScript(S) {
   yield* L('vela', 'Elbows OFF the table. We are not animals. Mostly.');
   yield* L('pebble', 'Can I have the eye? I want the eye.');
   yield* L('roxy', 'You are SO disgusting.');
-  for (let i = 0; i < 3; i++) { AudioSys.sfx('chomp'); for (const id of HERO_ORDER) A[id].squash(0.08); yield 0.35; }
+  const chomps = ['NOM', 'CHOMP', 'NOM NOM'];
+  for (let i = 0; i < 3; i++) {
+    AudioSys.sfx('chomp'); for (const id of HERO_ORDER) A[id].squash(0.1);
+    Toon.word(HOME.table + (i - 1) * 60, GY - 110 - (i % 2) * 14, chomps[i], { size: 1.6, col: '#ffa832', tilt: (i - 1) * 0.12, life: 0.8 });
+    yield 0.4;
+  }
+  Toon.hearts(A.pebble, 1.4);
   yield* L('bronk', 'More gravy, anyone?');
 
   // ============================================== 2. THE KNOCK
   yield 0.3;
-  for (let i = 0; i < 3; i++) { AudioSys.sfx('knock'); Juice.shake(4, 0.12); yield 0.3; }
-  for (const id of HERO_ORDER) { pose(A[id], 'idle'); Emotes.show(A[id], '!', 1.2); }
+  for (let i = 0; i < 3; i++) {
+    AudioSys.sfx('knock'); Juice.shake(4, 0.12);
+    Toon.word(HOME.door - 40 + i * 16, GY - 130 + i * 18, 'KNOCK', { size: 1.5, col: '#fffaea', burst: '#85562f', tilt: 0.15 - i * 0.12, life: 0.9 });
+    yield 0.32;
+  }
+  for (const id of HERO_ORDER) { pose(A[id], 'idle'); Emotes.show(A[id], '!', 1.2); A[id].stretch(0.2); }
   AudioSys.stop(0.6);
   yield 0.8;
   yield* L('vela', 'Who knocks on a CAVE?');
@@ -301,17 +333,20 @@ function* introScript(S) {
   yield* S.pan(HOME.door - 20, 320, 0.4);
   // she has to duck
   while (!granny.moveTo(HOME.table + 6, GY - 10, Time.dt, 60)) {
-    if (Math.floor(granny.t) !== granny._lt) { granny._lt = Math.floor(granny.t); if (granny._lt % 2 === 0) { AudioSys.sfx('stomp', { vol: 0.8 }); Juice.shake(5, 0.2); Particles.dust(granny.x, GY, 6); } }
+    if (Math.floor(granny.t) !== granny._lt) { granny._lt = Math.floor(granny.t); if (granny._lt % 2 === 0) { AudioSys.sfx('stomp', { vol: 0.8 }); Juice.shake(5, 0.2); Particles.dust(granny.x, GY, 6); Toon.word(granny.x + rnd(-20, 20), GY - 16, 'STOMP', { size: 1.2, col: '#e8dfc6', burst: '#574a66', life: 0.6 }); } }
     S.cam.lookAt(lerp(S.cam.x, granny.x - 60, 0.05), 320);
     yield 0;
   }
   pose(granny, 'idle'); granny.facing = -1;
   yield* S.pan(HOME.table + 60, 318, 0.3);
   AudioSys.sfx('crunch'); Juice.shake(6, 0.2); granny.squash(0.2);
-  Popups.add(granny.x + 20, GY - 20, 'CRUNCH', '#ffe98a', { scale: 1.4 });
+  Toon.word(granny.x + 30, GY - 30, 'CRUNCH!', { size: 1.8, col: '#ffe98a', burst: '#9c3510' });
+  for (const id of HERO_ORDER) Toon.sweat(A[id], 1);
   yield* S.say('GRANDMA REX', 'Oh, don\'t mind me, dears. My legs aren\'t what they were. Neither are my eyes.', { at: granny });
+  Toon.sweat(A.pebble, 2.4);
   yield* L('pebble', 'Grandma... what big TEETH you have.');
   yield* S.say('GRANDMA REX', 'All the better to chew my supper with, my dear.', { at: granny });
+  Toon.sweat(A.roxy, 2.4);
   yield* L('roxy', 'Grandma, what big EYES you have.');
   yield* S.say('GRANDMA REX', 'All the better to see what is for... for...', { at: granny });
   AudioSys.stop(0.3);
@@ -319,15 +354,21 @@ function* introScript(S) {
   yield 1.4;
 
   // ============================================== 4. REXFORD
+  yield* S.zoom(1.7, 0.9, granny.x - 10, granny.top + 40);
   yield* S.say('GRANDMA REX', '...Rexford?', { at: granny, speed: 20 });
+  Toon.shock(granny, 0.9);
   pose(granny, 'cry'); tears = 1; AudioSys.sfx('sob');
+  yield* S.zoom(1, 0.5, HOME.table + 60, 318);
   yield* S.say('GRANDMA REX', 'That is my Rexford. My little grandson. My baby boy. You... you COOKED him.', { at: granny });
+  Toon.sweat(A.bronk, 2.5);
   yield* L('bronk', 'He was YOURS? We thought he was just... dinner.');
   yield* L('vela', 'We didn\'t know he had a FAMILY!');
   tears = 0;
   pose(granny, 'roar');
   AudioSys.sfx('roar', { pitch: 48, vol: 1, len: 1.8 }); Juice.shake(16, 0.9); Juice.flash('#ffffff', 0.5, 3);
-  for (const id of HERO_ORDER) { A[id].squash(0.3); Emotes.show(A[id], 'sweat', 1.6); }
+  Toon.focus(granny, 1.1); Toon.steam(granny, 2.2);
+  Toon.word(granny.x - 40, granny.top + 6, 'ROOOAAR!', { size: 2.6, col: '#ef6a5e', burst: '#fffaea', life: 1.3, tilt: -0.12 });
+  for (const id of HERO_ORDER) { A[id].squash(0.3); Toon.shock(A[id], 0.8); }
   yield* S.say('GRANDMA REX', 'EVERYBODY HAS A FAMILY.', { at: granny, shake: 3 });
   yield* S.say('GRANDMA REX', 'You took mine. So I will take YOURS.', { at: granny });
 
@@ -338,6 +379,7 @@ function* introScript(S) {
     Particles.spawn(a.x, a.cy, { n: 16, color: ['#fffaea', '#c4b89a'], speed: 180, life: 0.4, size: 3 });
     pose(a, 'shock'); a.facing = 1; a.manual = true;
     grabbed.push(a);
+    Toon.word(a.x, a.top - 4, 'GRAB!', { size: 1.5, col: '#fffaea', burst: '#7c3eb2', life: 0.7 });
     Floaters.add(a, 'HEEELP!', 1.6);
     yield 0.35;
   }
@@ -360,17 +402,24 @@ function* introScript(S) {
   yield 0.8;
   yield* S.pan(HOME.table - 10, 324, 0.6);
   pose(hero, 'idle');
+  Toon.add('rain', hero, { life: 2.6 });
   yield* S.say(NAME(me), '...They are gone.', { at: hero, speed: 24 });
 
   // ============================================== 6. THE TUMMY
-  yield 0.5;
+  yield 0.4;
+  yield* S.zoom(1.9, 0.7, hero.x, hero.y - (hero.y - hero.top) * 0.45);
   AudioSys.sfx('growl'); hero.squash(0.2); Juice.shake(3, 0.3);
-  Popups.add(hero.x, hero.top - 6, 'GRRRBLBLBL', '#a8e878', { scale: 1.6, life: 1.4 });
+  Toon.rumble(hero, 2.4);
+  Toon.word(hero.x + 34, hero.y - 30, 'GRRRBLBLBL', { size: 1.3, col: '#ffe98a', burst: '#6b4a10', life: 1.3, tilt: 0.1 });
   yield 0.9;
-  AudioSys.sfx('growl'); hero.squash(0.25); green = 0.6; hero.tint = '#8ac850'; hero.tintT = 3;
-  Popups.add(hero.x, hero.top - 6, 'RUMBLE', '#a8e878', { scale: 2, life: 1.4 });
+  AudioSys.sfx('growl'); hero.squash(0.3); pose(hero, 'shock');
+  Toon.shock(hero, 0.9); Toon.sweat(hero, 3);
+  Toon.word(hero.x - 30, hero.top + 4, 'RUMBLE!', { size: 1.8, col: '#fffaea', burst: '#c2333c', life: 1.4, tilt: -0.14 });
+  Juice.shake(6, 0.4);
+  yield 0.6;
   yield* S.say(NAME(me), 'Oh no. Oh no no no. Not NOW.', { at: hero, shake: 2 });
   yield* S.say('', 'That was a LOT of roast T-Rex.', { at: null });
+  Co.run(S.zoom(1, 0.4), S);
   // straight out of the door to the little wooden house in the yard
   pose(hero, SPRITES[hero.base + '_dash'] ? 'dash' : 'walk', { fps: 22 });
   hero.y = GY; hero.facing = 1;
@@ -399,11 +448,13 @@ function* introScript(S) {
   yield 1.2;
   loo.shake = 0; loo.open = true;
   AudioSys.sfx('creak');
-  hero.visible = true; hero.x = HOME.shower + 4; hero.y = GY; hero.tint = null; green = 0; pose(hero, 'idle');
+  hero.visible = true; hero.x = HOME.shower + 4; hero.y = GY; pose(hero, 'idle');
   yield 0.4;
+  Toon.hearts(hero, 1.6); Particles.sparkle(hero.x, hero.top + 10, 14, ['#ffe98a', '#ffffff']);
   yield* S.say(NAME(me), 'Aaaaah. Much better.', { at: hero });
   yield 0.6;
-  Emotes.show(hero, '!', 1.2); AudioSys.sfx('detect');
+  Emotes.show(hero, '!', 1.2); AudioSys.sfx('detect'); Toon.shock(hero, 0.8);
+  Toon.steam(hero, 2.4);
   yield* S.say(NAME(me), '...GRANDMA REX!', { at: hero, shake: 2 });
   S.setOpt.prints = true;
   yield* S.pan(HOME.shower + 200, 318, 0.8);
@@ -516,6 +567,21 @@ function* endingCredits(S) {
       carve(String(v), cx, ty + 92, 2.2, '#241c2e');
       carve(label, cx, ty + 124, 0.9, '#5c3a20');
     });
+    // somebody new gets a seat at the table
+    const nu = S.unlocked;
+    if (nu) {
+      const k2 = Ease.outBack(clamp((t - 0.8) / 0.5, 0, 1)), N = Heroes.get(nu);
+      if (k2 > 0) {
+        const bw = 300, bh = 74, bx = W / 2 - bw / 2, by = ty + th + 12;
+        Gfx.ctx.save(); Gfx.ctx.translate(W / 2, by + bh / 2); Gfx.ctx.scale(k2, k2); Gfx.ctx.translate(-W / 2, -(by + bh / 2));
+        HUD.plate(bx, by, bw, bh, { hot: true, accent: N.color });
+        HUD.portrait(bx + 38, by + bh / 2, 26, Heroes.spr(nu), { ring: N.color, frame: Math.floor(t * 2) % 2 });
+        HUD.text('NEW AT THE TABLE', bx + 76, by + 14, { color: '#ffe98a', scale: 1 });
+        HUD.text(`${N.name} is playable`, bx + 76, by + 32, { color: N.color, scale: 1.5 });
+        HUD.text(N.instrument, bx + 76, by + 54, { color: HUD.C.dim, scale: 1 });
+        Gfx.ctx.restore();
+      }
+    }
     if (chance(Time.dt * 20)) Particles.confetti(rnd(0, W), -10, 1);
     UI.button(W / 2 - 230, H - 70, 210, 46, 'BACK TO THE TITLE', () => Game.go(new TitleScene()), { scale: 1.2 });
     UI.button(W / 2 + 20, H - 70, 210, 46, 'PLAY AGAIN', () => Game.newRun(), { scale: 1.2 });
@@ -528,5 +594,123 @@ class EndingScene extends CutsceneScene {
     super(endingScript, {});
     this.o.onSkip = () => { Co.stop(this.co); Dialogue.clear(); this.title = null; this.co = Co.run(endingCredits(this), this); };
   }
-  enter() { Game.clearSave(); super.enter(); }
+  enter() { Game.clearSave(); this.unlocked = Heroes.unlockNext(); super.enter(); }
+}
+
+// ---------------------------------------------------------------------------
+// WHO ARE YOU TONIGHT?
+//
+// Dinner, just before the knock, and you choose whose chair you are in.
+// Anyone you have not unlocked yet sits in the dark with a lock on their
+// stool. Picking someone starts the story right there at the table.
+// ---------------------------------------------------------------------------
+function* pickScript(S) {
+  S.set = 'home'; S.setOpt = { night: true, fire: 1 };
+  AudioSys.play('home', { fade: 1 });
+  const kid = id => id === 'pebble' || id === 'roxy';
+  const SEAT = { bronk: HOME.table - 94, pebble: HOME.table - 50, roxy: HOME.table + 52, vela: HOME.table + 96 };
+  const A = {};
+  for (const id of HERO_ORDER) {
+    const a = S.add(id, { base: Heroes.get(id).base, x: SEAT[id], y: kid(id) ? GY - 24 : GY - 6, scale: 1, facing: SEAT[id] < HOME.table ? 1 : -1 });
+    a.shadow = false; a.play(SPRITES[a.base + '_eat'] ? 'eat' : 'idle'); a.t = Math.random() * 4; a.manual = true;
+    A[id] = a;
+  }
+  S.add('blaze', { base: 'blaze', x: HOME.stove + 4, y: GY - 6, scale: 0.9, facing: -1 });
+  S.add('dodo', { base: 'dodo', x: HOME.perch, y: GY - 58, scale: 0.8, facing: -1 });
+  S.cam.lookAt(HOME.table + 10, 330, true);
+  const open = Heroes.unlocked();
+  let sel = open[open.length - 1], chosen = null, t = 0;
+  const box = a => { const sp = Gfx.spr(a.base + '_idle'); return { x0: a.x - sp.w * 0.34, x1: a.x + sp.w * 0.34, y0: a.top + 2, y1: a.y + 4 }; };
+  const under = () => {
+    const w = S.cam.toWorld(Input.mx, Input.my);
+    return HERO_ORDER.find(id => { const b = box(A[id]); return w.x > b.x0 && w.x < b.x1 && w.y > b.y0 && w.y < b.y1; }) || null;
+  };
+  const pick = id => {
+    if (!open.includes(id)) { AudioSys.sfx('error'); Toon.shock(A[id], 0.5); A[id].squash(0.15); sel = id; return; }
+    if (sel !== id) { sel = id; AudioSys.sfx('select'); A[id].stretch(0.18); Toon.hearts(A[id], 0.9); return; }
+    chosen = id;
+  };
+  S.overlay = world => {
+    if (!world) return;
+    const T = Time.t, hot = under();
+    for (const id of HERO_ORDER) {
+      const a = A[id], lock = !open.includes(id), on = id === sel;
+      if (lock) {
+        // a mystery guest: a lit edge round a shape you cannot make out
+        for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) Gfx.sprite(a.sprite, a.x + dx, a.y + dy, { anchor: 'bc', frame: 0, flip: a.facing < 0, tint: hot === id ? '#a79bb4' : '#7a6d8a' });
+        Gfx.sprite(a.sprite, a.x, a.y, { anchor: 'bc', frame: 0, flip: a.facing < 0, tint: '#2a2034' });
+      } else {
+        if (on || hot === id) {
+          const c = on ? '#ffe98a' : '#fffaea';
+          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) Gfx.sprite(a.sprite, a.x + dx, a.y + dy, { anchor: 'bc', frame: a.frame, flip: a.facing < 0, tint: c });
+        }
+        a.manual = false; a.draw(); a.manual = true;
+      }
+    }
+    // the table in front of everyone, the roast in the middle of it
+    Gfx.sprite('h_table', HOME.table, GY + 2, { anchor: 'bc' });
+    for (let i = 0; i < 4; i++) {
+      const sx = HOME.table - 54 + i * 36;
+      Gfx.round(sx - 10, GY - 52, 20, 4, 2, '#8a7f68');
+      Gfx.round(sx - 9, GY - 53, 18, 3, 1, '#e8dfc6');
+    }
+    Gfx.sprite('h_rexhead', HOME.table + 2, GY - 50, { anchor: 'bc' });
+    if (chance(0.2)) Particles.spawn(HOME.table + rnd(-18, 22), GY - 78, { n: 1, color: ['#fffaea', '#d6cfe0'], speed: 10, angle: -Math.PI / 2, spread: 0.3, gravity: -30, life: 1.4, size: 4, sizeEnd: 0 });
+    // a name over every head, and a lock over the ones still to earn
+    for (const id of HERO_ORDER) {
+      const a = A[id], lock = !open.includes(id), on = id === sel, H0 = Heroes.get(id);
+      const y = a.top - 10 + (on ? Math.sin(T * 5) * 2 : 0);
+      if (lock) {
+        Gfx.rect(a.x - 6, y - 7, 12, 10, '#120c16'); Gfx.rect(a.x - 5, y - 6, 10, 8, '#a8801f'); Gfx.rect(a.x - 1, y - 4, 2, 3, '#120c16');
+        Gfx.ctx.strokeStyle = '#120c16'; Gfx.ctx.lineWidth = 2; Gfx.ctx.beginPath(); Gfx.ctx.arc(a.x, y - 7, 4, Math.PI, 0); Gfx.ctx.stroke();
+      } else {
+        const nw = Gfx.measure(H0.name, 1) + 10;
+        Gfx.round(a.x - nw / 2, y - 9, nw, 14, 3, on ? '#241c2e' : 'rgba(18,12,22,0.75)');
+        Gfx.text(H0.name, a.x, y - 6, { color: on ? '#ffe98a' : H0.color, align: 'center' });
+        if (on) { Gfx.ctx.fillStyle = '#ffe98a'; Gfx.ctx.beginPath(); Gfx.ctx.moveTo(a.x - 4, y + 5); Gfx.ctx.lineTo(a.x + 4, y + 5); Gfx.ctx.lineTo(a.x, y + 10); Gfx.ctx.fill(); }
+      }
+    }
+  };
+  S.hud = () => {
+    t += Time.dt;
+    const H0 = Heroes.get(sel), lock = !open.includes(sel);
+    // the tablet over the wall: who this is, and what they do
+    const tw = 620, th = 150, tx = W / 2 - tw / 2, ty = 14 - (1 - Ease.outBack(clamp(t / 0.5, 0, 1))) * 60;
+    UI.slab(tx, ty, tw, th, { r: 6, shadow: true });
+    const carve = (txt, x, y, sc, col, al = 'left') => {
+      Gfx.text(txt, x, y + 2, { color: SKIN.faceHi, align: al, scale: sc });
+      Gfx.text(txt, x, y, { color: col, align: al, scale: sc });
+    };
+    carve('WHO ARE YOU TONIGHT?', W / 2, ty + 12, 1.4, '#5c3a20', 'center');
+    if (lock) {
+      carve('???', W / 2, ty + 44, 3, '#3a2415', 'center');
+      carve('This seat is still empty.', W / 2, ty + 90, 1.3, '#3a2415', 'center');
+      carve('Bring the whole family home to set a place for the next one.', W / 2, ty + 112, 1, '#5c3a20', 'center');
+    } else {
+      carve(H0.name, tx + 24, ty + 36, 3, '#9c3510');
+      carve(`${H0.title}  -  ${H0.hp} HP  -  ${H0.instrument}`, tx + 24, ty + 70, 1, '#3a2415');
+      Gfx.textWrap(`{y}${H0.ability.name}:{/} ${H0.ability.desc}`, tx + 24, ty + 88, tw - 48, { color: '#241c2e', onLight: true, lineHeight: 12 });
+      Gfx.textWrap(`{y}${H0.mechanic.name}:{/} ${H0.mechanic.desc}`, tx + 24, ty + 116, tw - 48, { color: '#241c2e', onLight: true, lineHeight: 12 });
+    }
+    carve(`${open.length} of 4 at the table`, tx + tw - 24, ty + 40, 1, '#5c3a20', 'right');
+    UI.button(24, H - 64, 130, 44, 'BACK', () => Game.go(new TitleScene()), { scale: 1.2 });
+    if (!lock) UI.button(W - 254, H - 64, 230, 48, `PLAY AS ${H0.name}`, () => { chosen = sel; }, { scale: 1.3, hot: true });
+    Gfx.text(Input.touch ? 'tap someone at the table' : 'click someone at the table  -  ENTER to play', W / 2, H - 22, { color: '#e8dfc6', align: 'center', outline: true });
+  };
+  // input, until somebody sits down for real
+  while (!chosen) {
+    if (Input.pressed('ArrowLeft', 'KeyA', 'ArrowRight', 'KeyD')) {
+      const d = Input.pressed('ArrowLeft', 'KeyA') ? -1 : 1, i = HERO_ORDER.indexOf(sel);
+      sel = HERO_ORDER[(i + d + 4) % 4]; AudioSys.sfx('select');
+    }
+    if (Input.pressed('Enter', 'Space') && open.includes(sel)) chosen = sel;
+    if (Input.pressed('Escape')) { Game.go(new TitleScene()); return; }
+    for (const c of Input.clicks) { const id = (Input.mx = c.x, Input.my = c.y, under()); if (id) pick(id); }
+    yield 0;
+  }
+  S.hud = null;
+  const a = A[chosen];
+  AudioSys.sfx('unlock'); a.squash(0.3); Toon.hearts(a, 1.2); Particles.sparkle(a.x, a.top + 10, 16, ['#ffe98a', '#ffffff']);
+  yield 0.7;
+  Game.newRun(chosen, { atTable: true });
 }

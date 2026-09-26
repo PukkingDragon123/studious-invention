@@ -69,6 +69,15 @@ const Heroes = {
   get(id) { return HEROES[id] || HEROES.bronk; },
   cur() { return this.get(Game.run && Game.run.hero); },
   // the other three, in the order the bosses hold them
+  // who has a seat at the table: Bronk always; each rescue won opens the next
+  unlocked() { const u = Settings.unlocked || []; return HERO_ORDER.filter(id => id === 'bronk' || u.includes(id)); },
+  isUnlocked(id) { return this.unlocked().includes(id); },
+  unlockNext() {
+    const u = this.unlocked(), next = HERO_ORDER.find(id => !u.includes(id));
+    if (!next) return null;
+    Settings.unlocked = u.concat(next); Game.saveSettings();
+    return next;
+  },
   captives(id) { return ['pebble', 'roxy', 'vela', 'bronk'].filter(k => k !== id); },
   spr(id, clip = 'idle') { const b = this.get(id).base; return b + '_' + clip; },
   has(id, clip) { return !!SPRITES[this.get(id).base + '_' + clip]; },
