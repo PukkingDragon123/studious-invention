@@ -32,6 +32,11 @@ const KIND_PAINT = {
   vine: 'move', geyser: 'move', boss: 'boss', start: 'home',
 };
 
+// The board is seen close, at the same pixel size as the home: the sky and
+// the far country across the top, the road through the middle, and the near
+// edge of the world going by in front.
+const BZ = 2, BCAM_Y = 234;
+
 class BoardScene {
   constructor(o = {}) {
     this.run = Game.run; this.bd = this.run.board;
@@ -52,9 +57,9 @@ class BoardScene {
       const t = this.T[d.tile], def = ENEMIES[d.kind];
       return { d, a: new Actor({ base: def ? def.base : 'raptor', x: t.x + 4, y: t.y + 2, scale: 1, facing: -1 }) };
     });
-    this.cam = new Camera(); this.cam.zoom = this.cam.tzoom = 1; this.cam.rate = 4.5;
-    this.cam.setBounds(0, 20, this.board.w, BOARD_H - 20);
-    this.cam.lookAt(p.x + 140, 300, true);
+    this.cam = new Camera(); this.cam.zoom = this.cam.tzoom = BZ; this.cam.rate = 4.5;
+    this.cam.setBounds(0, 0, this.board.w, BOARD_H);
+    this.cam.lookAt(p.x + 110, BCAM_Y, true);
     this.die = new Dice3D.Die(0, 0, 25); this.die2 = null;
     this.dieShow = 0;
     this.phase = 'idle'; this.moves = 0; this.reach = new Map(); this.hoverT = null; this.dir = 1;
@@ -68,7 +73,7 @@ class BoardScene {
   enter() {
     AudioSys.play(this.B.music, { fade: 0.9 });
     Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
-    const L = this.cam.x - W / 2 - 60, R = this.cam.x + W / 2 + 60;
+    const L = this.cam.x - W / (2 * BZ) - 60, R = this.cam.x + W / (2 * BZ) + 60;
     BoardBake.now(L, R);
     const bd = this.bd;
     if (!bd.arrived) {
@@ -90,11 +95,11 @@ class BoardScene {
     this.banner = { title: this.B.name, sub: this.B.sub, t: 0, life: 3.6 };
     AudioSys.sfx('unlock');
     yield 1.1;
-    this.cam.rate = 1.3; this.cam.lookAt(boss.x - 120, 300);
+    this.cam.rate = 1.3; this.cam.lookAt(boss.x - 60, BCAM_Y);
     yield 2.2;
     this.toast(`${this.B.boss.name} WAITS AT THE END`, '#ff7a6a');
     yield 1.1;
-    this.cam.rate = 3; this.cam.lookAt(this.me.x + 140, 300);
+    this.cam.rate = 3; this.cam.lookAt(this.me.x + 90, BCAM_Y);
     yield 1.2;
     this.cam.rate = 4.5;
     if (this.bd.biome === 1 && !this.run.tips.board) yield* this.say(this.hero.name, pick([
@@ -367,7 +372,7 @@ class BoardScene {
     const bossT = this.B.boss;
     this.phase = 'busy';
     AudioSys.stop(0.8);
-    this.cam.lookAt(t.x + 80, 300);
+    this.cam.lookAt(t.x + 60, BCAM_Y);
     yield 0.8;
     Juice.shake(10, 0.6); AudioSys.sfx('roar', { pitch: 60, vol: 1, len: 1.3 });
     const lines = BOSS_TALK[this.bd.biome](this);
@@ -481,7 +486,7 @@ class BoardScene {
     const K = TILE_KINDS[kind];
     if (!K || kind === 'path' || kind === 'junction') { yield 0.1; return; }
     if (!K.perm) this.bd.used[t.id] = 1;
-    this.cam.lookAt(t.x + 60, 300);
+    this.cam.lookAt(t.x + 50, BCAM_Y);
     yield* K.land(this, t);
     yield* Relics.boardTrigger('onLand', this, t);
   }
@@ -545,8 +550,10 @@ class BoardScene {
     return v;
   }
   placeDie() {
-    this.die.x = this.me.x + (this.die2 ? 34 : 0); this.die.y = this.me.top - 40;
-    if (this.die2) { this.die2.x = this.me.x - 34; this.die2.y = this.me.top - 40; }
+    // the bone floats at the hero's shoulder, clear of the bars along the top
+    const y = Math.max(this.me.top - 18, this.cam.y - H / (2 * BZ) + 58);
+    this.die.x = this.me.x + 40; this.die.y = y;
+    if (this.die2) { this.die2.x = this.me.x - 40; this.die2.y = y; }
   }
   roll() {
     if (this.phase !== 'idle' || this.leaving || this.panel) return;
@@ -688,25 +695,26 @@ class BoardScene {
       lx = a.x; ly = a.y;
     }
     // the camera: ahead of you, or over the road while you choose
-    let tx = this.me.x + 150 * (this.me.facing || 1);
+    const VWb = W / BZ;
+    let tx = this.me.x + 90 * (this.me.facing || 1);
     if (this.phase === 'choose' && this.reach.size) {
       let mn = 1e9, mx = -1e9;
       for (const id of this.reach.keys()) { mn = Math.min(mn, this.T[id].x); mx = Math.max(mx, this.T[id].x); }
       mn = Math.min(mn, this.me.x); mx = Math.max(mx, this.me.x);
-      tx = mx - mn < W - 200 ? (mn + mx) / 2 : this.me.x + 160;
+      tx = mx - mn < VWb - 90 ? (mn + mx) / 2 : this.me.x + 110;
     }
-    if (this.phase === 'move' || this.phase === 'world') tx = this.me.x + 120 * this.me.facing;
-    if (Input.down && !this.panel && !Game.overlay && Math.abs(Input.dragDX) > 0) this.pan -= Input.dragDX;
-    this.pan += Input.wheel * 40;
-    if (Input.isDown('ArrowRight', 'KeyD')) this.pan += dt * 520;
-    if (Input.isDown('ArrowLeft', 'KeyA')) this.pan -= dt * 520;
+    if (this.phase === 'move' || this.phase === 'world') tx = this.me.x + 70 * this.me.facing;
+    if (Input.down && !this.panel && !Game.overlay && Math.abs(Input.dragDX) > 0) this.pan -= Input.dragDX / BZ;
+    this.pan += Input.wheel * 24;
+    if (Input.isDown('ArrowRight', 'KeyD')) this.pan += dt * 300;
+    if (Input.isDown('ArrowLeft', 'KeyA')) this.pan -= dt * 300;
     if (this.phase === 'move' || this.phase === 'world' || this.phase === 'tile') this.pan = damp(this.pan, 0, 4, dt);
     this.pan = clamp(this.pan, -this.board.w, this.board.w);
-    if (this.phase !== 'tile' && this.phase !== 'busy') this.cam.lookAt(tx + this.pan, 300);
+    if (this.phase !== 'tile' && this.phase !== 'busy') this.cam.lookAt(tx + this.pan, BCAM_Y);
     this.cam.update(dt);
     if (this.phase === 'choose' || this.phase === 'idle') this.placeDie();
     // bake the ground ahead of the camera while nothing much is happening
-    BoardBake.step(this.cam.x - W / 2 - 300, this.cam.x + W / 2 + 300, this.phase === 'idle' ? 5 : 2);
+    BoardBake.step(this.cam.x - VWb / 2 - 300, this.cam.x + VWb / 2 + 300, this.phase === 'idle' ? 5 : 2);
     this.weather(dt);
     // keys
     if (!this.panel && !Game.overlay && !Dialogue.active) {
@@ -742,20 +750,20 @@ class BoardScene {
     }
   }
   weather(dt) {
-    const w = this.B.weather, L = this.cam.x - W / 2, top = this.cam.y - H / 2;
+    const w = this.B.weather, L = this.cam.x - W / (2 * BZ), top = this.cam.y - H / (2 * BZ);
     if (w === 'rain' || this.rain > 0) for (let i = 0; i < 3; i++) Particles.spawn(rnd(0, W), -10, { n: 1, color: ['#a8d8ff', '#6aa9ee'], speed: 30, vx: -60, vy: 620, gravity: 0, life: 0.9, size: 2, shape: 'drop', world: false, fade: false });
     else if (w === 'snow' && chance(0.7)) Particles.spawn(rnd(0, W + 100), -10, { n: 1, color: ['#ffffff', '#e8f0ff'], speed: 10, vx: -30, vy: 50, gravity: 0, life: 7, size: 2, drag: 1, world: false });
     else if (w === 'ash' && chance(0.6)) Particles.spawn(rnd(0, W), -10, { n: 1, color: ['#574a66', '#3b3048', '#7a6d8a'], speed: 10, vx: rnd(-20, 10), vy: 40, gravity: 0, life: 8, size: 2, drag: 1, world: false });
     else if (w === 'ash' && chance(0.12)) Particles.spawn(rnd(0, W), H + 10, { n: 1, color: ['#e06a1b', '#ffa832'], speed: 10, vx: rnd(-10, 10), vy: -60, gravity: 0, life: 6, size: 2, drag: 1, world: false });
-    else if (w === 'pollen' && chance(0.15)) Particles.spawn(L + rnd(0, W), top + rnd(200, H), { n: 1, color: ['#fffaea', '#ffe98a'], speed: 8, vx: 16, gravity: -4, life: 5, size: 1, drag: 1 });
-    else if (w === 'heat' && chance(0.06)) Particles.spawn(L + rnd(0, W), top + rnd(250, H), { n: 1, color: ['#e2b86e', '#c89a58'], speed: 40, vx: 90, gravity: -10, life: 2, size: 2, drag: 0.99 });
+    else if (w === 'pollen' && chance(0.15)) Particles.spawn(L + rnd(0, W / BZ), top + rnd(60, H / BZ), { n: 1, color: ['#fffaea', '#ffe98a'], speed: 8, vx: 16, gravity: -4, life: 5, size: 1, drag: 1 });
+    else if (w === 'heat' && chance(0.06)) Particles.spawn(L + rnd(0, W / BZ), top + rnd(80, H / BZ), { n: 1, color: ['#e2b86e', '#c89a58'], speed: 40, vx: 90, gravity: -10, life: 2, size: 2, drag: 0.99 });
   }
   // -------------------------------------------------------------------- draw
   draw() {
     const ctx = Gfx.ctx, cam = this.cam;
     Gfx.clear(this.B.sky[0]);
     cam.apply(ctx);
-    const L = cam.x - W / 2 - 40, R = cam.x + W / 2 + 40, camL = cam.x - W / 2;
+    const L = cam.x - W / (2 * BZ) - 40, R = cam.x + W / (2 * BZ) + 40, camL = cam.x - W / (2 * BZ);
     BoardSky.draw(this, L, R, camL);
     BoardBake.draw(L, R);
     BoardSky.liquids(this, L, R);
@@ -781,6 +789,7 @@ class BoardScene {
     Popups.draw(true);
     BoardSky.lights(this, L, R);
     cam.restore(ctx);
+    this.drawForeground();
     BoardSky.grade(this);
     Post.ui();
     Particles.draw(Gfx.ctx, false);
@@ -796,6 +805,53 @@ class BoardScene {
     if (this.banner) this.drawBanner();
     Popups.draw(false);
     Dialogue.draw();
+  }
+  // The near edge of the world, sliding past faster than the road: big dark
+  // plants, rocks and bones along the bottom, and in the jungle vines hanging
+  // in from the top. Bigger pixels than the board, because they are nearer.
+  drawForeground() {
+    const b = this.bd.biome, camL = this.cam.x - W / (2 * BZ), T = this.t;
+    const FG = {
+      1: ['v_fern', 'v_bush', 'v_fern', 'v_bush_berry', 'v_flowers', 'v_fern'],
+      2: ['v_bush_jungle', 'v_fern', 'v_bush_jungle', 'v_fern', 'v_mushroom'],
+      3: ['v_rock_bare', 'v_bones', 'v_skull', 'v_rock_bare', 'v_bones'],
+      4: ['v_rock_bare', 'v_pine', 'v_rock_bare', 'v_stump', 'v_rock'],
+      5: ['v_rock_bare', 'v_bones', 'v_rock_bare', 'v_skull', 'v_deadtree'],
+    }[b];
+    const shade = { 1: '#0e2414', 2: '#06140e', 3: '#3a1a0e', 4: '#1a2438', 5: '#0a060a' }[b];
+    const period = 1500, k = 1.45;
+    for (let i = 0; i < 14; i++) {
+      const spr = FG[i % FG.length], sp = Gfx.spr(spr);
+      const sc = 3 + (i % 3 === 0 ? 1 : 0);
+      const base = (i * 107.3 * 1.1 + (i % 2) * 40);
+      const x = ((base - camL * BZ * k) % period + period) % period - 200;
+      if (x < -sp.w * sc || x > W + sp.w * sc) continue;
+      const y = H + 14 + (i % 4) * 8 + (sp.h * sc > 140 ? sp.h * sc * 0.45 : 0);
+      const sway = /fern|bush|tree|pine/.test(spr) ? Math.sin(T * 1.1 + i) * 0.03 : 0;
+      Gfx.sprite(spr, x, y, { anchor: 'bc', scale: sc, flip: i % 2 === 0, tint: shade, tintAmount: 0.55, rot: sway });
+    }
+    if (b === 2) {
+      // vines, and a fringe of leaves along the top
+      const ctx = Gfx.ctx;
+      for (let i = 0; i < 9; i++) {
+        const x = ((i * 173 - camL * BZ * 1.3) % 1400 + 1400) % 1400 - 120, len = 70 + (i * 37) % 90;
+        const sw = Math.sin(T * 0.9 + i) * 6;
+        for (let y = 0; y < len; y += 3) {
+          const vx = x + sw * (y / len) ** 1.5;
+          Gfx.rect(Math.round(vx) - 2, y, 4, 3, '#06140e');
+          Gfx.rect(Math.round(vx) - 1, y, 2, 3, '#14331e');
+          if (y % 18 === 9) { Gfx.round(Math.round(vx) + 1, y, 12, 6, 3, '#0a1e12'); Gfx.round(Math.round(vx) + 2, y + 1, 9, 3, 2, '#27632f'); Gfx.round(Math.round(vx) - 13, y + 6, 12, 6, 3, '#0a1e12'); Gfx.round(Math.round(vx) - 11, y + 7, 9, 3, 2, '#1d4a26'); }
+        }
+      }
+      void ctx;
+    }
+    if (b === 4) {
+      // a snowy branch reaching in from each top corner
+      for (const side of [-1, 1]) {
+        const x0 = side < 0 ? -30 : W + 30;
+        Gfx.sprite('v_pine', x0, 150 + Math.sin(T * 0.7) * 2, { anchor: 'bc', scale: 4, rot: side * 2.4, tint: '#1a2438', tintAmount: 0.5 });
+      }
+    }
   }
   drawRoute(route) {
     for (let i = 1; i < route.length; i++) {
@@ -840,40 +896,63 @@ class BoardScene {
     if (reach) {
       const k = 0.5 + Math.sin(this.t * 6) * 0.5;
       BoardArt.ring(Math.round(t.x), Math.round(t.y - lift), slab.RX + 3, slab.RY + 3, hov ? '#ffffff' : k > 0.5 ? '#ffe98a' : '#e0b93a');
-      if (reach.dir < 0) Gfx.text('◀', t.x - slab.RX - 12, t.y - lift - 6, { color: '#ffe98a', outline: true, scale: 1 });
+      if (reach.dir < 0) this.arrow(t.x - slab.RX - 9, t.y - lift, -1, 5, '#ffe98a');
     } else if (hov) BoardArt.ring(Math.round(t.x), Math.round(t.y), slab.RX + 2, slab.RY + 2, 'rgba(255,250,234,0.55)');
+  }
+  // Where a landmark can stand beside its tile without hiding any other
+  // tile: tried right, left, behind and in front, nearest first.
+  spot(t, w, h, pref = 1) {
+    const key = t.id + ':' + w;
+    this._spots = this._spots || {};
+    if (this._spots[key]) return this._spots[key];
+    const cands = [[pref * (w / 2 + 26), -2], [-pref * (w / 2 + 26), -2], [pref * (w / 2 + 20), -26], [-pref * (w / 2 + 20), -26], [0, -34], [pref * (w / 2 + 30), 24], [pref * (w / 2 + 50), -10]];
+    let best = null;
+    for (const [dx, dy] of cands) {
+      const x = t.x + dx, y = t.y + dy;
+      const hit = this.T.some(u => u !== t && Math.abs(u.x - x) < w / 2 + 22 && u.y < y + 14 && u.y > y - h - 10);
+      if (!hit) { best = { x, y, dx }; break; }
+    }
+    if (!best) best = { x: t.x + cands[0][0], y: t.y - 2, dx: cands[0][0] };
+    return (this._spots[key] = best);
   }
   // the things that stand next to special tiles, so the board reads from afar
   landmark(t) {
     const kind = this.kindOf(t), used = this.used(t), T = this.t;
     switch (t.kind) {
       case 'start': return () => { Gfx.sprite('v_cave', t.x - 8, t.y - 16, { anchor: 'bc', scale: 1 }); };
-      case 'trader': return () => {
-        Gfx.shadow(t.x + 62, t.y - 2, 110, 0.3);
-        Gfx.sprite('mammoth_idle', t.x + 64, t.y - 2, { anchor: 'bc', frame: Math.floor(T * 1.6) % 2, flip: true });
-        Gfx.sprite('v_basket', t.x + 18, t.y - 12, { anchor: 'bc' }); Gfx.sprite('v_pot', t.x + 106, t.y - 4, { anchor: 'bc' });
-      };
-      case 'camp': return () => {
-        Gfx.sprite(used ? 'v_campfire_out' : 'v_campfire', t.x + 44, t.y - 4, { anchor: 'bc', frame: Math.floor(T * 10) });
-        if (!used && chance(0.25)) Particles.embers(t.x + 44, t.y - 22, 1);
-      };
-      case 'altar': return () => BoardSky.altar(t.x + 46, t.y - 6, T);
+      case 'trader': {
+        const P = this.spot(t, 150, 90);
+        return () => {
+          Gfx.shadow(P.x, P.y, 110, 0.3);
+          Gfx.sprite('mammoth_idle', P.x, P.y, { anchor: 'bc', frame: Math.floor(T * 1.6) % 2, flip: P.dx > 0 });
+          Gfx.sprite('v_basket', P.x - 46, P.y - 4, { anchor: 'bc' }); Gfx.sprite('v_pot', P.x + 44, P.y, { anchor: 'bc' });
+        };
+      }
+      case 'camp': {
+        const P = this.spot(t, 40, 40);
+        return () => {
+          Gfx.sprite(used ? 'v_campfire_out' : 'v_campfire', P.x, P.y, { anchor: 'bc', frame: Math.floor(T * 10) });
+          if (!used && chance(0.25)) Particles.embers(P.x, P.y - 18, 1);
+        };
+      }
+      case 'altar': { const P = this.spot(t, 56, 50); return () => BoardSky.altar(P.x, P.y, T); }
       case 'cave': return () => { Gfx.sprite('v_cave', t.x + 8, t.y - 14, { anchor: 'bc', scale: 0.8, alpha: used ? 0.7 : 1 }); };
-      case 'totem': return used ? null : () => Gfx.sprite('v_totem', t.x + 30, t.y - 4, { anchor: 'bc', scale: 0.7 });
-      case 'choice': return used ? null : () => Gfx.sprite('v_signpost', t.x + 26, t.y - 4, { anchor: 'bc' });
+      case 'totem': { if (used) return null; const P = this.spot(t, 24, 50); return () => Gfx.sprite('v_totem', P.x, P.y, { anchor: 'bc', scale: 0.7 }); }
+      case 'choice': { if (used) return null; const P = this.spot(t, 30, 40); return () => Gfx.sprite('v_signpost', P.x, P.y, { anchor: 'bc' }); }
       case 'npc': {
         if (used) return null;
         const ev = BOARD_EVENTS.npc.find(e => e.id === t.ev); if (!ev) return null;
-        return () => { Gfx.shadow(t.x + 22, t.y - 16, 30, 0.3); Gfx.sprite(ev.spr, t.x + 22, t.y - 16, { anchor: 'bc', frame: Math.floor(T * 2 + t.x) % 2, flip: true }); };
+        const s = Gfx.spr(ev.spr), P = this.spot(t, s.w * 0.7, s.h);
+        return () => { Gfx.shadow(P.x, P.y, 30, 0.3); Gfx.sprite(ev.spr, P.x, P.y, { anchor: 'bc', frame: Math.floor(T * 2 + t.x) % 2, flip: P.dx > 0 }); };
       }
       case 'dino': {
         if (used) return null;
         const D = DINO_TILES[this.bd.biome][t.dino || 0];
+        const s = Gfx.spr(D.spr), P = this.spot(t, s.w, s.h);
         return () => {
-          const s = Gfx.spr(D.spr);
-          Gfx.shadow(t.x + 10, t.y - 4, s.w * 0.7, 0.3);
-          Gfx.sprite(D.spr, t.x + 10, t.y - 4, { anchor: 'bc', frame: Math.floor(T * 1.4) % s.frames.length, flip: true });
-          if (Math.sin(T * 1.3 + t.x) > 0.3) Gfx.text('z', t.x + 10 + s.w * 0.3, t.y - s.h - 6 - (T * 12 % 14), { color: '#fffaea', outline: true });
+          Gfx.shadow(P.x, P.y, s.w * 0.7, 0.3);
+          Gfx.sprite(D.spr, P.x, P.y, { anchor: 'bc', frame: Math.floor(T * 1.4) % s.frames.length, flip: P.dx > 0 });
+          if (Math.sin(T * 1.3 + t.x) > 0.3) Gfx.text('z', P.x + s.w * 0.3, P.y - s.h - 6 - (T * 12 % 14), { color: '#fffaea', outline: true });
         };
       }
       case 'boss': {
@@ -1032,9 +1111,14 @@ class BoardScene {
       const left = p.x < 20, x = left ? 22 : W - 22, y = clamp(p.y, 120, H - 120);
       const hov = UI.hovered(x - 18, y - 18, 36, 36);
       Gfx.circle(x, y, 16, '#120c16'); Gfx.circle(x, y, 14, hov ? '#ffe98a' : '#e0b93a');
-      Gfx.text(left ? '◀' : '▶', x, y - 6, { color: '#120c16', align: 'center', scale: 1.2 });
+      this.arrow(x + (left ? -1 : 1), y, left ? -1 : 1, 7, '#120c16');
       UI.hit(x - 18, y - 18, 36, 36, () => { this.pan += (t.x - this.cam.x) * 0.8; });
     }
+  }
+  arrow(x, y, dir, r, col) {
+    const ctx = Gfx.ctx;
+    ctx.fillStyle = '#120c16'; ctx.beginPath(); ctx.moveTo(x + dir * (r + 2), y); ctx.lineTo(x - dir * (r - 1), y - r - 2); ctx.lineTo(x - dir * (r - 1), y + r + 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x + dir * r, y); ctx.lineTo(x - dir * (r - 2), y - r); ctx.lineTo(x - dir * (r - 2), y + r); ctx.closePath(); ctx.fill();
   }
   drawTileTip(t) {
     const kind = this.kindOf(t), K = TILE_KINDS[kind] || TILE_KINDS.path, T = TERRAIN[this.terrainOf(t)];

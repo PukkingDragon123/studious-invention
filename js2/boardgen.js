@@ -17,9 +17,9 @@
 'use strict';
 
 const BSTEP = 64;          // world px between tile centres along a lane
-const BOARD_H = 600;       // how tall a board is, sky included
+const BOARD_H = 430;       // how tall a board is, sky included
 const HORIZON = 176;       // where the ground meets the far country
-const LANE_CY = 372;       // the middle of the road, before it wanders
+const LANE_CY = 264;       // the middle of the road, before it wanders
 
 const BIOMES = {
   1: {
@@ -157,24 +157,24 @@ const Board = {
     };
     const link = (a, c) => { a.next.push(c.id); c.prev.push(a.id); };
     const ph1 = R.float(0, 6.28), ph2 = R.float(0, 6.28);
-    const wander = x => LANE_CY + 30 * Math.sin(x * 0.0041 + ph1) + 14 * Math.sin(x * 0.0109 + ph2);
+    const wander = x => LANE_CY + 16 * Math.sin(x * 0.0041 + ph1) + 7 * Math.sin(x * 0.0109 + ph2);
     let x = 150, idx = 0;
     const start = add(x, wander(x), { idx: idx++ }); start.kind = 'start';
     let cur = start, left = B.len, last = 'plain';
     const forks = [], spurs = [];
     while (left > 0) {
       const room = left > 9 && idx > 3;
-      if (room && last !== 'fork' && R.chance(0.34)) {
+      if (room && last === 'plain' && R.chance(0.34)) {
         // two lanes, one tile apart in length, so no two rolls end on the same tile
         const k = R.int(3, 4), longUp = R.chance(0.5);
-        const span = (k + 1) * BSTEP;
+        const span = Math.round((k + 1) * BSTEP * 1.16);   // room for the longer lane's stones
         const lanes = [];
         for (const side of [-1, 1]) {
           const n = (side < 0) === longUp ? k + 1 : k;
           let prev = cur; const lane = [];
           for (let j = 1; j <= n; j++) {
             const u = j / (n + 1), lx = cur.x + span * u;
-            const off = side * 66 * Math.sin(Math.PI * Math.min(1, u * 1.35 - 0.05)) + side * 6;
+            const off = side * 40 * Math.sin(Math.PI * Math.min(1, u * 1.35 - 0.05)) + side * 5;
             const t = add(lx, wander(lx) + off, { lane: side, main: false });
             link(prev, t); prev = t; lane.push(t);
           }
@@ -196,13 +196,14 @@ const Board = {
         const up = t.y > LANE_CY ? true : t.y < LANE_CY - 10 ? false : R.chance(0.5);
         const n = R.chance(0.35) ? 3 : 2;
         let prev = t; const trail = [];
+        const free = (x, y) => !tiles.some(u => Math.abs(u.x - x) < 56 && Math.abs(u.y - y) < 30);
         for (let j = 1; j <= n; j++) {
-          const sx = t.x + 16 + j * 20, sy = t.y + (up ? -1 : 1) * (46 + (j - 1) * 44);
-          const s = add(sx, clamp(sy, 236, 516), { lane: up ? -2 : 2, main: false, spur: true });
+          const sx = t.x + 22 + j * 26, sy = clamp(t.y + (up ? -1 : 1) * (34 + (j - 1) * 24), 208, 334);
+          if (!free(sx, sy)) break;                       // no stone on top of another
+          const s = add(sx, sy, { lane: up ? -2 : 2, main: false, spur: true });
           link(prev, s); prev = s; trail.push(s);
         }
-        spurs.push({ from: t, tiles: trail });
-        last = 'spur';
+        if (trail.length) { spurs.push({ from: t, tiles: trail }); last = 'spur'; } else last = 'plain';
       } else last = 'plain';
     }
     // the last stretch: a campfire, then the lair
@@ -274,7 +275,7 @@ const Board = {
         feats.push(F);
         for (const t of tiles) if (Math.abs(t.x - F.cx(t.y)) < F.hw(t.y) + 26 && !t.big) t.terrain = f.type === 'lava' ? 'hot' : 'wet';
       } else if (f.type === 'ice') {
-        const F = { type: 'ice', x: fx, y: LANE_CY + R.float(-20, 20), rx: R.float(150, 220), ry: R.float(90, 130) };
+        const F = { type: 'ice', x: fx, y: LANE_CY + R.float(-20, 20), rx: R.float(110, 160), ry: R.float(56, 76) };
         feats.push(F);
         for (const t of tiles) if (((t.x - F.x) / F.rx) ** 2 + ((t.y - F.y) / F.ry) ** 2 < 0.8 && !t.big) t.terrain = 'ice';
       } else if (f.type === 'tar') {
@@ -323,8 +324,13 @@ const Board = {
   // scatter scenery where it does not sit on the road
   scatter(R, B, tiles, W, feats) {
     const out = [];
-    const clear = (x, y, r) => {
+    const clear = (x, y, r, spr) => {
       for (const t of tiles) { const dx = t.x - x, dy = (t.y - y) * 1.6; if (dx * dx + dy * dy < r * r) return false; }
+      // anything standing below a tile must be short enough not to cover it
+      if (spr) {
+        const S = Gfx.spr(spr), hw = S.w / 2 + 26;
+        for (const t of tiles) if (Math.abs(t.x - x) < hw && t.y < y + 6 && t.y > y - S.h - 16) return false;
+      }
       for (const t of tiles) for (const n of t.next) {
         const u = tiles[n]; const vx = u.x - t.x, vy = u.y - t.y, L2 = vx * vx + vy * vy;
         const k = clamp(((x - t.x) * vx + (y - t.y) * vy) / (L2 || 1), 0, 1);
@@ -336,28 +342,29 @@ const Board = {
       return true;
     };
     // the treeline along the back, thick, so the country has an edge
-    for (let x = -40; x < W + 60; x += R.float(34, 64)) {
-      const y = HORIZON + R.float(18, 62);
-      const spr = R.pick(B.props.back);
-      if (clear(x, y, 40)) out.push({ spr, x, y, r: 40, flip: R.chance(0.5), sc: 1, back: true });
+    for (let x = -40; x < W + 60; x += R.float(60, 150)) {
+      const y = HORIZON + R.float(8, 24);
+      const tall = B.props.back.filter(k => /tree|palm|pine/.test(k)), low = B.props.back.filter(k => !/tree|palm|pine/.test(k));
+      const spr = (R.chance(0.28) || !low.length) && tall.length ? R.pick(tall) : low.length ? R.pick(low) : R.pick(B.props.back);
+      if (clear(x, y, 40, spr)) out.push({ spr, x, y, r: 40, flip: R.chance(0.5), sc: 1, back: true });
     }
     // things in the fields
     for (let i = 0; i < W / 26; i++) {
-      const x = R.float(0, W), y = R.float(HORIZON + 50, BOARD_H - 60);
+      const x = R.float(0, W), y = R.float(HORIZON + 34, BOARD_H - 60);
       const spr = R.pick(B.props.mid);
       const big = /tree|palm|pine/.test(spr);
-      if (clear(x, y, big ? 56 : 30)) out.push({ spr, x, y, r: big ? 56 : 26, flip: R.chance(0.5), sc: 1 });
+      if (clear(x, y, big ? 56 : 30, spr)) out.push({ spr, x, y, r: big ? 56 : 26, flip: R.chance(0.5), sc: 1 });
     }
     // boulders strewn over any stony rise
     for (const f of feats) if (f.type === 'rocks' || f.type === 'vents') for (let i = 0; i < f.w / 9; i++) {
-      const x = f.x + R.float(-f.w, f.w), y = R.float(HORIZON + 40, BOARD_H - 40);
-      if (clear(x, y, 26)) out.push({ spr: R.chance(0.6) ? 'v_rock_bare' : 'v_rock', x, y, r: 24, flip: R.chance(0.5), sc: 1 });
+      const x = f.x + R.float(-f.w, f.w), y = R.float(HORIZON + 30, BOARD_H - 50);
+      if (clear(x, y, 26, 'v_rock')) out.push({ spr: R.chance(0.6) ? 'v_rock_bare' : 'v_rock', x, y, r: 24, flip: R.chance(0.5), sc: 1 });
     }
     // the near edge: bushes and rocks cut off by the bottom of the screen
     for (let x = -30; x < W + 60; x += R.float(50, 110)) {
-      const y = BOARD_H - R.float(0, 26);
+      const y = BOARD_H - 36 - R.float(0, 14);
       const spr = R.pick(B.props.front);
-      if (clear(x, y, 36)) out.push({ spr, x, y, r: 36, flip: R.chance(0.5), sc: 1, front: true });
+      if (clear(x, y, 36, spr)) out.push({ spr, x, y, r: 36, flip: R.chance(0.5), sc: 1, front: true });
     }
     return out;
   },

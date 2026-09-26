@@ -10,6 +10,9 @@
 // ---------------------------------------------------------------------------
 'use strict';
 
+// The board camera sits close, so only the last stretch of sky over the
+// horizon is in shot: the far country is let down into it.
+const SKY_DROP = { far: 58, mid: 46, near: 12, sun: 84, cloud: 106 };
 const BoardSky = (() => {
   const layers = {};
   // the far country, three bands deep, built from the same painters as the
@@ -22,9 +25,9 @@ const BoardSky = (() => {
       make: () => kind === 'dunes' ? dunes(Object.assign({ h }, spec)) : kind === 'woods' ? Vista.gen.woods(Object.assign({ h }, spec)) : Vista.gen.mountains(Object.assign({ h }, spec)),
     });
     layers[b] = [
-      Object.assign(mk('far', B.far, 'm', 0.05, 200), { y: HORIZON - 200 + 38 }),
-      Object.assign(mk('mid', B.mid, 'm', 0.11, 190), { y: HORIZON - 190 + 26 }),
-      Object.assign(mk('near', B.near, B.near.kind, 0.22, 110), { y: HORIZON - 110 + 16 }),
+      Object.assign(mk('far', B.far, 'm', 0.05, 200), { y: HORIZON - 200 + 38 + SKY_DROP.far }),
+      Object.assign(mk('mid', B.mid, 'm', 0.11, 190), { y: HORIZON - 190 + 26 + SKY_DROP.mid }),
+      Object.assign(mk('near', B.near, B.near.kind, 0.22, 110), { y: HORIZON - 110 + 16 + SKY_DROP.near }),
     ];
     return layers[b];
   }
@@ -102,7 +105,7 @@ const BoardSky = (() => {
     draw(sc, L, R, camL) {
       const b = sc.bd.biome, B = sc.B, t = sc.t;
       World.skyRamp(L, R, -40, HORIZON + 30, B.sky);
-      const sx = camL + W * 0.72 - camL * 0.02, sy = b === 5 ? 70 : b === 3 ? 96 : 64;
+      const sx = camL + (W / BZ) * 0.74 - camL * 0.02, sy = SKY_DROP.sun + (b === 5 ? 70 : b === 3 ? 90 : 64) * 0.5;
       if (b === 1) sun(sx, sy, 18, '#fff4c2', '#ffe98a');
       else if (b === 2) sun(sx, sy, 16, '#d8f0e0', '#a8d0c0');
       else if (b === 3) sun(sx, sy, 26, '#ffe0a0', '#ffa860');
@@ -113,13 +116,13 @@ const BoardSky = (() => {
         const depth = 0.03 + d * 0.035, span = 1100 + d * 260, n = 4, spr = cloud(d, b);
         for (let i = 0; i < n; i++) {
           const cx = ((i * span / n + d * 190 - camL * depth + t * (3 + d * 2)) % span + span) % span + L - 220;
-          const cy = 24 + d * 34 + (i % 3) * 14;
+          const cy = SKY_DROP.cloud + d * 12 + (i % 3) * 6;
           Gfx.ctx.globalAlpha = 0.5 + d * 0.15;
           Gfx.ctx.drawImage(spr, Math.round(cx - spr.ox), Math.round(cy - spr.oy));
         }
       }
       Gfx.ctx.globalAlpha = 1;
-      if (b !== 5) World.flock(t, camL, L, R, false, 60);
+      if (b !== 5) World.flock(t, camL, L, R, false, 128);
       const Ls = bands(b);
       Ls.forEach((Lr, i) => {
         Vista.drawAt(Lr, null, camL, L, R, Lr.y, 1);
