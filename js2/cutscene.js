@@ -293,11 +293,11 @@ function* introScript(S) {
   // ============================================== 1. DINNER
   yield 0.4;
   yield* S.say('', 'Tonight is a special occasion. Tonight the Rockbottoms are eating a whole roast T-Rex head.', { at: null });
-  const L = (id, text) => S.say(NAME(id), text, { at: A[id] });
+  const L = (id, text, mood) => S.say(NAME(id), text, { at: A[id], mood });
   yield* L('bronk', 'Three days I tracked this one. It sat on me twice.');
   yield* L('vela', 'Elbows OFF the table. We are not animals. Mostly.');
-  yield* L('pebble', 'Can I have the eye? I want the eye.');
-  yield* L('roxy', 'You are SO disgusting.');
+  yield* L('pebble', 'Can I have the eye? I want the eye.', 'happy');
+  yield* L('roxy', 'You are SO disgusting.', 'angry');
   const chomps = ['NOM', 'CHOMP', 'NOM NOM'];
   for (let i = 0; i < 3; i++) {
     AudioSys.sfx('chomp'); for (const id of HERO_ORDER) A[id].squash(0.1);
@@ -317,13 +317,13 @@ function* introScript(S) {
   for (const id of HERO_ORDER) { pose(A[id], 'idle'); Emotes.show(A[id], '!', 1.2); A[id].stretch(0.2); }
   AudioSys.stop(0.6);
   yield 0.8;
-  yield* L('vela', 'Who knocks on a CAVE?');
+  yield* L('vela', 'Who knocks on a CAVE?', 'scared');
   rain = 0.6; S.setOpt.night = true;
   yield* S.pan(HOME.door + 30, 326, 0.6);
   AudioSys.sfx('thunder'); Juice.flash('#ffffff', 0.4, 5);
-  yield* S.say('GRANDMA REX', 'Yoo-hoo! Hello, my dearies! Just a poor old granny, lost in the rain. Could you spare a bite for a hungry old lady?', { at: { x: HOME.door + 120, top: GY - 150 } });
+  yield* S.say('GRANDMA REX', 'Yoo-hoo! Hello, my dearies! Just a poor old granny, lost in the rain. Could you spare a bite for a hungry old lady?', { at: { x: HOME.door + 120, top: GY - 150 }, mood: 'happy' });
   yield* S.pan(HOME.table + 20, 330, 0.3);
-  yield* L('bronk', 'Course we can! Come in, come in! There is loads!');
+  yield* L('bronk', 'Course we can! Come in, come in! There is loads!', 'happy');
 
   // ============================================== 3. GRANDMA REX
   AudioSys.play('event', { fade: 1 });
@@ -344,10 +344,10 @@ function* introScript(S) {
   for (const id of HERO_ORDER) Toon.sweat(A[id], 1);
   yield* S.say('GRANDMA REX', 'Oh, don\'t mind me, dears. My legs aren\'t what they were. Neither are my eyes.', { at: granny });
   Toon.sweat(A.pebble, 2.4);
-  yield* L('pebble', 'Grandma... what big TEETH you have.');
-  yield* S.say('GRANDMA REX', 'All the better to chew my supper with, my dear.', { at: granny });
+  yield* L('pebble', 'Grandma... what big TEETH you have.', 'scared');
+  yield* S.say('GRANDMA REX', 'All the better to chew my supper with, my dear.', { at: granny, mood: 'happy' });
   Toon.sweat(A.roxy, 2.4);
-  yield* L('roxy', 'Grandma, what big EYES you have.');
+  yield* L('roxy', 'Grandma, what big EYES you have.', 'scared');
   yield* S.say('GRANDMA REX', 'All the better to see what is for... for...', { at: granny });
   AudioSys.stop(0.3);
   granny.stretch(0.12);
@@ -355,22 +355,22 @@ function* introScript(S) {
 
   // ============================================== 4. REXFORD
   yield* S.zoom(1.7, 0.9, granny.x - 10, granny.top + 40);
-  yield* S.say('GRANDMA REX', '...Rexford?', { at: granny, speed: 20 });
+  yield* S.say('GRANDMA REX', '...Rexford?', { at: granny, speed: 20, mood: 'scared' });
   Toon.shock(granny, 0.9);
   pose(granny, 'cry'); tears = 1; AudioSys.sfx('sob');
   yield* S.zoom(1, 0.5, HOME.table + 60, 318);
-  yield* S.say('GRANDMA REX', 'That is my Rexford. My little grandson. My baby boy. You... you COOKED him.', { at: granny });
+  yield* S.say('GRANDMA REX', 'That is my Rexford. My little grandson. My baby boy. You... you COOKED him.', { at: granny, mood: 'sad' });
   Toon.sweat(A.bronk, 2.5);
-  yield* L('bronk', 'He was YOURS? We thought he was just... dinner.');
-  yield* L('vela', 'We didn\'t know he had a FAMILY!');
+  yield* L('bronk', 'He was YOURS? We thought he was just... dinner.', 'scared');
+  yield* L('vela', 'We didn\'t know he had a FAMILY!', 'scared');
   tears = 0;
   pose(granny, 'roar');
   AudioSys.sfx('roar', { pitch: 48, vol: 1, len: 1.8 }); Juice.shake(16, 0.9); Juice.flash('#ffffff', 0.5, 3);
   Toon.focus(granny, 1.1); Toon.steam(granny, 2.2);
   Toon.word(granny.x - 40, granny.top + 6, 'ROOOAAR!', { size: 2.6, col: '#ef6a5e', burst: '#fffaea', life: 1.3, tilt: -0.12 });
   for (const id of HERO_ORDER) { A[id].squash(0.3); Toon.shock(A[id], 0.8); }
-  yield* S.say('GRANDMA REX', 'EVERYBODY HAS A FAMILY.', { at: granny, shake: 3 });
-  yield* S.say('GRANDMA REX', 'You took mine. So I will take YOURS.', { at: granny });
+  yield* S.say('GRANDMA REX', 'EVERYBODY HAS A FAMILY.', { at: granny, shake: 3, mood: 'angry' });
+  yield* S.say('GRANDMA REX', 'You took mine. So I will take YOURS.', { at: granny, mood: 'angry' });
 
   // ============================================== 5. THE GRAB
   for (const id of others) {
@@ -403,7 +403,7 @@ function* introScript(S) {
   yield* S.pan(HOME.table - 10, 324, 0.6);
   pose(hero, 'idle');
   Toon.add('rain', hero, { life: 2.6 });
-  yield* S.say(NAME(me), '...They are gone.', { at: hero, speed: 24 });
+  yield* S.say(NAME(me), '...They are gone.', { at: hero, speed: 24, mood: 'sad' });
 
   // ============================================== 6. THE TUMMY
   yield 0.4;
@@ -417,7 +417,7 @@ function* introScript(S) {
   Toon.word(hero.x - 30, hero.top + 4, 'RUMBLE!', { size: 1.8, col: '#fffaea', burst: '#c2333c', life: 1.4, tilt: -0.14 });
   Juice.shake(6, 0.4);
   yield 0.6;
-  yield* S.say(NAME(me), 'Oh no. Oh no no no. Not NOW.', { at: hero, shake: 2 });
+  yield* S.say(NAME(me), 'Oh no. Oh no no no. Not NOW.', { at: hero, shake: 2, mood: 'scared' });
   yield* S.say('', 'That was a LOT of roast T-Rex.', { at: null });
   Co.run(S.zoom(1, 0.4), S);
   // straight out of the door to the little wooden house in the yard
@@ -451,11 +451,11 @@ function* introScript(S) {
   hero.visible = true; hero.x = HOME.shower + 4; hero.y = GY; pose(hero, 'idle');
   yield 0.4;
   Toon.hearts(hero, 1.6); Particles.sparkle(hero.x, hero.top + 10, 14, ['#ffe98a', '#ffffff']);
-  yield* S.say(NAME(me), 'Aaaaah. Much better.', { at: hero });
+  yield* S.say(NAME(me), 'Aaaaah. Much better.', { at: hero, mood: 'happy' });
   yield 0.6;
   Emotes.show(hero, '!', 1.2); AudioSys.sfx('detect'); Toon.shock(hero, 0.8);
   Toon.steam(hero, 2.4);
-  yield* S.say(NAME(me), '...GRANDMA REX!', { at: hero, shake: 2 });
+  yield* S.say(NAME(me), '...GRANDMA REX!', { at: hero, shake: 2, mood: 'angry' });
   S.setOpt.prints = true;
   yield* S.pan(HOME.shower + 200, 318, 0.8);
   yield* S.say(NAME(me), { bronk: 'Nobody takes my family. NOBODY. Not even a granny.', vela: 'Right. That old lizard is going to learn some manners.', pebble: 'I am coming, everybody! I am SO fast!', roxy: 'She took my FAMILY. Nobody takes my family but me.' }[me], { at: hero });
@@ -524,18 +524,18 @@ function* endingScript(S) {
   S.cam.lookAt(HOME.table + 20, 330, true);
   yield 0.8;
   yield* S.say('', 'A week later. Sunday dinner at the Rockbottoms\'. There is no T-Rex on the table.', { at: null });
-  yield* S.say('GRANDMA REX', 'Berry crumble, my dears. No goats in it. No anybody in it.', { at: granny });
-  yield* S.say(NAME('pebble'), 'Grandma, what a big CRUMBLE you have.', { at: A.pebble });
+  yield* S.say('GRANDMA REX', 'Berry crumble, my dears. No goats in it. No anybody in it.', { at: granny, mood: 'happy' });
+  yield* S.say(NAME('pebble'), 'Grandma, what a big CRUMBLE you have.', { at: A.pebble, mood: 'happy' });
   for (let i = 0; i < 5; i++) heart(granny.x - 20, granny.top + 30);
   yield* S.say('GRANDMA REX', 'All the better to share with you, my dear.', { at: granny });
   yield* S.say(NAME(me), me === 'pebble' ? 'We are sorry about Rexford, Grandma. Really really sorry.' : 'We are sorry about Rexford, Grandma. We really are.', { at: A[me] });
   pose(granny, 'cry');
-  yield* S.say('GRANDMA REX', 'I know, dear. He never did write. Just ran about eating people\'s goats.', { at: granny });
+  yield* S.say('GRANDMA REX', 'I know, dear. He never did write. Just ran about eating people\'s goats.', { at: granny, mood: 'sad' });
   pose(granny, 'idle');
   for (let i = 0; i < 3; i++) { AudioSys.sfx('chomp'); for (const id of HERO_ORDER) A[id].squash(0.08); granny.squash(0.05); yield 0.35; }
   yield* S.say(NAME('roxy'), '...Okay. This is actually really good.', { at: A.roxy });
   yield* S.say('BLAZE', 'I could do custard. I am very good with hot things.', { at: blaze });
-  yield* S.say(NAME('bronk'), 'Pass the crumble, Gran.', { at: A.bronk });
+  yield* S.say(NAME('bronk'), 'Pass the crumble, Gran.', { at: A.bronk, mood: 'happy' });
   for (let i = 0; i < 6; i++) heart(granny.x - 20, granny.top + 30);
   yield* S.say('', 'And so the Rockbottoms gave up eating dinosaurs, mostly, and every Sunday a very large grandmother came round for tea and knitted everybody jumpers.', { at: null });
   yield* S.glide(HOME.table + 20, 324, 1.2);

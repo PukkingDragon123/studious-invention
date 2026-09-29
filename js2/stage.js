@@ -366,14 +366,14 @@ class EventStage {
       const k = T.t < 0.3 ? Ease.outBack(T.t / 0.3) : T.t > 2 ? 1 - (T.t - 2) / 0.4 : 1;
       const tw = Math.max(300, Gfx.measure(T.text, 3, 'rock') + 60), th = 54, tx = W / 2 - tw / 2, ty = 70;
       Gfx.ctx.save(); Gfx.ctx.globalAlpha = clamp(k, 0, 1); Gfx.ctx.translate(W / 2, ty + th / 2); Gfx.ctx.scale(k, k); Gfx.ctx.translate(-W / 2, -(ty + th / 2));
-      UI.slab(tx, ty, tw, th, { r: 5, shadow: true });
+      PixUI.panel('stone', tx, ty, tw, th, { seed: 5 });
       Gfx.text(T.text, W / 2, ty + 17, { color: SKIN.faceHi, align: 'center', scale: 3, font: 'rock' });
       Gfx.text(T.text, W / 2, ty + 14, { color: '#9c3510', align: 'center', scale: 3, font: 'rock' });
       Gfx.ctx.restore();
     } else if (T.text) {
-      const tw = Gfx.measure(T.text, 1) + 16;
-      Gfx.round(W - tw - 14, 62, tw, 18, 4, 'rgba(18,12,22,0.8)');
-      Gfx.text(T.text, W - 14 - tw / 2, 66, { color: '#ffe98a', align: 'center' });
+      const tw = Gfx.measure(T.text, 1, 'rock') + 20;
+      PixUI.panel('obsidian', W - tw - 14, 60, tw, 22, { seed: 2 });
+      Gfx.text(T.text, W - 14 - tw / 2, 66, { color: '#ffe98a', align: 'center', font: 'rock' });
     }
     // the hero's life and purse, so you can see what the choice cost
     const r = this.B.run, C = HUD.C;
@@ -393,12 +393,15 @@ class EventStage {
       const ok = ch.ok !== false, y = y0 + i * (bh + gap) + (1 - k) * 40;
       const hov = ok && UI.hovered(x, y, bw, bh);
       Gfx.ctx.save(); Gfx.ctx.globalAlpha = clamp(k, 0, 1);
-      UI.slab(x, y - (hov ? 2 : 0), bw, bh, { face: hov ? SKIN.btn : ok ? SKIN.face : '#8a7f68', lit: hov ? SKIN.btnLit : SKIN.faceLit, mid: SKIN.btnDark, dark: SKIN.ink, r: 5, shadow: true, rough: false, len: 7 });
-      Gfx.circle(x + 24, y + bh / 2 - (hov ? 2 : 0), 13, SKIN.ink);
-      Gfx.circle(x + 24, y + bh / 2 - (hov ? 2 : 0), 11, ok ? '#e0b93a' : '#574a66');
-      Gfx.text(String(i + 1), x + 24, y + bh / 2 - 6 - (hov ? 2 : 0), { color: '#241c2e', align: 'center', scale: 1.2 });
-      Gfx.text(ch.label, x + 46, y + 7 - (hov ? 2 : 0), { color: ok ? (hov ? '#fffaea' : '#3a2415') : '#5c3a20', scale: 1.6 });
-      Gfx.rich(ch.desc || '', x + 46, y + 29 - (hov ? 2 : 0), { color: ok ? (hov ? '#fffaea' : '#241c2e') : '#5c3a20', onLight: !hov && ok, scale: 1 });
+      const dy = hov ? -2 + Math.sin(this.t * 8) : 0, tilt = hov ? Math.sin(this.t * 3) * 0.006 : (i % 2 ? 0.004 : -0.004);
+      Gfx.ctx.translate(W / 2, y + bh / 2); Gfx.ctx.rotate(tilt); Gfx.ctx.translate(-W / 2, -(y + bh / 2));
+      PixUI.panel(ok ? (hov ? 'woodhot' : 'wood') : 'obsidian', x, y + dy, bw, bh, { hot: hov, seed: i * 7 + 3 });
+      // the number is burnt into a stone knob on the left
+      PixUI.panel(ok ? 'stone' : 'obsidian', x + 22, y + dy + 7, 30, 30, { seed: i + 20, cut: 3, moss: false });
+      Gfx.text(String(i + 1), x + 37, y + dy + 15, { color: ok ? '#5c3a20' : '#8a7f68', align: 'center', scale: 1.6, font: 'rock' });
+      Gfx.text(ch.label, x + 67, y + dy + 10, { color: '#140a05', scale: 1.6 });
+      Gfx.text(ch.label, x + 66, y + dy + 8, { color: ok ? (hov ? '#fffaea' : '#ffe0a8') : '#8a7f68', scale: 1.6 });
+      Gfx.rich(ch.desc || '', x + 66, y + dy + 29, { color: ok ? '#e8dfc6' : '#8a7f68', scale: 1 });
       Gfx.ctx.restore();
       if (ok) UI.hit(x, y, bw, bh, () => { if (this.choiceT > 0.35 && this.pick < 0) this.pick = i; });
     });

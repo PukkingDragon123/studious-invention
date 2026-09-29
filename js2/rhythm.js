@@ -72,6 +72,10 @@ class Riff {
     const ew = [1, 1.5, 2.6][this.lesson], et = [1, 1.22, 1.55][this.lesson];
     this.windowMul = dm * (o.windowMult || 1) * ew;
     this.travel = (typeof Settings !== 'undefined' ? Settings.noteSpeed : 1.15) / (o.speedMul || 1) * et;
+    // which instrument is in your hands decides how the notes come at you
+    this.inst = Instruments.get(o.inst);
+    if (this.inst.layout === 'col') this.travel *= 0.85;
+    this.kick = [0, 0, 0, 0]; this.breath = 1;
     this.build();
   }
   static latency() { const c = AudioSys.ctx; return c ? (c.outputLatency || 0) + (typeof Settings !== 'undefined' ? Settings.offset : 0) : 0; }
@@ -119,13 +123,17 @@ class Riff {
       if (s === prev && chance(0.5)) s = (s + 1 + Math.floor(rnd(0, 2))) % STRINGS;
       prev = s;
       const sustain = e.len >= 4 ? e.len * AudioSys.stepDur * 0.8 : 0;
-      return { time: e.time + offset, lane: s, midi: e.midi, dur: e.dur, sustain, mine, judged: false, hit: false, holdT: 0, held: false, brokeHold: false, pop: 0 };
+      return { time: e.time + offset, step: e.step, lane: s, midi: e.midi, dur: e.dur, sustain, mine, judged: false, hit: false, holdT: 0, held: false, brokeHold: false, pop: 0 };
     };
     for (const e of evs) {
       if (call) { this.notes.push(mk(e, false, 0)); prev = -1; }
       this.notes.push(mk(e, true, call ? bars * barDur : 0));
     }
-    this.notes.sort((a, b) => a.time - b.time);
+    // the instrument reshapes the chart: chords, blows, rolls, trills, runs
+    const byT = (a, b) => a.time - b.time;
+    this.notes = this.inst.chart(this, this.notes.filter(n => !n.mine).sort(byT))
+      .concat(this.inst.chart(this, this.notes.filter(n => n.mine).sort(byT)));
+    this.notes.sort(byT);
     this.mine = this.notes.filter(n => n.mine);
     this.total = this.mine.length;
     if (this.lesson < 2) this.buildChant();
@@ -208,14 +216,22 @@ class Riff {
     return pts[pts.length - 1].midi;
   }
   // touch: the whole right side of a string's band strums it
-  stringRect(i) { return { x: STRUM_X - 56, y: STR_Y[i] - 18, w: W - (STRUM_X - 56), h: 36 }; }
+  stringRect(i) { return this.inst.rect(this, i); }
   chantRect() { return { x: 0, y: CH_TOP - 34, w: W, h: (CH_BOT - CH_TOP) + 54 }; }
   laneFromPoint(x, y) {
-    for (let i = 0; i < STRINGS; i++) { const r = this.stringRect(i); if (inRect(x, y, r.x, r.y, r.w, r.h)) return i; }
-    if (y > NECK_TOP) { let best = 0; for (let i = 1; i < STRINGS; i++) if (Math.abs(y - STR_Y[i]) < Math.abs(y - STR_Y[best])) best = i; return best; }
+    const L = this.inst.lanes;
+    for (const i of L) { const r = this.stringRect(i); if (inRect(x, y, r.x, r.y, r.w, r.h)) return i; }
+    if (y > NECK_TOP) {
+      let best = L[0], bd = 1e9;
+      for (const i of L) { const p = this.inst.hitPt(this, i), d = Math.hypot(x - p.x, y - p.y) * (this.inst.layout === 'col' ? 1 : 0) + Math.abs(y - p.y); if (d < bd) { bd = d; best = i; } }
+      return best;
+    }
     return -1;
   }
-  laneFromKey(code) { for (let i = 0; i < STRINGS; i++) if (LANE_KEYS[i].includes(code)) return i; return -1; }
+  laneFromKey(code) {
+    if (this.inst.keyLane) return this.inst.keyLane(code);
+    for (let i = 0; i < STRINGS; i++) if (LANE_KEYS[i].includes(code)) return i; return -1;
+  }
   // ------------------------------------------------------------------ input
   press(lane, at) {
     if (lane < 0 || this.done) return;
@@ -241,10 +257,13 @@ class Riff {
     this.strVib[n.lane] = 9 - i * 1.4;
     this.strPhase[n.lane] = 0;
     this.flare = Math.max(this.flare, i === 0 ? 1 : 0.6);
-    AudioSys.playLeadNote(n.midi, Math.max(0.16, n.dur), 0.95);
-    AudioSys.sfx('strum', { vol: i === 0 ? 0.85 : 0.6 });
+    AudioSys.playInst(this.inst.voice, n.midi, Math.max(0.16, n.sustain || n.dur), 0.95);
+    if (this.inst.sfx) AudioSys.sfx(this.inst.sfx, { vol: i === 0 ? 0.85 : 0.6 });
     if (n.sustain > 0.05) { n.held = true; this.held.set(n.lane, n); }
-    Particles.spawn(STRUM_X, STR_Y[n.lane], {
+    this.kick[n.lane] = 1;
+    if (this.inst.onHit) this.inst.onHit(this, n, i);
+    const hp = this.inst.hitPt(this, n.lane);
+    Particles.spawn(hp.x, hp.y, {
       n: i === 0 ? 12 : 6, color: [STR_COL[n.lane], '#ffffff', '#ffe98a'],
       speed: 150, spread: Math.PI * 2, life: 0.4, size: 4, sizeEnd: 0, gravity: 220,
     });
@@ -278,11 +297,12 @@ class Riff {
         ? [...Input.touches.values()].some(p => { const r = this.stringRect(lane); return inRect(p.x, p.y, r.x, r.y, r.w, r.h); })
         : Input.isDown(...LANE_KEYS[lane]);
       const over = now > n.time + n.sustain;
-      if (over) { this.held.delete(lane); n.held = false; continue; }
+      if (over) { this.held.delete(lane); n.held = false; if (this.inst.onHoldEnd) this.inst.onHoldEnd(this, n); continue; }
       if (!down) { this.held.delete(lane); n.held = false; n.brokeHold = true; this.combo = 0; this.health = clamp(this.health - 0.02, 0, 1); continue; }
       n.holdT += dt; this.health = clamp(this.health + dt * 0.03, 0, 1); this.score += dt * 70;
       this.strVib[lane] = Math.max(this.strVib[lane], 5);
-      if (chance(dt * 16)) Particles.spawn(STRUM_X, STR_Y[lane], { n: 1, color: [STR_COL[lane]], speed: 70, life: 0.3, size: 3, sizeEnd: 0, gravity: 120 });
+      const hp = this.inst.hitPt(this, lane);
+      if (chance(dt * 16)) Particles.spawn(hp.x, hp.y, { n: 1, color: [STR_COL[lane]], speed: 70, life: 0.3, size: 3, sizeEnd: 0, gravity: 120 });
     }
     // ---- missed notes fall off the left edge
     const late = RATINGS[RATINGS.length - 1].win * this.windowMul;
@@ -292,15 +312,19 @@ class Riff {
       if (n.mine || n.judged || now < n.time) continue;
       n.judged = true; n.pop = 1;
       this.strVib[n.lane] = Math.max(this.strVib[n.lane], 5);
+      this.kick[n.lane] = Math.max(this.kick[n.lane], 0.5);
       this.ghostSing = 0.2;
-      Particles.spawn(STRUM_X, STR_Y[n.lane], { n: 4, color: ['#7a6d8a', '#a79bb4'], speed: 90, life: 0.3, size: 3, sizeEnd: 0, gravity: 180 });
+      const gp = this.inst.hitPt(this, n.lane);
+      Particles.spawn(gp.x, gp.y, { n: 4, color: ['#7a6d8a', '#a79bb4'], speed: 90, life: 0.3, size: 3, sizeEnd: 0, gravity: 180 });
     }
     this.updateChant(dt, now);
+    if (this.inst.update) this.inst.update(this, dt);
     // ---- decay
     for (let i = 0; i < STRINGS; i++) {
       this.strPress[i] = Math.max(0, this.strPress[i] - dt);
       this.strVib[i] = Math.max(0, this.strVib[i] - dt * 20);
       this.strPhase[i] += dt * 46;
+      this.kick[i] = Math.max(0, this.kick[i] - dt * 4);
     }
     for (const n of this.notes) if (n.pop > 0) n.pop = Math.max(0, n.pop - dt * 4);
     this.flare = Math.max(0, this.flare - dt * 2.2);
@@ -390,97 +414,48 @@ class Riff {
   }
   // ------------------------------------------------------------------- draw
   draw() {
-    const now = Riff.now(), ctx = Gfx.ctx;
+    const now = Riff.now(), ctx = Gfx.ctx, bop = this.bopT * 3;
     this.drawChant(now, ctx);
-    this.drawNeck(ctx);
+    Gfx.rectA(0, NECK_TOP - 30, W, H - NECK_TOP + 30, '#120c16', 0.55);
+    this.inst.bed(this, ctx, now, bop);
     this.drawNotes(now, ctx);
-    this.drawStrumBar(ctx);
+    this.inst.front(this, ctx, now, bop);
     this.drawHud(ctx);
   }
-  // --- the instrument ------------------------------------------------------
-  drawNeck(ctx) {
-    const bop = this.bopT * 3;
-    // a slab of dark wood under a stone fretboard
-    Gfx.rectA(0, NECK_TOP - 26, W, H - NECK_TOP + 26, '#120c16', 0.55);
-    Gfx.rect(0, NECK_TOP - bop, W, NECK_BOT - NECK_TOP, '#3a2415');
-    Gfx.rect(0, NECK_TOP - bop, W, 5, '#85562f');
-    Gfx.rect(0, NECK_TOP + 5 - bop, W, 3, '#5c3a20');
-    Gfx.rect(0, NECK_BOT - 8 - bop, W, 8, '#241109');
-    // carved fret bars with bone inlay dots
-    for (let x = STRUM_X + 92; x < W; x += 104) {
-      Gfx.rectA(x, NECK_TOP + 8 - bop, 3, NECK_BOT - NECK_TOP - 18, '#c4b89a', 0.34);
-      Gfx.rectA(x - 2, NECK_TOP + 8 - bop, 2, NECK_BOT - NECK_TOP - 18, '#241109', 0.5);
-      Gfx.circle(x + 1, (STR_Y[1] + STR_Y[2]) / 2 - bop, 3, 'rgba(232,223,198,0.28)');
-    }
-    // the four strings, whipping where they were struck
-    for (let i = 0; i < STRINGS; i++) {
-      const y = STR_Y[i] - bop, vib = this.strVib[i], thick = 1 + (STRINGS - i) * 0.7;
-      ctx.strokeStyle = this.strPress[i] > 0 ? '#ffffff' : '#a79bb4';
-      ctx.lineWidth = thick;
-      ctx.beginPath();
-      for (let x = 0; x <= W; x += 6) {
-        // the whip is widest mid-span and pinned at the strum bar
-        const d = Math.abs(x - STRUM_X), env = Math.max(0, 1 - d / 420) * Math.min(1, d / 26);
-        const yy = y + Math.sin(x * 0.055 - this.strPhase[i]) * vib * env;
-        x === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
-      }
-      ctx.stroke();
-      if (vib > 1) { ctx.globalAlpha = clamp(vib / 16, 0, 0.5); ctx.strokeStyle = STR_COL[i]; ctx.lineWidth = thick + 3; ctx.stroke(); ctx.globalAlpha = 1; }
-    }
-  }
-  drawStrumBar(ctx) {
-    const bop = this.bopT * 3, pulse = 0.5 + this.bopT * 0.5;
-    Gfx.glow(STRUM_X, (NECK_TOP + NECK_BOT) / 2 - bop, 90 + this.flare * 70, '#ffe08a', 0.10 + this.flare * 0.22);
-    Gfx.rect(STRUM_X - 7, NECK_TOP - 10 - bop, 14, NECK_BOT - NECK_TOP + 12, '#8a7f68');
-    Gfx.rect(STRUM_X - 5, NECK_TOP - 10 - bop, 8, NECK_BOT - NECK_TOP + 12, '#e8dfc6');
-    Gfx.rect(STRUM_X - 5, NECK_TOP - 10 - bop, 3, NECK_BOT - NECK_TOP + 12, '#fffaea');
-    // bone caps
-    Gfx.round(STRUM_X - 12, NECK_TOP - 22 - bop, 24, 16, 5, '#e8dfc6');
-    Gfx.round(STRUM_X - 12, NECK_BOT - 2 - bop, 24, 16, 5, '#c4b89a');
-    for (let i = 0; i < STRINGS; i++) {
-      if (this.strPress[i] <= 0) continue;
-      const k = this.strPress[i] / 0.16;
-      Gfx.circle(STRUM_X, STR_Y[i] - bop, 10 + (1 - k) * 16, `rgba(255,255,255,${0.35 * k})`);
-    }
-    Gfx.rectA(STRUM_X - 2, NECK_TOP - 22 - bop, 4, NECK_BOT - NECK_TOP + 40, '#ffe98a', 0.25 * pulse);
-  }
+  // --- the notes, wherever this instrument sends them -----------------------
   drawNotes(now, ctx) {
-    const bop = this.bopT * 3;
-    // sustains first, so the stones sit on top of their tails
+    const I = this.inst, bop = this.bopT * 3;
+    // sustains first, so the notes sit on top of their tails
     for (const n of this.notes) {
       if (n.sustain <= 0.05 || (n.judged && n.hit === false && n.mine)) continue;
-      const y = STR_Y[n.lane] - bop;
-      const x0 = this.noteX(n.time, now), x1 = this.noteX(n.time + n.sustain, now);
-      if (x1 < STRUM_X - 60 || x0 > W + 60) continue;
-      const a = n.mine ? (n.brokeHold ? 0.18 : 0.6) : 0.22;
-      const left = Math.max(x0, STRUM_X);
-      Gfx.rectA(left, y - 7, Math.max(0, x1 - left), 14, STR_DIM[n.lane], a);
-      Gfx.rectA(left, y - 3, Math.max(0, x1 - left), 6, STR_COL[n.lane], a * 0.9);
-      if (n.held) { Gfx.circle(STRUM_X, y, 13 + Math.sin(Time.t * 30) * 3, `rgba(255,255,255,0.4)`); }
+      if (n.time + n.sustain < now) continue;
+      if (I.tailDraw) I.tailDraw(this, n, now);
+      else Instruments.tail(this, n, now, 12, STR_COL[n.lane], n.mine ? (n.brokeHold ? 0.18 : 0.6) : 0.22);
+      if (n.held) { const p = I.hitPt(this, n.lane); Gfx.ring(p.x, p.y - bop, 14 + Math.sin(Time.t * 30) * 3, '#ffffff', 2); }
     }
+    let labelled = false;
     for (const n of this.notes) {
       if (n.judged && (n.hit || !n.mine)) continue;
-      const x = this.noteX(n.time, now), y = STR_Y[n.lane] - bop;
-      if (x < STRUM_X - 70 || x > W + 70) continue;
-      this.drawRune(x, y, n.lane, n.mine ? 1 : 0.4, 1);
+      const dt = n.time - now; if (dt / this.travel > 1.04) continue;
+      const p = I.at(this, n.lane, dt);
+      if (p.x < -40 || p.x > W + 70 || p.y > H + 30) continue;
+      ctx.globalAlpha = n.mine ? 1 : 0.4;
+      I.note(this, n, p.x, p.y - bop);
+      ctx.globalAlpha = 1;
+      // name the trick the first time one comes at you
+      if (!labelled && n.mine && (n.chord || n.roll === 1 || n.trill === 1 || (n.gliss && n.lane === 0)) && dt > 0.1) {
+        labelled = true;
+        Gfx.text(I.twist, p.x, p.y - bop - 34, { color: '#ffe98a', align: 'center', scale: 1.2, font: 'rock', outline: true });
+      }
     }
-    // the pop when a stone is struck
+    // the pop when a note is struck
     for (const n of this.notes) {
       if (n.pop <= 0) continue;
-      const k = 1 - n.pop, y = STR_Y[n.lane] - bop;
+      const k = 1 - n.pop, p = I.hitPt(this, n.lane);
       ctx.globalAlpha = n.pop;
-      Gfx.ring(STRUM_X, y, 12 + k * 30, STR_COL[n.lane], 3);
+      Gfx.ring(p.x, p.y - bop, 12 + k * 30, STR_COL[n.lane], 3);
       ctx.globalAlpha = 1;
     }
-  }
-  drawRune(x, y, lane, alpha, scale) {
-    const ctx = Gfx.ctx, r = NOTE_R * scale;
-    ctx.globalAlpha = alpha;
-    Gfx.round(x - r, y - r, r * 2, r * 2, 6, '#120c16');
-    Gfx.round(x - r + 2, y - r + 2, r * 2 - 4, r * 2 - 4, 5, STR_DIM[lane]);
-    Gfx.round(x - r + 2, y - r + 2, r * 2 - 4, r - 2, 5, STR_COL[lane]);
-    Gfx.text(STR_RUNE[lane], x, y - 7, { color: '#120c16', align: 'center', scale: 1.3 });
-    ctx.globalAlpha = 1;
   }
   // --- the voice -----------------------------------------------------------
   drawChant(now, ctx) {
@@ -567,14 +542,30 @@ class Riff {
       Gfx.text(this.judge.text, STRUM_X, NECK_TOP - 58 - k * 22, { color: this.judge.col, align: 'center', scale: 2.1, outline: true, outlineWidth: 2 });
       ctx.globalAlpha = 1;
     }
-    if (this.o.title) Gfx.text(this.o.title, W / 2, 18, { color: '#ffe98a', align: 'center', scale: 1.7, outline: true, outlineWidth: 2 });
-    // what to press, once, while the first stones are still travelling
+    if (this.o.title) Gfx.text(this.o.title, W / 2, 50, { color: '#ffe98a', align: 'center', scale: 2, font: 'rock', outline: true, outlineWidth: 2 });
+    // what is in your hands
+    const nm = this.inst.name, nw = Gfx.measure(nm, 1, 'rock') + 22;
+    PixUI.panel('obsidian', 10, NECK_TOP - 58, nw, 22, { seed: 9 });
+    Gfx.text(nm, 10 + nw / 2, NECK_TOP - 52, { color: '#ffe98a', align: 'center', font: 'rock' });
+    // what to press: a little stone key cap on every lane
     const now = Riff.now();
+    if (!Input.touch) {
+      const ka = now < this.startTime + 1.2 ? 1 : 0.55;
+      ctx.globalAlpha = ka;
+      for (const i of this.inst.lanes) {
+        const p = this.inst.hitPt(this, i), col = this.inst.layout === 'col';
+        const x = col ? p.x : p.x - 44, y = col ? p.y - 44 : p.y;
+        const lab = this.inst.keyLane ? (i === 1 ? 'AS' : 'DF') : LANE_KEYS[i][0].slice(3);
+        const kw = lab.length > 1 ? 30 : 20;
+        PixUI.panel(this.strPress[i] > 0 ? 'woodhot' : 'bone', x - kw / 2, y - 10 - this.bopT * 3, kw, 20, { seed: i, cut: 2, moss: false, hot: this.strPress[i] > 0 });
+        Gfx.text(lab, x, y - 5 - this.bopT * 3, { color: '#241109', align: 'center', font: 'rock' });
+      }
+      ctx.globalAlpha = 1;
+    }
     if (now < this.startTime + 0.9) {
       const a = clamp((this.startTime + 0.9 - now) / 0.6, 0, 1);
       ctx.globalAlpha = a;
-      Gfx.text(Input.touch ? 'TAP THE STRING THE STONE LANDS ON' : 'A  S  D  F  -  ONE PER STRING',
-        W / 2, NECK_TOP - 34, { color: '#ffffff', align: 'center', scale: 1.4, outline: true, outlineWidth: 2 });
+      if (Input.touch) Gfx.text(this.inst.tip[1], W / 2, NECK_TOP - 34, { color: '#ffffff', align: 'center', scale: 1.2, font: 'rock', outline: true });
       if (this.lesson) Gfx.text(this.lesson > 1 ? 'take your time - the timing is wide open' : 'a little tighter now',
         W / 2, NECK_TOP - 12, { color: '#a8e878', align: 'center', scale: 1.1, outline: true });
       ctx.globalAlpha = 1;

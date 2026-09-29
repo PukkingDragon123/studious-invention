@@ -420,7 +420,7 @@ class Combat {
     let done = false, result = null;
     this.riff = new Riff({
       bars: card.def.riff.bars, density: card.def.riff.density, callResponse: card.def.riff.callResponse,
-      title: card.name.toUpperCase(), windowMult: windowMul, act: this.act, encore: card.id === 'encore',
+      title: card.name.toUpperCase(), windowMult: windowMul, act: this.act, encore: card.id === 'encore', inst: card.def.inst,
       onNote: (rating, n) => {
         if (!rating) { this.me.flash('#ef6a5e', 0.1); Juice.shake(3, 0.1); return; }
         this.me.squash(0.12);

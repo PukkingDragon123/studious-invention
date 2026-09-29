@@ -322,6 +322,54 @@ const AudioSys = {
     this.osc('sawtooth', f, t, end, -3).connect(lp); this.osc('sawtooth', f, t, end, 3).connect(lp); this.osc('square', f / 2, t, end).connect(lp);
     lp.connect(this.shaper(1.2)).connect(g); this.send(g, 0.5);
   },
+  // A skull bongo: a tight hide head, so the pitch drops as it rings, with a
+  // slap of noise on top. The note sets how tight the skin is.
+  bongo(t, midi, dur, vel = 1, dest) {
+    const c = this.ctx; dest = dest || this.musicBus; const f = midiToFreq(clamp(midi - 12, 40, 84));
+    const o = this.osc('sine', f * 1.5, t, t + 0.4); o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.75 * vel, t + 0.003); g.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+    const o2 = this.osc('triangle', f * 2.3, t, t + 0.12); const g2 = c.createGain(); g2.gain.setValueAtTime(0.18 * vel, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    o.connect(g).connect(dest); o2.connect(g2).connect(dest);
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.9;
+    const ng = c.createGain(); ng.gain.setValueAtTime(0.3 * vel, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    this.noise(t, 0.05, bp); bp.connect(ng).connect(dest);
+    this.send(g, 0.2);
+  },
+  // A stalactite chime: a stone that rings like glass. Inharmonic partials
+  // that die at different rates, a long tail into the cave's reverb.
+  chime(t, midi, dur, vel = 1, dest) {
+    const c = this.ctx; dest = dest || this.musicBus; const f = midiToFreq(midi + 12);
+    const out = c.createGain(); out.gain.value = 1; out.connect(dest);
+    [[1, 0.28, 2.2], [2.76, 0.12, 1.1], [5.4, 0.07, 0.5], [8.93, 0.04, 0.25]].forEach(([r, a, len]) => {
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(a * vel, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      this.osc('sine', f * r, t, t + len + 0.05).connect(g).connect(out);
+    });
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 6000;
+    const ng = c.createGain(); ng.gain.setValueAtTime(0.08 * vel, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.012);
+    this.noise(t, 0.02, hp); hp.connect(ng).connect(out);
+    this.send(out, 0.7);
+  },
+  // The boom-log: a hollow trunk hit with a club. A deep wooden thud that
+  // blooms, and a knock of the bark on top.
+  logdrum(t, midi, dur, vel = 1, dest) {
+    const c = this.ctx; dest = dest || this.musicBus; const f = midiToFreq(clamp(midi - 24, 28, 60));
+    const o = this.osc('sine', f * 2, t, t + 0.9); o.frequency.exponentialRampToValueAtTime(f, t + 0.08);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(1.0 * vel, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+    o.connect(this.shaper(1.5)).connect(g).connect(dest);
+    const o2 = this.osc('triangle', f * 3.1, t, t + 0.2); const g2 = c.createGain(); g2.gain.setValueAtTime(0.3 * vel, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    o2.connect(g2).connect(dest);
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 1.4;
+    const ng = c.createGain(); ng.gain.setValueAtTime(0.5 * vel, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    this.noise(t, 0.08, bp); bp.connect(ng).connect(dest);
+    this.send(g, 0.35);
+  },
+  // one note of whichever instrument is being played, straight into the song
+  playInst(voice, midi, dur, vel = 1) {
+    if (!this.ready) return;
+    const fn = this[voice] && voice !== 'lead' ? this[voice] : null;
+    if (fn) fn.call(this, this.now(), midi, dur, vel, this.songGain || this.musicBus);
+    else this.lead(this.now(), midi, dur, vel, this.songGain || this.musicBus);
+  },
 
   // --- sequencer -----------------------------------------------------------
   prepare(song) {
