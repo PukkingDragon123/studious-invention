@@ -117,17 +117,17 @@ function titleStone(t) {
   // the name bounces to the music, a letter at a time
   const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
   const bounce = (txt, ty, sc, col, ph) => {
-    const wd = Gfx.measure(txt, sc); let lx = cx - wd / 2;
+    const wd = Gfx.measure(txt, sc, 'rock'); let lx = cx - wd / 2;
     [...txt].forEach((ch, i) => {
       const dy = -Math.abs(Math.sin((beat * 0.5 + ph + i * 0.12) * Math.PI)) * 4;
-      Gfx.text(ch, lx, ty + 3 + dy, { color: SKIN.faceHi, scale: sc });
-      Gfx.text(ch, lx + 1, ty + 1 + dy, { color: '#3a2415', scale: sc });
-      Gfx.text(ch, lx, ty + dy, { color: col, scale: sc });
-      lx += Gfx.measure(ch, sc);
+      Gfx.text(ch, lx, ty + 3 + dy, { color: SKIN.faceHi, scale: sc, font: 'rock' });
+      Gfx.text(ch, lx + 2, ty + 2 + dy, { color: '#3a2415', scale: sc, font: 'rock' });
+      Gfx.text(ch, lx, ty + dy, { color: col, scale: sc, font: 'rock' });
+      lx += Gfx.measure(ch, sc, 'rock');
     });
   };
-  bounce('ONGA', y + 48, 5.6, '#9c3510', 0);
-  bounce('BONGA', y + 116, 5.6, '#5c1607', 0.5);
+  bounce('ONGA', y + 50, 6, '#9c3510', 0);
+  bounce('BONGA', y + 118, 6, '#5c1607', 0.5);
   Gfx.rect(x + 40, y + 188, w - 80, 3, '#3a2415');
   Gfx.rect(x + 40, y + 191, w - 80, 2, SKIN.faceHi);
   carve('A STONE AGE BOARD GAME SAGA', y + 200, 1.3, '#3a2415');

@@ -364,11 +364,11 @@ class EventStage {
     const T = this.title;
     if (T.text && T.t < 2.4) {
       const k = T.t < 0.3 ? Ease.outBack(T.t / 0.3) : T.t > 2 ? 1 - (T.t - 2) / 0.4 : 1;
-      const tw = Math.max(300, Gfx.measure(T.text, 2.4) + 60), th = 54, tx = W / 2 - tw / 2, ty = 70;
+      const tw = Math.max(300, Gfx.measure(T.text, 3, 'rock') + 60), th = 54, tx = W / 2 - tw / 2, ty = 70;
       Gfx.ctx.save(); Gfx.ctx.globalAlpha = clamp(k, 0, 1); Gfx.ctx.translate(W / 2, ty + th / 2); Gfx.ctx.scale(k, k); Gfx.ctx.translate(-W / 2, -(ty + th / 2));
       UI.slab(tx, ty, tw, th, { r: 5, shadow: true });
-      Gfx.text(T.text, W / 2, ty + 17, { color: SKIN.faceHi, align: 'center', scale: 2.4 });
-      Gfx.text(T.text, W / 2, ty + 15, { color: '#9c3510', align: 'center', scale: 2.4 });
+      Gfx.text(T.text, W / 2, ty + 17, { color: SKIN.faceHi, align: 'center', scale: 3, font: 'rock' });
+      Gfx.text(T.text, W / 2, ty + 14, { color: '#9c3510', align: 'center', scale: 3, font: 'rock' });
       Gfx.ctx.restore();
     } else if (T.text) {
       const tw = Gfx.measure(T.text, 1) + 16;

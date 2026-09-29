@@ -42,6 +42,8 @@ const Dialogue = {
       b.pop = Math.min(1, (b.pop || 0) + Time.dt * 7);
       const was = Math.floor(b.chars);
       b.chars = Math.min(text.length, b.chars + Time.dt * b.speed * (Input.down ? 3 : 1));
+      b.rev = b.rev || [];
+      for (let i = was; i < Math.floor(b.chars); i++) b.rev[i] = b.t;
       // one blip every few letters, skipping spaces, so speech has a voice
       if (Math.floor(b.chars) > was && Math.floor(b.chars) % 3 === 0 && text[Math.floor(b.chars) - 1] !== ' ')
         AudioSys.sfx('talk', { pitch: pitch + (text.charCodeAt(Math.floor(b.chars) - 1) % 40) });
@@ -54,6 +56,7 @@ const Dialogue = {
       }
     }
     const chosen = b.choice;
+    this.ghost = { b, t: 0 };
     this.active = null;
     AudioSys.sfx('talk_end');
     return chosen;
@@ -114,20 +117,25 @@ const Dialogue = {
     return { x, y, w: textW, h, tx, ty, lines, lh, scale, choiceRects, pad, nameH, narr };
   },
   // one line of speech; words in capitals bounce
-  line(str, x, y, scale, o, t) {
-    let cx = x, k = 0;
+  line(str, x, y, scale, o, b, ci, kind) {
+    let cx = x;
+    const t = b.t, rev = b.rev || [];
     for (const seg of Gfx.richSegs(str, o)) {
       for (const word of seg.t.split(/(\s+)/)) {
         if (!word) continue;
-        const loud = /[A-Z]{2}/.test(word) && word === word.toUpperCase();
-        if (loud) {
-          for (const ch of word) {
-            Gfx.text(ch, cx, y + Math.round(Math.sin(t * 13 + k * 0.9) * 1.6), { color: seg.c, scale });
-            cx += Gfx.measure(ch, scale); k++;
-          }
-        } else { Gfx.text(word, cx, y, { color: seg.c, scale }); cx += Gfx.measure(word, scale); k += word.length; }
+        const loud = kind === 'shout' || kind === 'angry' || (/[A-Z]{2}/.test(word) && word === word.toUpperCase());
+        for (const ch of word) {
+          const age = t - (rev[ci] ?? -9), k = clamp(age / 0.12, 0, 1);
+          let dy = -(1 - Ease.outBack(k)) * 6 * (1 - k);
+          if (loud) dy += Math.round(Math.sin(t * 13 + ci * 0.9) * 1.6);
+          if (kind === 'scared') dy += Math.round(Math.sin(t * 31 + ci * 2.3) * 0.8);
+          if (kind === 'sad') dy += Math.round(Math.sin(t * 2 + ci * 0.4) * 1);
+          if (ch !== ' ') Gfx.text(ch, cx, y + dy, { color: seg.c, scale });
+          cx += Gfx.measure(ch, scale); ci++;
+        }
       }
     }
+    return ci;
   },
   spiky(x, y, w, h, fill, edge) {
     const ctx = Gfx.ctx, cx = x + w / 2, cy = y + h / 2, n = 22;
@@ -144,55 +152,66 @@ const Dialogue = {
     ctx.fillStyle = edge; path(3); ctx.fill();
     ctx.fillStyle = fill; path(0); ctx.fill();
   },
+  mood(b, L) {
+    if (L.narr) return 'scroll';
+    const m = Bubble.moodOf(b.text, b.o);
+    return m === 'talk' && b.st.text ? 'dark' : m;
+  },
   draw() {
+    if (this.ghost) this.drawGhost();
     const b = this.active; if (!b) return;
     const L = this.layout(b);
-    const st = b.st, loud = this.shouting(b);
-    const shake = b.shake || (loud ? 1.2 : 0);
+    const st = b.st, kind = this.mood(b, L);
+    const shake = b.shake || (kind === 'shout' ? 1.4 : kind === 'angry' ? 0.9 : kind === 'scared' ? 0.5 : 0);
     const sh = shake ? rnd(-shake, shake) : 0, sv = shake ? rnd(-shake, shake) * 0.6 : 0;
-    const pop = Ease.outBack(clamp(b.pop || 0, 0, 1));
+    // pop in with a squash, then breathe; the happy ones bounce
+    const k = clamp(b.pop || 0, 0, 1), po = Ease.outBack(k);
+    const sx = lerp(0.3, 1, po) * (1 + Math.sin(b.t * 3) * 0.008), sy = lerp(0.1, 1, Ease.outBack(clamp(k * 1.3, 0, 1))) * (1 - Math.sin(b.t * 3) * 0.008);
+    const hop = kind === 'happy' ? -Math.abs(Math.sin(b.t * 5)) * 2 : kind === 'sad' ? Math.sin(b.t * 1.5) * 1 : 0;
     const ctx = Gfx.ctx;
-    const dark = !!st.text, fill = L.narr ? '#1a1424' : dark ? st.fill : '#fffaea', ink = '#120c16';
     ctx.save();
     const ox = L.tx ?? L.x + L.w / 2, oy = L.ty ?? L.y + L.h;
-    ctx.translate(ox, oy); ctx.scale(clamp(pop, 0.02, 1.2), clamp(pop, 0.02, 1.2)); ctx.translate(-ox, -oy);
-    ctx.translate(sh, sv);
-    if (loud && !L.narr) {
-      this.spiky(L.x, L.y, L.w, L.h, fill, ink);
-      if (L.tx != null) { ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(L.tx - 12, L.y + L.h); ctx.lineTo(L.tx + 12, L.y + L.h); ctx.lineTo(L.tx, L.ty); ctx.fill(); }
-    } else if (L.narr) {
-      Gfx.rectA(L.x + 3, L.y + 5, L.w, L.h, '#000', 0.35);
-      Gfx.round(L.x, L.y, L.w, L.h, 6, '#e0b93a');
-      Gfx.round(L.x + 3, L.y + 3, L.w - 6, L.h - 6, 4, fill);
-    } else {
-      // the tail, then a three-pixel ink line round a plain white body
-      const cx = clamp(L.tx, L.x + 22, L.x + L.w - 22), cy = L.y + L.h;
-      Gfx.rectA(L.x + 3, L.y + 5, L.w, L.h, '#000', 0.3);
-      ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(cx - 15, cy - 4); ctx.lineTo(cx + 13, cy - 4); ctx.lineTo(L.tx, L.ty); ctx.closePath(); ctx.fill();
-      Gfx.round(L.x, L.y, L.w, L.h, 10, ink);
-      Gfx.round(L.x + 3, L.y + 3, L.w - 6, L.h - 6, 8, fill);
-      ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(cx - 10, cy - 6); ctx.lineTo(cx + 8, cy - 6); ctx.lineTo(lerp(L.tx, cx, 0.3), lerp(L.ty, cy, 0.3)); ctx.closePath(); ctx.fill();
-    }
+    ctx.translate(ox, oy); ctx.scale(sx, sy); ctx.translate(-ox, -oy);
+    ctx.translate(sh, sv + hop);
+    Bubble.draw(kind, L.x, L.y, L.w, L.h, L.tx != null ? { x: L.tx, y: L.ty } : null, b.t);
+    const dark = kind === 'dark', light = !(dark || kind === 'scroll' && false);
     const x0 = L.x + L.pad;
-    if (b.speaker) Gfx.text(b.speaker, x0, L.y + L.pad - 4, { color: dark || L.narr ? st.name : (st.name || '#3b3048'), scale: 1 });
+    if (b.speaker) {
+      const nc = dark ? st.name : kind === 'scroll' ? '#5c3a20' : (st.name || '#3b3048');
+      Gfx.text(b.speaker, x0, L.y + L.pad - 6, { color: nc, scale: 1, font: 'rock' });
+    }
     const shown = b.text.slice(0, Math.floor(b.chars));
     const lines = Gfx.wrap(shown, L.w - L.pad * 2, L.scale);
-    const tcol = L.narr ? '#fffaea' : st.text || '#241c2e';
-    for (let i = 0; i < lines.length; i++) this.line(lines[i], x0, L.y + L.pad - 4 + L.nameH + i * L.lh, L.scale, { color: tcol, onLight: !(L.narr || dark) }, b.t);
+    const tcol = dark ? st.text : kind === 'scroll' ? '#3a2415' : kind === 'angry' ? '#5c1607' : kind === 'sad' ? '#1d3d72' : '#241c2e';
+    let ci = 0;
+    for (let i = 0; i < lines.length; i++) ci = this.line(lines[i], x0, L.y + L.pad - 4 + L.nameH + i * L.lh, L.scale, { color: tcol, onLight: light && !dark }, b, ci, kind);
     if (b.choices && b.chars >= b.text.length) {
       for (let i = 0; i < b.choices.length; i++) {
         const r = L.choiceRects[i], hov = b.hover === i && UI.hovered(r.x, r.y, r.w, r.h);
-        Gfx.round(r.x, r.y + 3, r.w, r.h, 6, '#120c16');
-        Gfx.round(r.x, r.y + (hov ? 1 : 0), r.w, r.h, 6, hov ? '#e0b93a' : '#3b3048');
-        Gfx.round(r.x + 2, r.y + 2 + (hov ? 1 : 0), r.w - 4, r.h - 5, 5, hov ? '#ffe98a' : '#574a66');
+        UI.stoneButton(r.x, r.y, r.w, r.h, hov, true);
         Gfx.rich(`${i + 1}.  ` + b.choices[i], r.x + 12, r.y + 11 + (hov ? 1 : 0), { color: hov ? '#241c2e' : '#fffaea', scale: 1.4, onLight: hov });
       }
       b.hover = -1;
     } else if (b.chars >= b.text.length && !b.auto) {
+      // a little pixel arrow, bobbing, to say there is more
       const ax = L.x + L.w - 16, ay = L.y + L.h - 13 + Math.abs(Math.sin(Time.t * 6)) * -2;
-      ctx.fillStyle = L.narr ? '#ffe98a' : '#c2333c';
-      ctx.beginPath(); ctx.moveTo(ax - 6, ay); ctx.lineTo(ax + 6, ay); ctx.lineTo(ax, ay + 7); ctx.closePath(); ctx.fill();
+      const c = dark ? '#ffa832' : kind === 'scroll' ? '#9c3510' : '#c2333c';
+      for (let r = 0; r < 4; r++) Gfx.rect(ax - 3 + r, ay + r * 2, 7 - r * 2, 2, c);
     }
+    ctx.restore();
+  },
+  // the bubble you just clicked away shrinks and pops
+  drawGhost() {
+    const G = this.ghost; G.t += Time.dt;
+    if (G.t > 0.16) { this.ghost = null; return; }
+    const b = G.b, L = this.layout(b), kind = this.mood(b, L), k = 1 - G.t / 0.16;
+    if (!G.burst) {
+      G.burst = true;
+      for (let i = 0; i < 10; i++) Particles.spawn(L.x + Math.random() * L.w, L.y + Math.random() * L.h, { n: 1, color: ['#fffaea', '#d6cfe0'], speed: 120, life: 0.35, size: 4, sizeEnd: 0, gravity: 100, world: false });
+    }
+    const ctx = Gfx.ctx, ox = L.x + L.w / 2, oy = L.y + L.h / 2;
+    ctx.save(); ctx.globalAlpha = k; ctx.translate(ox, oy); ctx.scale(1 + (1 - k) * 0.25, k); ctx.translate(-ox, -oy);
+    Bubble.draw(kind, L.x, L.y, L.w, L.h, null, b.t);
     ctx.restore();
   },
   clear() { this.active = null; this.queue.length = 0; }
@@ -210,9 +229,11 @@ const Floaters = {
       const pop = k < 0.12 ? Ease.outBack(k / 0.12) : 1;
       const x = f.actor.x, y = (f.actor.top ?? f.actor.y) - 14;
       Gfx.ctx.globalAlpha = clamp(a, 0, 1);
-      const w = f.w * pop, h = 26 * pop;
-      Gfx.bubble(x - w / 2, y - h, w, h, x, y + 8, { fill: '#fffaea' });
-      if (pop > 0.9) Gfx.text(f.text, x, y - h + 7, { color: '#241c2e', align: 'center', scale: 1.5 });
+      const w = Math.round(f.w), h = 26, ctx = Gfx.ctx;
+      ctx.save(); ctx.translate(x, y); ctx.scale(pop, pop); ctx.translate(-x, -y);
+      Bubble.draw(Bubble.moodOf(f.text), Math.round(x - w / 2), Math.round(y - h - 8), w, h, { x, y: y + 4 }, f.t);
+      Gfx.text(f.text, x, y - h - 1, { color: '#241c2e', align: 'center', scale: 1.5 });
+      ctx.restore();
       Gfx.ctx.globalAlpha = 1;
     }
   },

@@ -24,25 +24,9 @@ const HUD = {
   // A plate of dark glass. Corners are cut, not rounded: it is still a stone
   // age, the glass is obsidian.
   plate(x, y, w, h, o = {}) {
-    const c = Gfx.ctx, C = HUD.C, k = o.cut ?? 4;
     x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
-    const path = (px, py, pw, ph, kk) => {
-      c.beginPath();
-      c.moveTo(px + kk, py); c.lineTo(px + pw - kk, py); c.lineTo(px + pw, py + kk);
-      c.lineTo(px + pw, py + ph - kk); c.lineTo(px + pw - kk, py + ph); c.lineTo(px + kk, py + ph);
-      c.lineTo(px, py + ph - kk); c.lineTo(px, py + kk); c.closePath();
-    };
-    if (o.shadow !== false) { c.fillStyle = 'rgba(0,0,0,0.35)'; path(x + 2, y + 3, w, h, k); c.fill(); }
-    c.fillStyle = C.ink; path(x - 1, y - 1, w + 2, h + 2, k + 1); c.fill();
-    c.fillStyle = o.fill || C.glass; path(x, y, w, h, k); c.fill();
-    c.fillStyle = C.glassHi; c.fillRect(x + k, y + 1, w - k * 2, 1);          // the lit top edge
-    if (o.accent) { c.fillStyle = o.accent; c.fillRect(x + 1, y + k, 2, h - k * 2); }
-    if (o.gold !== false) {                                                  // gold on the cut corners
-      c.fillStyle = o.hot ? C.gold : C.goldDim;
-      for (const [cx, cy, dx, dy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]) {
-        for (let i = 0; i < k; i++) c.fillRect(cx + dx * i - (dx < 0 ? 1 : 0), cy + dy * (k - 1 - i) - (dy < 0 ? 1 : 0), 1, 1);
-      }
-    }
+    PixUI.panel(o.danger ? 'red' : 'obsidian', x, y, w, h, { seed: (w + h) & 31, hot: o.hot, cut: Math.min(3, Math.floor(Math.min(w, h) / 12)) });
+    if (o.accent) PixUI.stud(x + 4, y + Math.round(h / 2), o.accent);
   },
   // A bar: ink trough, the fill, a lighter stripe along the top of the fill,
   // and tick marks so a long bar still reads as quantity.
@@ -84,12 +68,14 @@ const HUD = {
     const col = o.disabled ? HUD.C.faint : hov ? HUD.C.shell : HUD.C.text;
     let tx = x + w / 2;
     if (o.keyHint && !Input.touch) {
-      const kw = Math.max(16, Gfx.measure(o.keyHint, 0.9) + 8), lw = Gfx.measure(label, o.scale || 1.2);
+      const kw = Math.max(16, Gfx.measure(o.keyHint, 0.9) + 8), lw = Gfx.measure(label, UI.fitRock(label, w - 60, (o.scale || 1.2) * 1.3), 'rock');
       const total = kw + 8 + lw;
       HUD.key(o.keyHint, x + w / 2 - total / 2, y + h / 2 - 7 + (press ? 1 : 0));
       tx = x + w / 2 - total / 2 + kw + 8 + lw / 2;
     }
-    Gfx.text(label, tx, y + h / 2 - 5 * (o.scale || 1.2) + (press ? 1 : 0), { color: col, align: 'center', scale: o.scale || 1.2 });
+    const sc = UI.fitRock(label, w - 20 - (o.keyHint && !Input.touch ? 40 : 0), (o.scale || 1.2) * 1.3);
+    Gfx.text(label, tx, y + h / 2 - 4.5 * sc + (press ? 1 : 0) + sc, { color: '#07050a', align: 'center', scale: sc, font: 'rock' });
+    Gfx.text(label, tx, y + h / 2 - 4.5 * sc + (press ? 1 : 0), { color: col, align: 'center', scale: sc, font: 'rock' });
     UI.hit(x, y, w, h, cb, { disabled: o.disabled });
     return hov;
   },

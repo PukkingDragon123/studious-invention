@@ -431,15 +431,6 @@ const World = {
   // hill. What is left is the stuff that hangs on it and the stuff that burns.
   FIRE: ['#e06a1b', '#ffa832', '#ffe98a', '#9c3510'],
   homeWall(t, o, camX) {
-    // employee of the week, for the fortieth week running
-    const px = HOME.plaque, py = 330;
-    // (after the journey, somebody has quietly changed what it says)
-    Gfx.sprite('h_plaque', px, py, { anchor: 'bc' });
-    Gfx.text(o.gran ? 'GRAN' : 'HUNTER', px - 3, py - 74, { color: '#241c2e', align: 'center', font: 'small' });
-    Gfx.text('OF THE YEAR', px - 3, py - 65, { color: '#241c2e', align: 'center', font: 'small' });
-    if (o.gran) Gfx.sprite('grandma_idle', px - 5, py - 21, { anchor: 'bc', scale: 0.25 });
-    else Gfx.sprite('trex_idle', px - 5, py - 21, { anchor: 'bc', scale: 0.32 });
-    Gfx.text(o.gran ? 'REX' : 'BRONK', px - 5, py - 18, { color: '#7d1d2b', align: 'center', font: 'small' });
     // the lamps, hung off the roof on cords
     for (const lx of HOME.lamps) {
       const sw = Math.sin(t * 1.2 + lx * 0.01) * 2;

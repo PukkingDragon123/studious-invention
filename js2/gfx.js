@@ -96,13 +96,19 @@ const Gfx = {
   size(name) { const s = this.spr(name); return { w: s.w, h: s.h }; },
   frames(name) { return this.spr(name).frames.length; },
   tinted(name, frame, color, amount) {
-    const key = name + '|' + frame + '|' + color + '|' + (amount || 1);
-    let c = this.tintCache.get(key); if (c) return c;
+    // amounts are stepped, and the cache is capped: a fade or a flash animates
+    // the amount every frame, and caching every value of it was a canvas a
+    // frame that nothing ever freed - the long-session slowdown
+    amount = amount === undefined ? 1 : Math.round(clamp(amount, 0, 1) * 16) / 16;
+    const key = name + '|' + frame + '|' + color + '|' + amount;
+    let c = this.tintCache.get(key);
+    if (c) { this.tintCache.delete(key); this.tintCache.set(key, c); return c; }
+    if (this.tintCache.size > 500) { let n = 100; for (const k of this.tintCache.keys()) { this.tintCache.delete(k); if (--n <= 0) break; } }
     const s = this.spr(name), src = s.frames[frame % s.frames.length];
     c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
     const g = c.getContext('2d');
     g.drawImage(src, 0, 0);
-    g.globalAlpha = amount === undefined ? 1 : amount;
+    g.globalAlpha = amount;
     g.globalCompositeOperation = 'source-atop'; g.fillStyle = color; g.fillRect(0, 0, s.w, s.h);
     this.tintCache.set(key, c); return c;
   },
@@ -531,6 +537,13 @@ const SKIN = {
 
 const UI = {
   items: [], tips: [], hoverAny: false, locked: false, hot: new Map(),
+  // labels are cut in the chisel font at a whole-pixel scale, one size down
+  // if it would not fit
+  fitRock(label, w, want) {
+    let sc = Math.max(1, Math.round(want || 2));
+    while (sc > 1 && Gfx.measure(label, sc, 'rock') > w) sc--;
+    return sc;
+  },
   begin() { this.items.length = 0; this.tips.length = 0; this.hoverAny = false; },
   hovered(x, y, w, h) { return inRect(Input.mx, Input.my, x, y, w, h); },
   anim(key, target, rate = 14) {
@@ -550,44 +563,15 @@ const UI = {
   // one of these at some size, so the whole interface reads as one material.
   slab(x, y, w, h, o = {}) {
     x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
-    const face = o.face || SKIN.face, lit = o.lit || SKIN.faceLit;
-    const mid = o.mid || SKIN.faceMid, dark = o.dark || SKIN.faceDark;
-    const r = o.r ?? 4;
-    if (o.shadow !== false) Gfx.rectA(x + 5, y + 7, w, h, '#000000', 0.42);
-    Gfx.round(x, y, w, h, r, SKIN.ink);                      // the cut edge
-    Gfx.round(x + 1, y + 1, w - 2, h - 2, r, dark);
-    Gfx.round(x + 2, y + 2, w - 4, h - 4, Math.max(1, r - 1), mid);
-    Gfx.round(x + 3, y + 3, w - 6, h - 7, Math.max(1, r - 1), face);
-    Gfx.rect(x + 4, y + 3, w - 8, 2, lit);                   // the light comes from above
-    Gfx.rect(x + 3, y + 5, 2, h - 12, lit);
-    Gfx.rect(x + w - 5, y + 5, 2, h - 11, mid);
-    Gfx.rect(x + 4, y + h - 6, w - 8, 3, mid);
-    // pitting, mottle and hairline cracks, seeded off the rect so nothing crawls
-    if (o.rough !== false && w > 26 && h > 26) {
-      const n = clamp(((w * h) / 620) | 0, 6, 70);
-      for (let i = 0; i < n; i++) {
-        const px = x + 7 + ((i * 53 + (w | 0)) % (w - 16));
-        const py = y + 7 + ((i * 37 + (h | 0)) % (h - 16));
-        Gfx.rectA(px, py, 2 + (i % 4), 2, i % 3 ? mid : lit, i % 3 ? 0.55 : 0.75);
-        if (i % 5 === 0) Gfx.rectA(px + 1, py + 2, 2, 1, dark, 0.35);
-      }
-      for (let k = 0; k < 2; k++) {                          // a crack running across it
-        let px = x + 10 + ((k * 61 + (w | 0)) % Math.max(1, w - 30));
-        let py = y + 8;
-        for (let i = 0; i < ((h - 16) / 6) | 0; i++) {
-          const nx = px + (((i + k * 3) * 29) % 7) - 3;
-          Gfx.rectA(px, py, 2, 6, dark, 0.28);
-          px = clamp(nx, x + 6, x + w - 8); py += 6;
-        }
-      }
-      for (let i = 0; i < 3; i++) {                          // chips out of the rim
-        const t = ((i * 37 + (w | 0)) % 100) / 100;
-        Gfx.rect(x + 8 + t * (w - 22), y + (i % 2 ? h - 4 : 1), 5, 3, SKIN.ink);
-        Gfx.rect(x + (i % 2 ? 1 : w - 4), y + 8 + t * (h - 22), 3, 5, SKIN.ink);
-      }
-    }
-    if (o.gold !== false) UI.filigree(x, y, w, h, o);
+    const f = o.face;
+    const mat = o.mat || (f === SKIN.btn ? 'woodhot' : f === SKIN.btnFace ? 'wood' : f === SKIN.red ? 'red' : f === '#8a7f68' || f === '#4d4a5c' ? 'stone' : 'stone');
+    PixUI.panel(mat, x, y, w, h, { seed: (w * 7 + h * 3) & 63, hot: o.hotRim, moss: o.moss });
+    if (o.gold !== false && mat === 'stone' && Math.min(w, h) >= 120) UI.filigree(x, y, w, h, o);
     return { x, y, w, h };
+  },
+  // a big wooden button, for choices: a plank that lights up and lifts
+  stoneButton(x, y, w, h, hot, ok = true) {
+    PixUI.panel(!ok ? 'stone' : hot ? 'woodhot' : 'wood', x, y - (hot ? 2 : 0), w, h, { seed: 5, hot });
   },
   // The gold corner pieces off the reference sheet: a flared bracket with a
   // scroll curling in off the elbow. Two sizes, drawn from a little bitmap and
@@ -660,11 +644,11 @@ const UI = {
     Gfx.round(x, y + 4, w, h, 4, SKIN.ink);
     UI.slab(x, yy, w, h, { face, lit, mid: SKIN.btnDark, dark: SKIN.ink, r: 4, shadow: false, rough: false, len: 9 });
     if (hov) UI.filigree(x, yy, w, h, { goldCol: SKIN.goldLit, goldLit: '#ffffff', len: 9 });
-    const scale = o.scale || 1;
-    const ty = yy + Math.round((h - Gfx.fontOf(o.font).gh * scale) / 2);
+    const font = o.font || 'rock', scale = font === 'rock' ? UI.fitRock(label, w - 24 - (o.icon ? 24 : 0), (o.scale || 1) * 1.5) : (o.scale || 1);
+    const ty = yy + Math.round((h - Gfx.fontOf(font).gh * scale) / 2);
     if (o.icon) Gfx.sprite(o.icon, x + 14, yy + h / 2, { anchor: 'c', scale: o.iconScale || 1 });
-    Gfx.text(label, x + w / 2 + (o.icon ? 8 : 0), ty + 1, { color: SKIN.ink, align: 'center', scale, font: o.font });
-    Gfx.text(label, x + w / 2 + (o.icon ? 8 : 0), ty, { color: o.disabled ? '#5c3a20' : (o.color || SKIN.textLit), align: 'center', scale, font: o.font });
+    Gfx.text(label, x + w / 2 + (o.icon ? 8 : 0), ty + scale, { color: SKIN.ink, align: 'center', scale, font });
+    Gfx.text(label, x + w / 2 + (o.icon ? 8 : 0), ty, { color: o.disabled ? '#5c3a20' : (o.color || SKIN.textLit), align: 'center', scale, font });
     this.items.push({ x, y: yy, w, h: h + lift, cb, disabled: o.disabled || this.locked });
     return hov;
   },
@@ -695,8 +679,9 @@ const UI = {
       Gfx.rect(x + 10, y + BAR + 3, w - 20, 2, SKIN.barDark);
       for (let i = 0; i < 6; i++)                                 // tool marks in the band
         Gfx.rectA(x + 16 + ((i * 71 + w) % Math.max(1, w - 34)), y + 13 + (i % 3) * 4, 5, 2, SKIN.barDark, 0.45);
-      Gfx.text(title, x + w / 2, y + 13, { color: SKIN.barDark, align: 'center', scale: o.titleScale || 1.4 });
-      Gfx.text(title, x + w / 2, y + 12, { color: SKIN.goldLit, align: 'center', scale: o.titleScale || 1.4 });
+      const ts = UI.fitRock(title, w - 80, 2);
+      Gfx.text(title, x + w / 2, y + 14, { color: SKIN.barDark, align: 'center', scale: ts, font: 'rock' });
+      Gfx.text(title, x + w / 2, y + 12, { color: SKIN.goldLit, align: 'center', scale: ts, font: 'rock' });
       if (o.onClose) {
         const bx = x + w - 32, by = y + 10;
         const hov = this.hit(bx - 2, by - 2, 24, 24, o.onClose);
@@ -731,11 +716,11 @@ const UI = {
       rough: w > 70, len: clamp((h / 3) | 0, 6, 10),
     });
     Gfx.rect(x + 6, y + dy + 4, w - 12, 2, lit);
-    const scale = o.scale || 1.5;
-    const ty = y + dy + Math.round((h - Gfx.fontOf(o.font).gh * scale) / 2) - 1;
+    const font = o.font || 'rock', scale = font === 'rock' ? UI.fitRock(label, w - 28 - (o.icon ? 28 : 0), o.scale || 1.5) : (o.scale || 1.5);
+    const ty = y + dy + Math.round((h - Gfx.fontOf(font).gh * scale) / 2) - 1;
     if (o.icon) Gfx.sprite(o.icon, x + 18, y + dy + h / 2, { anchor: 'c', scale: o.iconScale || 1.4 });
-    Gfx.text(label, x + w / 2 + (o.icon ? 10 : 0), ty + 1, { color: SKIN.ink, align: 'center', scale, font: o.font });
-    Gfx.text(label, x + w / 2 + (o.icon ? 10 : 0), ty, { color: o.disabled ? '#5c3a20' : SKIN.textLit, align: 'center', scale, font: o.font });
+    Gfx.text(label, x + w / 2 + (o.icon ? 10 : 0), ty + scale, { color: SKIN.ink, align: 'center', scale, font });
+    Gfx.text(label, x + w / 2 + (o.icon ? 10 : 0), ty, { color: o.disabled ? '#5c3a20' : SKIN.textLit, align: 'center', scale, font });
     this.items.push({ x, y, w, h: h + 5, cb, disabled: o.disabled || this.locked });
     return hov;
   },
@@ -822,8 +807,8 @@ const UI = {
       const wdt = Math.min(maxW, Math.max(...all.map(l => Gfx.measure(l.replace(/\{[^}]*\}/g, ''), scale))) + 16);
       const h = all.length * lh + 12;
       let x = clamp(t.x, 4, W - wdt - 4), y = t.y; if (y + h > H - 4) y = t.y - h - 22; y = clamp(y, 4, H - h - 4);
-      Gfx.panel(x, y, wdt, h, { fill: '#1a1424', border: '#ffe98a', radius: 4 });
-      for (let i = 0; i < all.length; i++) Gfx.rich(all[i], x + 8, y + 6 + i * lh, { color: i === 0 && t.o.titleColor !== false ? '#ffe98a' : '#d6cfe0' });
+      PixUI.panel('hide', x, y, wdt + 4, h + 6, { seed: 9 });
+      for (let i = 0; i < all.length; i++) Gfx.rich(all[i], x + 10, y + 8 + i * lh, { color: i === 0 && t.o.titleColor !== false ? '#ffe98a' : '#fffaea', shadow: '#241109' });
     }
   },
   click(x, y, button = 0) {

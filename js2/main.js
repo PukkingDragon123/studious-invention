@@ -21,7 +21,7 @@ const Game = {
   go(scene) {
     if (this.scene && this.scene.exit) this.scene.exit();
     UI.locked = false; this.overlay = null;
-    Co.clear(); Tweens.clear(); Particles.clear(); Popups.clear(); FX.clear(); Emotes.clear(); Floaters.clear();
+    Co.clear(); Tweens.clear(); Particles.clear(); Popups.clear(); FX.clear(); Emotes.clear(); Floaters.clear(); Toon.clear();
     Juice.reset(); Dialogue.clear();
     this.scene = scene;
     if (scene.enter) scene.enter();
