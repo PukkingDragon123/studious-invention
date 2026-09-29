@@ -191,7 +191,7 @@ const Toon = {
   draw(screen = false) {
     const ctx = Gfx.ctx;
     for (const e of this.list) {
-      if ((e.kind === 'focus') !== screen) continue;
+      if ((e.kind === 'focus' || e.kind === 'word') !== screen) continue;
       const k = e.t / e.life, fade = clamp(k < 0.15 ? k / 0.15 : (1 - k) / 0.3, 0, 1);
       const a = e.at, h = a ? this.head(a) : null;
       ctx.save(); ctx.globalAlpha = fade;
@@ -256,19 +256,25 @@ const Toon = {
         Gfx.circle(cx - 3, cy - 4, 3, '#a79bb4');
         for (let j = 0; j < 5; j++) { const q = ((e.t * 2.2) + j / 5) % 1; Gfx.rect(cx - 10 + j * 5, cy + 9 + q * 16, 1, 3, '#6aa9ee'); }
       } else if (e.kind === 'word') {
-        // a sound word, punched in with a burst behind it, then wobbling off
-        // the same size on screen however close the camera has come
-        const sc0 = Game.scene && (Game.scene.stage ? Game.scene.stage.cam : Game.scene.cam), cz = sc0 ? sc0.zoom / VIEW : 1;
-        const g = Ease.outBack(clamp(k * 4, 0, 1)), sc = e.size * (0.4 + 0.6 * g) / Math.max(1, cz);
-        const x = e.x, y = e.y - k * 14, n = 12, R = Gfx.measure(e.text, sc) * 0.62 + 10;
-        ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(e.seed + e.t * 9) * 0.06 + (e.tilt || -0.08));
-        ctx.beginPath();
-        for (let i = 0; i <= n * 2; i++) { const an = i / (n * 2) * Math.PI * 2, rr = (i % 2 ? 0.72 : 1) * R * g; const px = Math.cos(an) * rr, py = Math.sin(an) * rr * 0.62; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
-        ctx.closePath(); ctx.fillStyle = '#120c16'; ctx.fill();
-        ctx.scale(0.86, 0.84); ctx.fillStyle = e.burst || '#fffaea'; ctx.fill();
-        ctx.restore();
-        ctx.save(); ctx.translate(x, y); ctx.rotate(e.tilt || -0.08);
-        Gfx.text(e.text, 0, -Gfx.lineHeight(sc) * 0.36, { color: e.col, scale: sc, align: 'center', outline: '#120c16', outlineWidth: Math.max(1, Math.round(sc * 0.7)) });
+        // a sound word in a white pixel burst with a black ink line: it slams
+        // in oversized, squashes, wobbles, and pops away. The same size on
+        // screen however close the camera has come.
+        const sc0 = Game.scene && (Game.scene.stage ? Game.scene.stage.cam : Game.scene.cam);
+        const P = sc0 && sc0.toScreen ? sc0.toScreen(e.x, e.y) : { x: e.x, y: e.y };
+        const inK = clamp(k * 5, 0, 1), g = inK < 1 ? Ease.outBack(inK) * 1.15 : 1 + Math.max(0, 0.15 - (k - 0.2) * 0.6);
+        const out = k > 0.8 ? 1 - (k - 0.8) / 0.2 : 1;
+        const ts = Math.max(1.5, Math.round(e.size * 1.2 * 2) / 2);
+        const tw = Gfx.measure(e.text, ts, 'rock'), th = Gfx.lineHeight(ts, 'rock');
+        const bw = Math.round(tw + 30), bh = Math.round(th + 18);
+        const wob = Math.sin(e.seed + e.t * 11) * 0.05;
+        ctx.save();
+        ctx.translate(P.x, P.y - k * 14);
+        ctx.rotate((e.tilt ?? -0.08) + wob);
+        ctx.scale(g * out * (1 + Math.sin(e.t * 22) * 0.03 * (1 - k)), g * out * (1 - Math.sin(e.t * 22) * 0.03 * (1 - k)));
+        Bubble.draw('pow', -bw / 2, -bh / 2, bw, bh, null, e.t);
+        // black letters with a colour kick under them, like a comic sound word
+        Gfx.text(e.text, 2, -th / 2 + 3, { color: e.col && e.col !== '#fffaea' && e.col !== '#e8dfc6' ? e.col : '#c2333c', scale: ts, align: 'center', font: 'rock' });
+        Gfx.text(e.text, 0, -th / 2 + 1, { color: '#08060c', scale: ts, align: 'center', font: 'rock' });
         ctx.restore();
       } else if (e.kind === 'focus') {
         // anime focus lines closing in on somebody, drawn over the screen

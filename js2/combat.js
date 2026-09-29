@@ -734,6 +734,7 @@ class Combat {
     if (!this.riff) this.drawHand();
     if (this.selected) this.drawTargeting();
     Popups.draw(false);
+    Toon.draw(true);
     if (this.banner) this.drawBanner();
   }
   drawHeroActor() {

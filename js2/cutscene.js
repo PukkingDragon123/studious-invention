@@ -227,10 +227,38 @@ function* introScript(S) {
   // behind it; the snores; the rain at the door; the tears
   let snore = atTable ? 0 : 1, rain = 0, steam = 1, tears = 0, headGone = false;
   const grabbed = [];
-  let granny = null;
+  let granny = null, shade = null;
   S.overlay = world => {
     if (!world) return;
     const T = Time.t;
+    // Grandma outside in the rain, before she comes in: a huge black shape
+    // with two lamps for eyes, her shadow reaching right across the floor,
+    // and every flash of lightning showing a little too much of her
+    if (shade) {
+      shade.t += Time.dt; shade.a = Math.min(1, shade.a + Time.dt * 0.8);
+      shade.flash = Math.max(0, shade.flash - Time.dt * 2.5);
+      if (chance(Time.dt * 0.35)) { shade.flash = 1; AudioSys.sfx('thunder', { vol: 0.5 }); Juice.flash('#e8f4ff', 0.25, 5); }
+      const spr = 'grandma_idle', sp = Gfx.spr(spr), sc = 1.2 + Math.sin(shade.t * 1.3) * 0.015;
+      const x = shade.x, ctx = Gfx.ctx;
+      // the shadow on the floor, thrown in by the lightning, stretching to the table
+      ctx.save(); ctx.globalAlpha = shade.a * (0.45 + shade.flash * 0.35);
+      ctx.translate(x - 20, GY); ctx.transform(1, 0, -2.2, 1, 0, 0); ctx.scale(1, -0.3);
+      Gfx.sprite(spr, 0, 0, { anchor: 'bc', scale: sc, flip: true, tint: '#05030a', tintAmount: 1 });
+      ctx.restore();
+      ctx.globalAlpha = shade.a;
+      Gfx.sprite(spr, x, GY + Math.sin(shade.t * 1.3) * 1, { anchor: 'bc', scale: sc, flip: true, tint: '#05030a', tintAmount: 1 });
+      if (shade.flash > 0.3) Gfx.sprite(spr, x, GY, { anchor: 'bc', scale: sc, flip: true, alpha: (shade.flash - 0.3) * 0.5, tint: '#3b3048', tintAmount: 0.6 });
+      ctx.globalAlpha = 1;
+      // the eyes: they blink, slowly, and they are looking at the roast
+      const top = GY - sp.h * sc, blink = (shade.t % 3.7) < 0.12;
+      const ex = x - sp.w * sc * 0.2, ey = top + sp.h * sc * 0.16;
+      if (!blink) for (const dx of [-7, 7]) {
+        Gfx.rect(ex + dx - 4, ey - 2, 8, 4, '#ffe98a'); Gfx.rect(ex + dx - 4, ey - 2, 8, 1, '#ffa832'); Gfx.rect(ex + dx - 3, ey - 2, 2, 4, '#120c16');
+        Gfx.rect(ex + dx - 5, ey - 4, 10, 2, '#05030a');                        // a brow, low and mean
+      }
+      if (window.Post) { Post.light(ex, ey, 40, '#ffe98a', 0.5 * shade.a); Post.light(x, top, 180, '#a8d8ff', shade.flash * 0.9); }
+      if (chance(Time.dt * 3)) Particles.spawn(ex + rnd(-10, 10), ey + 30, { n: 1, color: ['#e8f4ff', '#a8d8ff'], speed: 8, angle: -Math.PI / 2, spread: 0.4, gravity: -12, life: 1.6, size: 3, sizeEnd: 8 });
+    }
     // Grandma, drawn here so she stands over the pit and behind the table
     if (granny && granny.visible) {
       granny.manual = false; granny.draw(); granny.manual = true;
@@ -319,15 +347,20 @@ function* introScript(S) {
   yield 0.8;
   yield* L('vela', 'Who knocks on a CAVE?', 'scared');
   rain = 0.6; S.setOpt.night = true;
-  yield* S.pan(HOME.door + 30, 326, 0.6);
+  shade = { x: HOME.door + 196, t: 0, a: 0, flash: 1 };
+  yield* S.pan(HOME.door + 60, 300, 0.6);
   AudioSys.sfx('thunder'); Juice.flash('#ffffff', 0.4, 5);
-  yield* S.say('GRANDMA REX', 'Yoo-hoo! Hello, my dearies! Just a poor old granny, lost in the rain. Could you spare a bite for a hungry old lady?', { at: { x: HOME.door + 120, top: GY - 150 }, mood: 'happy' });
+  AudioSys.sfx('growl'); Juice.shake(4, 0.8);
+  for (const id of HERO_ORDER) { A[id].squash(0.15); Toon.sweat(A[id], 1.4); }
+  yield 1.2;
+  yield* S.say('GRANDMA REX', 'Yoo-hoo! Hello, my dearies! Just a poor old granny, lost in the rain. Could you spare a bite for a hungry old lady?', { at: { x: HOME.door - 40, top: GY - 150 }, mood: 'happy' });
   yield* S.pan(HOME.table + 20, 330, 0.3);
   yield* L('bronk', 'Course we can! Come in, come in! There is loads!', 'happy');
 
   // ============================================== 3. GRANDMA REX
   AudioSys.play('event', { fade: 1 });
-  granny = S.add('granny', { base: 'grandma', x: HOME.door + 160, y: GY, scale: 1, facing: -1 });
+  granny = S.add('granny', { base: 'grandma', x: shade ? shade.x : HOME.door + 160, y: GY, scale: 1, facing: -1 });
+  shade = null;
   granny.manual = true;
   pose(granny, 'walk');
   yield* S.pan(HOME.door - 20, 320, 0.4);

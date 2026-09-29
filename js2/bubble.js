@@ -32,6 +32,7 @@ const Bubble = (() => {
     scared:  { fill: '#f6f0ff', shade: '#c8c0d8', ink: '#120c16', hi: '#ffffff' },
     angry:   { fill: '#fff0e4', shade: '#f4b098', ink: '#3f0e18', hi: '#ffffff' },
     shout:   { fill: '#fffaea', shade: '#e0d4b8', ink: '#120c16', hi: '#ffffff' },
+    pow:     { fill: '#ffffff', shade: '#e8e4ee', ink: '#08060c', hi: '#ffffff' },
     think:   { fill: '#f4f8ff', shade: '#c8d4ea', ink: '#241c2e', hi: '#ffffff' },
     whisper: { fill: '#ece6f0', shade: '#c8c0cc', ink: '#574a66', hi: '#fffaea' },
     scroll:  { fill: '#e8dfc6', shade: '#c4b89a', ink: '#3a2415', hi: '#fffaea', roll: '#a88d62', rollD: '#6e5634' },
@@ -43,6 +44,12 @@ const Bubble = (() => {
   // is (x, y) inside the body? coordinates relative to the centre, in bubble pixels
   function body(kind, x, y, a, b, f) {
     const th = Math.atan2(y / b, x / a), ph = f / 8 * Math.PI * 2;
+    if (kind === 'pow') {
+      // a sound-effect burst: few, long, uneven spikes that twitch
+      const n = 9, u = th / (Math.PI * 2) * n, sp = tri(u) ** 1.6, jag = 0.12 * Math.sin(Math.floor(u) * 2.7 + f * 0.8);
+      const r = 0.78 + sp * (0.42 + jag);
+      return (x / a) ** 2 + (y / b) ** 2 <= r * r;
+    }
     if (kind === 'shout' || kind === 'angry') {
       const n = kind === 'shout' ? 16 : 12, sp = tri(th / (Math.PI * 2) * n + (kind === 'angry' ? f * 0.06 : 0));
       const r = 0.86 + sp * (kind === 'shout' ? 0.3 : 0.24);
