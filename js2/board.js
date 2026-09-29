@@ -304,6 +304,15 @@ class BoardScene {
     yield 0.45;
     return v;
   }
+  // a little test of skill (see minigames.js); returns { score, win, n }
+  *miniGame(kind, o = {}) {
+    let res = null;
+    const was = this.panel; this.panel = null;
+    this.mini = new MiniGame(kind, o, r => { res = r; });
+    yield () => res;
+    this.mini = null; this.panel = was;
+    return res;
+  }
   *riffChallenge(cfg) {
     let res = null, done = false;
     const was = this.panel; this.panel = null;
@@ -747,6 +756,7 @@ class BoardScene {
   update(dt) {
     this.t += dt;
     if (this.riff) { this.riff.update(dt); this.me.update(dt); return; }
+    if (this.mini) { this.mini.update(dt); this.me.update(dt); return; }
     Dialogue.update();
     this.me.update(dt);
     for (const b of this.band) b.a.update(dt);
@@ -814,7 +824,7 @@ class BoardScene {
     return best;
   }
   click(x, y, button) {
-    if (this.riff || this.panel) return;
+    if (this.riff || this.panel || this.mini) return;
     if (button === 2) { this.pan = 0; return; }
     // where the click landed, not where the pointer was last seen: a quick
     // tap lifts the finger before the next frame looks for it
@@ -842,6 +852,8 @@ class BoardScene {
       Toon.draw(true);
       Particles.draw(Gfx.ctx, false);
       if (this.riff) { this.riff.draw(); Popups.draw(false); return; }
+    if (this.mini) { this.mini.draw(); Toon.draw(true); Popups.draw(false); return; }
+      if (this.mini) { this.mini.draw(); Toon.draw(true); Popups.draw(false); return; }
       this.stage.drawUI();
       if (this.dieChoice) this.drawDiePick();
       this.drawToasts();

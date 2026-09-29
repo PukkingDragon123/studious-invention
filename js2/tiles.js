@@ -234,6 +234,44 @@ const BOARD_EVENTS = {
         { label: 'Pay', desc: 'Lose {v}2 shells{/}. Gain a {y}charm{/}.', cond: B => B.run.gems >= 2, act: function* (B, S) { B.run.gems -= 2; yield* B.findCharm(true); S.result = 'He hands you a pouch "for your trouble". It is the nicest thing a raider has ever done.'; } },
         { label: 'Play', desc: 'A {r}fight{/}, and his whole toll pot if you win.', act: function* (B, S) { S.fight = ['brute']; S.bonusGems = 4; S.result = 'He cracks his knuckles.'; } },
       ] },
+    // ------------------------------------------------ tests of skill
+    { id: 'nut', title: 'THE IRON NUT', spr: 'v_rock', scale: 2,
+      text: 'A giant nut on a stump, and a club leaning on it. Carved in the stump: CRACK IT, KEEP WHAT IS INSIDE.',
+      choices: [
+        { label: 'Swing the club', desc: '{y}Skill{/}: hit the sweet spot 2 of 3 times. Win {v}5 shells{/} and a {y}card{/}. Miss: {r}-6 HP{/}.', act: function* (B, S) { const r = yield* B.miniGame('swing', { title: 'CRACK IT!', zone: 0.17 }); if (r.win) { B.addGems(5); yield* B.offerCards(3); S.result = 'CRACK. It is full of shells. And a painting of a club. Nice.'; } else { B.hurt(6); S.result = 'The club bounces off the nut and into your face.'; } } },
+        { label: 'Walk on', desc: 'It is just a nut.', act: function* (B, S) { S.result = 'You leave the nut alone. The nut, you feel, is disappointed in you.'; } },
+      ] },
+    { id: 'tug', title: 'TUG OF WAR', spr: 'raptor_idle', scale: 1.2,
+      text: 'A raptor has one end of a vine, and a relic tied round its middle. It points at a bubbling tar pit, then at you. It wants to play.',
+      choices: [
+        { label: 'Grab the vine', desc: '{y}Skill{/}: mash to pull it in. Win an {y}artifact{/}. Lose: into the {r}tar{/}.', act: function* (B, S) { const r = yield* B.miniGame('tug', { title: 'PULL!', foe: 'raptor_idle' }); if (r.win) { const id = B.randomRelic(['common', 'uncommon']); if (id) B.giveRelic(id); S.result = 'SPLOSH. The raptor goes into the tar. You untie its relic. It sulks.'; } else { B.hurt(6); B.bd.tarred = 2; S.result = 'SPLOSH. That was you. {r}Tarred{/}: your next roll is {r}-2{/}.'; } } },
+        { label: 'Fight it instead', desc: 'A {r}fight{/}.', act: function* (B, S) { S.fight = ['raptor', 'raptor']; S.result = 'It drops the vine and grins.'; } },
+      ] },
+    { id: 'tree', title: 'THE SHAKING TREE', spr: 'v_tree', scale: 1,
+      text: 'A fruit tree, and a mammoth scratching its back on it. Fruit is coming down. So are rocks.',
+      choices: [
+        { label: 'Catch the fruit', desc: '{y}Skill{/}: catch fruit, dodge rocks. {g}Heal 3{/} a fruit, {r}-4{/} a rock.', act: function* (B, S) { const r = yield* B.miniGame('catch', { title: 'CATCH!' }); const mg = B.mini; void mg; B.heal(r.n * 3); S.result = `${r.n} fruit! Sticky, sweet, and only a little bit bruised.`; } },
+        { label: 'Leave the mammoth to it', desc: 'Nothing gained.', act: function* (B, S) { S.result = 'The mammoth sighs happily. You do not.'; } },
+      ] },
+    // ------------------------------------------------ just evil
+    { id: 'shrine', title: 'THE HUNGRY SHRINE', spr: 'v_skull', scale: 2.2,
+      text: 'A stone face in the rock opens its mouth. "FEED ME," it says, "OR I FEED ON YOU." There is no third door.',
+      choices: [
+        { label: 'Feed it', desc: 'Lose {r}10 HP{/}. It lets you go.', act: function* (B, S) { B.hurt(10); S.result = 'It licks its stone lips. "DELICIOUS. COME AGAIN." You will not.'; } },
+        { label: 'Refuse', desc: 'It sends its {r}guardians{/} after you.', act: function* (B, S) { S.fight = ['brute', 'brute']; S.result = 'The eyes glow red. Two raiders climb out of its mouth. That should not be possible.'; } },
+      ] },
+    { id: 'gran_note', title: 'A NOTE FROM GRANDMA', spr: 'ti_berries', scale: 3,
+      text: 'A basket of berries on the path, and a note in big wobbly letters: "FOR MY DEARIES. EAT UP. LOVE, GRAN." The berries are ticking.',
+      choices: [
+        { label: 'Eat them', desc: 'Grandma would not poison you. Would she?', act: function* (B, S) { B.hurt(12); B.touch('hot', 1); Juice.shake(10, 0.4); S.result = 'She would. {r}-12 HP{/}, and your tongue is on fire.'; } },
+        { label: 'Kick the basket', desc: 'Get rid of it.', act: function* (B, S) { B.hurt(6); Juice.flash('#ffa832', 0.4, 3); Juice.shake(14, 0.5); S.result = 'BOOM. Berry everywhere. {r}-6 HP{/}. Somewhere, a very large old lady is laughing.'; } },
+      ] },
+    { id: 'friendly', title: 'A VERY FRIENDLY DODO', spr: 'dodo_idle', scale: 1.4,
+      text: '"Hello, friend! Have some shells! Free shells! For my very best friend!" It is smiling far too hard.',
+      choices: [
+        { label: 'Take the shells', desc: 'Free shells!', act: function* (B, S) { const lost = Math.ceil((B.run.gems || 0) / 2); B.run.gems = (B.run.gems || 0) - lost; B.hurt(5); S.result = `It bites your hand and runs off with {r}${lost} of your shells{/}. The free ones were painted pebbles.`; } },
+        { label: 'No thank you', desc: 'Back away slowly.', act: function* (B, S) { S.fight = ['dodo', 'dodo', 'compy']; S.result = '"No?" it says. "NO?" Its friends come out of the bushes.'; } },
+      ] },
     { id: 'berries', title: 'STRANGE BERRIES', spr: 'ti_berries', scale: 3,
       text: 'Fat purple berries. They smell amazing. They are also glowing slightly.',
       choices: [

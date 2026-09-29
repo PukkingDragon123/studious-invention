@@ -52,11 +52,16 @@ heals you after the fight.
   that many tiles, forward or back. Every tile you could land on lights up and
   you pick one. The road forks, and the two lanes of a fork are always
   different lengths, so no two paths ever end on the same tile.
-- **Tiles do things.** Berries and roast legs heal you. Gem seams, cave
+- **Everybody throws the die their own way.** Bronk tosses it up and
+  punches it across the board, Vela blows it a kiss and flicks it, Pebble
+  shakes it until he vibrates and hurls it, Roxy floats it up on a gust.
+  Then they react: a one gets a rain cloud, a six a victory dance. Landing
+  on a tile gets a reaction too: YUM, OUCH, BRING IT.
+- **Tiles do things.** Berries and roast legs heal you. Ammonite beds, cave
   paintings (new cards) and charm pouches are rewards. Spike pits, rockfalls
   and tar pits hurt or slow you. There are fights, big roaming dinosaurs,
   strangers, crossroads choices, mystery tiles, caves, hidden secrets, camps,
-  a mammoth trader, a gem altar for enchanting cards, luck totems, vines that
+  a mammoth trader, luck totems, vines that
   swing you on and geysers that throw you. Each land ends in a lair you cannot
   walk past.
 - **The ground counts.** Every tile has terrain: grass, wet, hot, stone, bone,
@@ -70,11 +75,19 @@ heals you after the fight.
   throw again. Others heal, reveal secrets, or make you slip away from a fight.
   Artifacts are permanent: a die that never rolls a 1, tar that cannot stop
   you, glasses that show every tile on the board.
+- **Some choices test you, and some are just evil.** Crack the iron nut
+  with a swinging club (hit the sweet spot), win a tug of war over a tar pit
+  (mash), catch fruit from a shaking tree and dodge the rocks. And some roads
+  have no good way out: the Hungry Shrine, the Very Friendly Dodo, and a
+  basket of ticking berries with a note from Grandma.
+- **Money is ammonite shells.** Dig them out of ammonite beds, win them in
+  fights, spend them with Trunks the mammoth. The road is fight-heavy: most
+  lands have a dozen fights on them, and an elite halfway along.
 - **Events are little films.** Landing on a stranger, a mystery, a
   crossroads, a cave, a big dino, a secret or a campfire cuts to a close-up
   set in that land: the family walks on, the stranger walks on from the far
   side or the dino snores, they talk in bubbles, you choose from big carved
-  buttons, and whatever happens is acted out (the bite, the heal, gems flying
+  buttons, and whatever happens is acted out (the bite, the heal, shells flying
   across, a relic held up, beasts running on to square up).
 - **Fights are a deck of cards.** Three energy a turn, Block, statuses and
   enemy intents you can read ahead of time. Cards marked RIFF cut to your
@@ -180,6 +193,9 @@ js2/dialogue.js   who says what, and how the bubbles move
 js2/rhythm.js     the riff: timing, scoring and the chant
 js2/instruments.js the seven instruments: layouts, twists, art and voices
 js2/arena.js      the fight's set pieces, framing and usable props
+js2/antics.js     how each hero throws the die, and reacts to it and to tiles
+js2/minigames.js  the swing, tug and catch tests of skill
+js2/shell.js      the ammonite shell, painted
 js2/cards.js      cards, enchantments and the card renderer
 js2/relics.js     artifacts
 js2/heroes.js     the four heroes, their cards and their artifacts

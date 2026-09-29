@@ -41,7 +41,8 @@ require('fs').mkdirSync(OUT, { recursive: true });
   // a fight with every hero
   for (const hero of ['bronk', 'vela', 'pebble', 'roxy']) {
     await ev(h => { const H = Heroes.get(h); const r = Game.run; r.hero = h; r.hp = r.maxHp = H.hp; r.deck = H.deck.map(id => Cards.make(id)); r.relics = [H.relic]; r.board.touched = { wet: 2, stone: 1 }; Game.enterFight(['raptor', 'compy'], 'normal', { terrain: 'wet', touched: { wet: 2, stone: 1 } }); }, hero);
-    await page.waitForTimeout(3600);
+    // wait on the game, not the clock: a slow machine plays the intro slowly
+    await page.waitForFunction(() => Game.scene.constructor.name === 'Combat' && Game.scene.phase === 'player' && !Game.scene.busy, null, { timeout: 20000 }).catch(() => {});
     const st = await ev(() => { const c = Game.scene; return { n: c.constructor.name, hand: c.hand && c.hand.length, e: c.energy, sp: c.me && c.me.sprite, touched: c.touched && JSON.stringify(c.touched) }; });
     ok(`${hero} fights`, st.n === 'Combat' && st.hand >= 5, JSON.stringify(st));
     await page.screenshot({ path: `${OUT}/05_fight_${hero}.png` });
@@ -52,10 +53,10 @@ require('fs').mkdirSync(OUT, { recursive: true });
       await ev(() => { const c = Game.scene; if (c.riff) { c.riff.o.onDone({ grade: 'A', acc: 0.9, hits: 8, notes: 8, sick: 4, fc: false, mult: 1.2 }); c.riff = null; } });
     }
     await ev(() => { const c = Game.scene; if (c.constructor.name !== 'Combat') return; for (const e of c.alive()) c.damageEnemy(e, 9999); c.checkDeaths(); if (!c.won) Co.run(c.victory(), c); });
-    await page.waitForTimeout(3600);
+    await page.waitForFunction(() => Game.scene.constructor.name === 'RewardScene', null, { timeout: 20000 }).catch(() => {});
     ok(`${hero} wins to the reward`, await scene() === 'RewardScene', await ev(() => JSON.stringify({ gems: Game.run.gems })));
     await ev(() => { const s = Game.scene; if (s.o) { s.cardTaken = s.relicTaken = true; Game.afterReward(s.o); } });
-    await page.waitForTimeout(1500);
+    await page.waitForFunction(() => Game.scene.constructor.name === 'BoardScene', null, { timeout: 15000 }).catch(() => {});
     ok(`${hero} back on the board`, await scene() === 'BoardScene');
   }
   // save and continue
