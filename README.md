@@ -137,7 +137,8 @@ talking, a bouncing one with sparkles when happy, a drooping one that drips
 when sad, a trembling one when scared, spiky and steaming when angry, a cloud
 for thinking, a thin wisp for a whisper, a scroll for narration. They pop in
 with a squash, their letters wobble in one at a time, and they shrink away
-when they close. Titles and buttons are set in a chiselled capital font.
+when they close. Text is set in Jersey 10 and titles in Jersey 15 (Google Fonts, SIL Open Font
+License), baked at their native pixel grid so every stroke stays crisp.
 
 The board's ground is baked per pixel from tiling noise with Bayer dithering, a
 chunk at a time just ahead of the camera. Light and colour are done in a WebGL
@@ -165,7 +166,8 @@ melody of the song that is playing.
 
 ```
 js2/core.js       math, seeded RNG, coroutines, tweens, camera, juice, particles
-js2/font.js       three bitmap fonts, one of them chisel-cut capitals
+js2/font_hi.js    Jersey 10 and Jersey 15 (OFL), baked to pixel bitmaps
+js2/font.js       the bitmap fonts: high-res Jersey for text and titles, old ones as fallback
 js2/gfx.js        palette, sprite compiler, drawing, input, immediate-mode UI
 js2/post.js       the WebGL light and colour pass
 js2/light.js      where the light comes from, scene by scene

@@ -267,8 +267,71 @@ class BitmapFont {
   }
 }
 
-const FONTS = {
+// A proportional, higher-resolution pixel font, baked from a real typeface
+// (see font_hi.js). It keeps the old font's layout units: 'unit' is the old
+// glyph height, so a label laid out for the old font still fits its box. Each
+// glyph is drawn at a whole or half multiple of its own pixel grid, never
+// smaller than 1:1, so every stroke stays crisp; tiny text, and symbols the
+// typeface lacks, fall back to the old bitmap font.
+class PixelFont {
+  constructor(data, unit, lh, old, o = {}) {
+    this.d = data; this.gh = unit; this.lh = lh; this.old = old; this.k = unit / data.h;
+    this.min = o.min ?? 0.5; this.whole = !!o.whole;
+    this.gw = old.gw; this.adv = old.adv;
+    this.cache = new Map(); this.rowsOf = {};
+    for (const ch in data.glyphs) this.rowsOf[ch] = data.glyphs[ch].split('|');
+  }
+  px(scale) {
+    const e = scale * this.k;
+    if (e < this.min) return 0;                                  // too small: the old font
+    return Math.max(1, this.whole ? Math.round(e) : Math.round(e * 2) / 2);
+  }
+  has(ch) { return ch === ' ' || !!this.rowsOf[ch]; }
+  glyph(ch, color) {
+    const key = ch + '|' + color;
+    let c = this.cache.get(key); if (c) return c;
+    const rows = this.rowsOf[ch], w = Math.max(1, ...rows.map(r => r.length));
+    c = document.createElement('canvas'); c.width = w; c.height = this.d.h;
+    const g = c.getContext('2d'); g.fillStyle = color;
+    for (let y = 0; y < rows.length; y++) for (let x = 0; x < rows[y].length; x++) if (rows[y][x] === '#') g.fillRect(x, y, 1, 1);
+    this.cache.set(key, c); return c;
+  }
+  charW(ch, scale, e, tracking) {
+    if (!this.has(ch)) return (this.old.adv + tracking) * scale;
+    return (this.d.widths[ch] + 1) * e + tracking * scale;
+  }
+  width(str, scale = 1, tracking = 0) {
+    const e = this.px(scale);
+    if (!e) return this.old.width(str, scale, tracking);
+    let w = 0; for (const ch of str) w += this.charW(ch, scale, e, tracking);
+    return Math.max(0, w - e - tracking * scale);
+  }
+  draw(ctx, str, x, y, color = '#fff', scale = 1, tracking = 0) {
+    const e = this.px(scale);
+    if (!e) return this.old.draw(ctx, str, x, y, color, scale, tracking);
+    // centre the taller glyphs on the box the old font would have filled
+    const top = Math.round(y + (this.gh * scale - this.d.h * e) / 2 + e);
+    let cx = x;
+    for (const ch of str) {
+      if (ch !== ' ') {
+        if (this.has(ch)) {
+          const g = this.glyph(ch, color);
+          ctx.drawImage(g, Math.round(cx), top, g.width * e, g.height * e);
+        } else this.old.draw(ctx, ch, Math.round(cx), y, color, scale, 0);
+      }
+      cx += this.charW(ch, scale, e, tracking);
+    }
+  }
+}
+
+const FONTS_OLD = {
   small: new BitmapFont(GLYPHS_SMALL, 5, 7, 6, 9),
   main: new BitmapFont(GLYPHS_MAIN, 6, 9, 7, 12),
   rock: new BitmapFont(GLYPHS_ROCK, 8, 9, 9, 12),
+};
+const FONTS = {
+  small: FONTS_OLD.small,
+  classic: FONTS_OLD.main,
+  main: typeof HIFONT_BODY !== 'undefined' ? new PixelFont(HIFONT_BODY, 9, 12, FONTS_OLD.main) : FONTS_OLD.main,
+  rock: typeof HIFONT_TITLE !== 'undefined' ? new PixelFont(HIFONT_TITLE, 9, 12, FONTS_OLD.rock, { min: 0.8, whole: true }) : FONTS_OLD.rock,
 };

@@ -399,9 +399,11 @@ const Cards = {
 
     // ---- the name, carved across a sunken band
     this.carve(x + 5, y + ah + 29, w - 10, 17, STONE.mid);
-    let nm = c.name; while (Gfx.measure(nm, 1) > w - 18 && nm.length > 4) nm = nm.slice(0, -1);
-    Gfx.text(nm, x + w / 2, y + ah + 34, { color: '#120c16', align: 'center' });
-    Gfx.text(nm, x + w / 2, y + ah + 33, { color: c.up ? '#a8e878' : '#e8dfc6', align: 'center' });
+    // the big font if the name fits, the narrow old one if it does not
+    let nm = c.name, nf = Gfx.measure(nm, 1) > w - 14 ? 'classic' : 'main';
+    while (Gfx.measure(nm, 1, nf) > w - 14 && nm.length > 4) nm = nm.slice(0, -1);
+    Gfx.text(nm, x + w / 2, y + ah + 34, { color: '#120c16', align: 'center', font: nf });
+    Gfx.text(nm, x + w / 2, y + ah + 33, { color: c.up ? '#a8e878' : '#e8dfc6', align: 'center', font: nf });
 
     // ---- the rules, chalked onto the rough part of the face
     const ty = y + ah + 51;
