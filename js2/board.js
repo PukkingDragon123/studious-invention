@@ -558,6 +558,7 @@ class BoardScene {
     if (!K || kind === 'path' || kind === 'junction') { yield 0.1; return; }
     if (!K.perm) this.bd.used[t.id] = 1;
     this.cam.lookAt(t.x + 50, BCAM_Y);
+    yield* Antics.tile(this, kind);
     yield* K.land(this, t);
     yield* Relics.boardTrigger('onLand', this, t);
   }
@@ -661,14 +662,15 @@ class BoardScene {
       this.die2 = null; this.dieChoice = null;
     } else {
       v = this.rollValue(range);
-      this.die.roll(v, 1.2); AudioSys.sfx('dice_roll');
-      yield () => !this.die.busy;
+      yield* Antics.throwDie(this, v);           // each of them throws it their own way
     }
     AudioSys.sfx('dice_land');
     // what the road does to it
     if (bd.tarred) { v = Math.max(1, v - bd.tarred); bd.tarred = 0; this.popup('STILL STICKY  -2', '#ef6a5e'); }
     if (bd.bonusNext) { v += bd.bonusNext; this.popup(`+${bd.bonusNext}`, '#ffe98a'); bd.bonusNext = 0; }
     if (bd.doubleNext) { v *= 2; bd.doubleNext = false; this.popup('DOUBLED!', '#ffe98a'); }
+    yield* Antics.react(this, v);                // and has something to say about it
+    this.placeDie();
     this.moves = v; this.rolled = v;
     this.computeRoutes();
     this.phase = 'choose';
@@ -871,7 +873,7 @@ class BoardScene {
     for (const it of list) it.f();
     Particles.draw(ctx, true); FX.draw(true);
     if (this.dieShow && !this.riff) { this.die.draw(); if (this.die2) this.die2.draw(); }
-    Floaters.draw(); Emotes.draw();
+    Floaters.draw(); Emotes.draw(); Toon.draw(false);
     Popups.draw(true);
     BoardSky.lights(this, L, R);
     cam.restore(ctx);
