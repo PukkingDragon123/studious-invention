@@ -28,7 +28,7 @@ class RewardScene {
     if (this.o.gems) {
       HUD.plate(W / 2 - 70, 64, 140, 32, { gold: false, accent: HUD.C.gem });
       HUD.gem(W / 2 - 44, 80, 1);
-      HUD.text(`+${this.o.gems} GEM${this.o.gems > 1 ? 'S' : ''}`, W / 2 - 28, 74, { color: HUD.C.gem, scale: 1.3 });
+      HUD.text(`+${this.o.gems} SHELL${this.o.gems > 1 ? 'S' : ''}`, W / 2 - 28, 74, { color: HUD.C.gem, scale: 1.3 });
     }
     let y = 112;
     if (this.o.relics.length && !this.relicTaken) {

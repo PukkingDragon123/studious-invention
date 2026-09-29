@@ -403,7 +403,6 @@ class Combat {
     let r = null;
     if (card.def.riff) r = yield* this.riffCo(card, target);
     yield* card.def.effect(this, card, target, r);
-    if (card.v.enchDraw) this.drawCards(card.v.enchDraw);           // the amber in it
     if (card.def.echo && !card.echoCopy) this.echoNext.push({ id: card.id, up: card.up });
     if (this.powers.rkid) this.gainBlock(this.powers.rkid);
     if (Relics.has('skull_bongos') && this.played % 3 === 0) { const e = this.randomEnemy(); if (e) { this.flashRelic(RELICS.skull_bongos); this.damageEnemy(e, 4, { src: 'relic' }); AudioSys.sfx('hit'); } }
@@ -647,7 +646,7 @@ class Combat {
       wallI >= 0 && { title: 'BLOCK', rect: () => this.handRect(wallI), text: 'Stone Wall gives BLOCK. Block soaks damage until your next turn, then it crumbles. Block up when a big hit is coming.' },
       { title: 'HYPE', rect: { x: 8, y: 128, w: 26, h: 234 }, text: 'Landed notes fill the Hype column. At full, ENCORE plays a free solo that hits every beast for every note you land.' },
       this.run.relics.length && { title: 'RELICS', rect: { x: 12, y: 70, w: this.run.relics.length * 34 - 4, h: 30 }, text: 'Relics are charms that work all run without being played. Point at one to read it. More drop from elites and bosses.' },
-      { title: 'END TURN', rect: { x: W - 180, y: H - 60, w: 168, h: 48 }, text: 'Out of energy? End the turn and the beasts act. Beat all of them to win the fight, and gems and a new card are yours.' },
+      { title: 'END TURN', rect: { x: W - 180, y: H - 60, w: 168, h: 48 }, text: 'Out of energy? End the turn and the beasts act. Beat all of them to win the fight, and shells and a new card are yours.' },
     ];
   }
   update(dt) {

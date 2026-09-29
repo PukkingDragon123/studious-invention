@@ -146,7 +146,7 @@ class EventStage {
     }
     if (dg > 0) {
       for (let i = 0; i < Math.min(12, dg * 2); i++) this.fx.push({ kind: 'gem', t: -i * 0.06, life: 0.7, x0: src.x, y0: (src.top ?? src.y - 40) + 10, x1: H0.x, y1: H0.cy, arc: 40 + (i % 3) * 16 });
-      Toon.word(H0.x - 40, H0.top - 16, `+${dg} GEM${dg > 1 ? 'S' : ''}`, { size: 1.6, col: '#c28cff', burst: '#281040', life: 1.4 });
+      Toon.word(H0.x - 40, H0.top - 16, `+${dg} SHELL${dg > 1 ? 'S' : ''}`, { size: 1.6, col: '#e0b93a', life: 1.4 });
       yield 1;
     } else if (dg < 0) {
       for (let i = 0; i < Math.min(8, -dg * 2); i++) this.fx.push({ kind: 'gem', t: -i * 0.06, life: 0.6, x0: H0.x, y0: H0.cy, x1: src.x, y1: (src.top ?? src.y - 40) + 20, arc: 30 });
@@ -206,7 +206,7 @@ class EventStage {
     if (this.thing) this.thing.pop = Math.min(1, this.thing.pop + dt * 3);
     for (let i = this.fx.length - 1; i >= 0; i--) {
       const f = this.fx[i]; const was = f.t; f.t += dt;
-      if (f.kind === 'gem' && was < f.life && f.t >= f.life) { Particles.sparkle(f.x1, f.y1, 5, ['#c28cff', '#ffffff']); AudioSys.sfx('gem', { vol: 0.35 }); }
+      if (f.kind === 'gem' && was < f.life && f.t >= f.life) { Particles.sparkle(f.x1, f.y1, 5, ['#ffd08a', '#ffffff']); AudioSys.sfx('gem', { vol: 0.35 }); }
       if (f.t > f.life + 0.1) this.fx.splice(i, 1);
     }
     if (this.choices) for (const k of Input.keys) if (/^Digit[1-4]$/.test(k.code)) { const i = +k.code.slice(5) - 1; const c = this.choices[i]; if (c && c.ok !== false && this.choiceT > 0.3) this.pick = i; }

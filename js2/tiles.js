@@ -60,7 +60,7 @@ const TILE_KINDS = {
     land: function* (B) { const n = B.foodHeal(8); B.heal(n); B.burst('#c2333c'); AudioSys.sfx('eat'); yield 0.3; } },
   meat:    { name: 'Roast Leg', icon: 'ti_meat', desc: 'Heal {g}14{/} HP.',
     land: function* (B) { const n = B.foodHeal(14); B.heal(n); B.burst('#e06a1b'); AudioSys.sfx('eat'); yield 0.3; } },
-  gem:     { name: 'Gem Seam', icon: 'ti_gem', desc: 'Dig out {v}2{/} gems.',
+  gem:     { name: 'Ammonite Bed', icon: 'ti_gem', desc: 'Dig out {v}2{/} ammonite shells.',
     land: function* (B) { B.addGems(2); B.burst('#c28cff'); AudioSys.sfx('gem'); yield 0.3; } },
   card:    { name: 'Cave Painting', icon: 'ti_card', desc: 'Learn a new card: choose one of three.',
     land: function* (B) { yield* B.offerCards(3); } },
@@ -81,7 +81,7 @@ const TILE_KINDS = {
   tar:     { name: 'Tar Pit', icon: 'ti_tar', desc: 'Stops you dead when you walk into it. Your next roll is {r}2 less{/}.', stop: true,
     land: function* (B) { B.run.board.tarred = 2; AudioSys.sfx('slurp'); B.popup('STUCK! -2 NEXT ROLL', '#ef6a5e'); yield 0.4; } },
   battle:  { name: 'Beasts', icon: 'ti_battle', desc: 'A fight with whatever lives here.',
-    land: function* (B, t) { yield* B.startFight(t, 'normal'); } },
+    land: function* (B, t) { yield* B.startFight(t, t.elite ? 'elite' : 'normal'); } },
   dino:    { name: 'Big Dino', icon: 'ti_dino', desc: 'Something huge. Fight it for a trophy, or try your luck.',
     land: function* (B, t) { yield* B.dinoTile(t); } },
   npc:     { name: 'Stranger', icon: 'ti_npc', desc: 'Someone on the road. They might help. They might want something.',
@@ -96,10 +96,8 @@ const TILE_KINDS = {
     land: function* (B, t) { yield* B.secretTile(t); } },
   camp:    { name: 'Campfire', icon: 'ti_camp', desc: 'Rest ({g}heal 30%{/}) or practise ({g}upgrade a card{/}).',
     land: function* (B, t) { yield* B.campTile(t); } },
-  trader:  { name: 'Mammoth Trader', icon: 'ti_trader', desc: 'Trunks the mammoth trades cards, artifacts and charms for gems.', perm: true,
+  trader:  { name: 'Mammoth Trader', icon: 'ti_trader', desc: 'Trunks the mammoth trades cards, artifacts and charms for shells.', perm: true,
     land: function* (B) { yield* B.openShop(); } },
-  altar:   { name: 'Gem Altar', icon: 'ti_altar', desc: 'Press gems into your cards, for good.', perm: true,
-    land: function* (B) { yield* B.openAltar(); } },
   vine:    { name: 'Vine Swing', icon: 'ti_vine', desc: 'Grab the vine and swing {y}3 tiles{/} further on.',
     land: function* (B) { AudioSys.sfx('whoosh'); yield* B.say(B.heroName, 'AAAAA-EEE-AAAA!', { auto: 0.9 }); yield* B.slide(3, 'vine'); } },
   geyser:  { name: 'Geyser', icon: 'ti_geyser', desc: 'It blows you somewhere. Forward, mostly.',
@@ -114,7 +112,7 @@ const TILE_KINDS = {
 // Each event is a little panel: a picture, some words, two or three choices.
 // `act(B, S)` runs a choice and may set S.result (the text shown after),
 // S.fight (a fight to start when the panel closes) or yield for more.
-// {g}green{/} good, {r}red{/} bad, {y}yellow{/} things, {v}violet{/} gems.
+// {g}green{/} good, {r}red{/} bad, {y}yellow{/} things, {v}violet{/} shells.
 const BOARD_EVENTS = {
   // ------------------------------------------------------------ mysteries
   event: [
@@ -122,14 +120,14 @@ const BOARD_EVENTS = {
       text: 'Three warm eggs in a ring of stones. Something big made this nest, and it will be back.',
       choices: [
         { label: 'Take an egg', desc: 'Gain {y}Warm Egg{/}. It might hatch trouble.', act: function* (B, S) {
-          if (!B.hasRelic('egg')) { B.giveRelic('egg'); S.result = 'You tuck the egg under your arm. It hums.'; } else { B.addGems(3); S.result = 'This one is full of amber. {v}+3 gems{/}.'; }
+          if (!B.hasRelic('egg')) { B.giveRelic('egg'); S.result = 'You tuck the egg under your arm. It hums.'; } else { B.addGems(3); S.result = 'This one is full of amber. {v}+3 shells{/}.'; }
           if (chance(0.45)) { S.fight = ['raptor', 'raptor']; S.result += ' Then the ferns start moving. {r}Two raptors!{/}'; } } },
         { label: 'Leave it', desc: 'Some things are not yours. {g}+6 HP{/}.', act: function* (B, S) { B.heal(6); S.result = 'You back away. Somewhere in the ferns, something relaxes.'; } },
       ] },
     { id: 'stuck', title: 'STUCK', spr: 'brute_idle', scale: 1.2,
       text: 'A raider is sunk to the chest in mud, club still in hand, going down slowly and complaining the whole way.',
       choices: [
-        { label: 'Pull him out', desc: 'Lose {r}8 HP{/}. He pays you back.', act: function* (B, S) { B.hurt(8); B.addGems(4); const r = B.randomRelic(['common', 'uncommon']); if (r) B.giveRelic(r); S.result = `He comes free with a noise like a burp. {v}+4 gems{/}${r ? ` and his ${RELICS[r].name}` : ''}.`; } },
+        { label: 'Pull him out', desc: 'Lose {r}8 HP{/}. He pays you back.', act: function* (B, S) { B.hurt(8); B.addGems(4); const r = B.randomRelic(['common', 'uncommon']); if (r) B.giveRelic(r); S.result = `He comes free with a noise like a burp. {v}+4 shells{/}${r ? ` and his ${RELICS[r].name}` : ''}.`; } },
         { label: 'Take his lunch', desc: '{g}+10 HP{/}. He will remember.', act: function* (B, S) { B.heal(10); S.result = 'You hook his lunch with a stick. He calls you a word nobody has invented yet.'; } },
         { label: 'Walk on', desc: 'Not your mud.', act: function* (B, S) { S.result = 'The mud burps behind you.'; } },
       ] },
@@ -142,8 +140,8 @@ const BOARD_EVENTS = {
     { id: 'shiny', title: 'SOMETHING SHINY', spr: 'ti_gem', scale: 3,
       text: 'A glint at the bottom of a crack in the ground. Your arm might fit. Might.',
       choices: [
-        { label: 'Reach in', desc: 'Roll the die. 3 or more: {v}4 gems{/}. Less: {r}bitten{/}.', act: function* (B, S) { const v = yield* B.quickRoll(); if (v >= 3) { B.addGems(4); S.result = `A ${v}! Your fingers close on something cold. {v}+4 gems{/}.`; } else { B.hurt(6); S.result = `A ${v}. Something in there closes on YOUR fingers. {r}-6 HP{/}.`; } } },
-        { label: 'Poke it with a stick', desc: 'Safer. {v}+1 gem{/}.', act: function* (B, S) { B.addGems(1); S.result = 'The stick comes back with one small gem stuck to it, and teeth marks.'; } },
+        { label: 'Reach in', desc: 'Roll the die. 3 or more: {v}4 shells{/}. Less: {r}bitten{/}.', act: function* (B, S) { const v = yield* B.quickRoll(); if (v >= 3) { B.addGems(4); S.result = `A ${v}! Your fingers close on something cold. {v}+4 shells{/}.`; } else { B.hurt(6); S.result = `A ${v}. Something in there closes on YOUR fingers. {r}-6 HP{/}.`; } } },
+        { label: 'Poke it with a stick', desc: 'Safer. {v}+1 shell{/}.', act: function* (B, S) { B.addGems(1); S.result = 'The stick comes back with one small ammonite stuck to it, and teeth marks.'; } },
       ] },
     { id: 'storm', title: 'THE SKY RUMBLES', spr: 'art_bolt', scale: 3,
       text: 'Black clouds, all at once. The rain comes in sideways, and the ground around you turns to puddles.',
@@ -154,7 +152,7 @@ const BOARD_EVENTS = {
     { id: 'drum', title: 'A HOLLOW LOG', spr: 'h_drum', scale: 1.6,
       text: 'A log, hollowed out and stretched with hide. Someone left their drum in the middle of nowhere.',
       choices: [
-        { label: 'Play it', desc: 'A {y}riff challenge{/}. Nail it for a relic.', act: function* (B, S) { const r = yield* B.riffChallenge({ bars: 1, density: 1, title: 'THE LOG DRUM' }); if (r && r.acc > 0.66) { const id = B.randomRelic(['uncommon', 'rare']); if (id) { B.giveRelic(id); S.result = `The whole valley hears it. {y}${RELICS[id].name}{/} rolls out of the log.`; } } else { B.addGems(1); S.result = 'It sounds like a log. You find {v}1 gem{/} inside anyway.'; } } },
+        { label: 'Play it', desc: 'A {y}riff challenge{/}. Nail it for a relic.', act: function* (B, S) { const r = yield* B.riffChallenge({ bars: 1, density: 1, title: 'THE LOG DRUM' }); if (r && r.acc > 0.66) { const id = B.randomRelic(['uncommon', 'rare']); if (id) { B.giveRelic(id); S.result = `The whole valley hears it. {y}${RELICS[id].name}{/} rolls out of the log.`; } } else { B.addGems(1); S.result = 'It sounds like a log. You find {v}1 shell{/} inside anyway.'; } } },
         { label: 'Leave it', desc: 'Not your drum.', act: function* (B, S) { S.result = 'You walk on. Behind you, something thumps it once.'; } },
       ] },
     { id: 'shortcut', title: 'A HIDDEN TRAIL', spr: 'v_signpost', scale: 1.6,
@@ -187,7 +185,7 @@ const BOARD_EVENTS = {
     { id: 'shaman', title: 'MOONWHISKER THE SHAMAN', spr: 'elder_idle', scale: 1.4,
       text: 'He has bones in his hair and bees in his beard. "I can make your deck lighter," he says. "For a price."',
       choices: [
-        { label: 'Remove a card', desc: 'Costs {v}2 gems{/}.', cond: B => B.run.gems >= 2, act: function* (B, S) { const c = yield* B.pickCard('REMOVE A CARD', () => true); if (c) { B.run.gems -= 2; B.removeCard(c); S.result = `He eats ${c.def.name}. You try not to watch.`; } else S.result = 'You keep your cards.'; } },
+        { label: 'Remove a card', desc: 'Costs {v}2 shells{/}.', cond: B => B.run.gems >= 2, act: function* (B, S) { const c = yield* B.pickCard('REMOVE A CARD', () => true); if (c) { B.run.gems -= 2; B.removeCard(c); S.result = `He eats ${c.def.name}. You try not to watch.`; } else S.result = 'You keep your cards.'; } },
         { label: 'Ask for a blessing', desc: 'Gain a random {y}charm{/}.', act: function* (B, S) { yield* B.findCharm(true); S.result = 'He blows smoke in your face. You feel lucky, and slightly dizzy.'; } },
         { label: 'Leave', desc: 'The bees are looking at you.', act: function* (B, S) { S.result = 'The bees watch you go.'; } },
       ] },
@@ -195,18 +193,18 @@ const BOARD_EVENTS = {
       text: 'A small kid with a big stick. "Have you seen my mum? She is tall and she yells a lot."',
       choices: [
         { label: 'Help look', desc: 'Your next roll is {r}1{/}. Gain {y}a relic{/}.', act: function* (B, S) { B.run.board.forceNext = 1; const id = B.randomRelic(['common', 'uncommon']); if (id) B.giveRelic(id); S.result = `You find her mum behind the next rock. She gives you {y}${id ? RELICS[id].name : 'a hug'}{/} and yells at the kid.`; } },
-        { label: 'Point the way', desc: '{v}+1 gem{/} from the kid, for some reason.', act: function* (B, S) { B.addGems(1); S.result = 'The kid pays you with a shiny pebble. It is a gem.'; } },
+        { label: 'Point the way', desc: '{v}+1 shell{/} from the kid, for some reason.', act: function* (B, S) { B.addGems(1); S.result = 'The kid pays you with a shiny pebble. It is a gem.'; } },
       ] },
     { id: 'rival', title: 'GRONK THE RIVAL', spr: 'brute_idle', scale: 1.3,
-      text: '"You call that an instrument?" Gronk has a bigger one. Of course he does. "Play-off. Winner takes a gem pouch."',
+      text: '"You call that an instrument?" Gronk has a bigger one. Of course he does. "Play-off. Winner takes a shell pouch."',
       choices: [
-        { label: 'Play-off', desc: 'A {y}hard riff{/}. Win {v}5 gems{/}, lose {r}5 HP{/}.', act: function* (B, S) { const r = yield* B.riffChallenge({ bars: 1, density: 2, title: 'PLAY-OFF' }); if (r && r.acc > 0.6) { B.addGems(5); S.result = 'Gronk cries a little. {v}+5 gems{/}.'; } else { B.hurt(5); S.result = 'Gronk wins, and hits you with his instrument. {r}-5 HP{/}.'; } } },
+        { label: 'Play-off', desc: 'A {y}hard riff{/}. Win {v}5 shells{/}, lose {r}5 HP{/}.', act: function* (B, S) { const r = yield* B.riffChallenge({ bars: 1, density: 2, title: 'PLAY-OFF' }); if (r && r.acc > 0.6) { B.addGems(5); S.result = 'Gronk cries a little. {v}+5 shells{/}.'; } else { B.hurt(5); S.result = 'Gronk wins, and hits you with his instrument. {r}-5 HP{/}.'; } } },
         { label: 'Just punch him', desc: 'A {r}fight{/}.', act: function* (B, S) { S.fight = ['brute']; S.result = 'Gronk raises his club. Fine.'; } },
       ] },
     { id: 'bird', title: 'A TALKING BIRD', spr: 'dodo_idle', scale: 1.8,
-      text: 'A dodo on a rock. "I have seen a big lady go by," it says. "Big teeth. Glasses. Carrying people. For a gem I will tell you a shortcut."',
+      text: 'A dodo on a rock. "I have seen a big lady go by," it says. "Big teeth. Glasses. Carrying people. For a shell I will tell you a shortcut."',
       choices: [
-        { label: 'Pay the bird', desc: '{v}1 gem{/}: your next roll is {y}doubled{/}.', cond: B => B.run.gems >= 1, act: function* (B, S) { B.run.gems -= 1; B.run.board.doubleNext = true; S.result = '"Left at the bone, right at the other bone." It is somehow useful.'; } },
+        { label: 'Pay the bird', desc: '{v}1 shell{/}: your next roll is {y}doubled{/}.', cond: B => B.run.gems >= 1, act: function* (B, S) { B.run.gems -= 1; B.run.board.doubleNext = true; S.result = '"Left at the bone, right at the other bone." It is somehow useful.'; } },
         { label: 'Eat the bird', desc: '{g}+12 HP{/}. Ethically dubious.', act: function* (B, S) { B.heal(12); S.result = 'It was a very small bird. You feel a bit bad. A bit.'; } },
       ] },
   ],
@@ -215,7 +213,7 @@ const BOARD_EVENTS = {
     { id: 'river', title: 'THE RIVER', spr: 'tile_water', scale: 3,
       text: 'The river is fast and cold. There is a log bridge downstream, and it looks rotten.',
       choices: [
-        { label: 'Wade across', desc: 'You get {b}wet feet{/}. Find {v}2 gems{/} in the shallows.', act: function* (B, S) { B.touch('wet', 2); B.addGems(2); S.result = 'Cold. Very cold. But the riverbed is full of pretty stones.'; } },
+        { label: 'Wade across', desc: 'You get {b}wet feet{/}. Find {v}2 shells{/} in the shallows.', act: function* (B, S) { B.touch('wet', 2); B.addGems(2); S.result = 'Cold. Very cold. But the riverbed is full of pretty stones.'; } },
         { label: 'Risk the bridge', desc: 'Roll: 3+ you cross, less: {r}-8 HP{/}.', act: function* (B, S) { const v = yield* B.quickRoll(); if (v >= 3) S.result = 'The bridge holds. Just.'; else { B.hurt(8); B.touch('wet', 1); S.result = 'The bridge does not hold. Neither do you. {r}-8 HP{/}.'; } } },
       ] },
     { id: 'mammoth', title: 'A SLEEPING MAMMOTH', spr: 'mammoth_idle', scale: 1.1,
@@ -228,12 +226,12 @@ const BOARD_EVENTS = {
       text: 'Two cave mouths side by side. One smells of flowers. One smells of lunch. Neither smells safe.',
       choices: [
         { label: 'The flowery one', desc: '{g}Heal 12{/}, or {r}a fight{/}. Half and half.', act: function* (B, S) { if (chance(0.5)) { B.heal(12); S.result = 'A little meadow, inside a mountain. You lie down for a bit.'; } else { S.fight = B.encounter('normal'); S.result = 'The flowers have teeth. {r}Fight!{/}'; } } },
-        { label: 'The lunchy one', desc: '{v}+3 gems{/}, or {r}-10 HP{/}. Half and half.', act: function* (B, S) { if (chance(0.5)) { B.addGems(3); S.result = 'Somebody\'s larder, and somebody\'s gems. {v}+3{/}.'; } else { B.hurt(10); S.result = 'The lunch was a bear. {r}-10 HP{/}.'; } } },
+        { label: 'The lunchy one', desc: '{v}+3 shells{/}, or {r}-10 HP{/}. Half and half.', act: function* (B, S) { if (chance(0.5)) { B.addGems(3); S.result = 'Somebody\'s larder, and somebody\'s shells. {v}+3{/}.'; } else { B.hurt(10); S.result = 'The lunch was a bear. {r}-10 HP{/}.'; } } },
       ] },
     { id: 'toll', title: 'THE BONE TOLL', spr: 'v_skull', scale: 2,
       text: 'A skull on a pole, and a sign: PAY OR PLAY. Under it, a raider picking his teeth.',
       choices: [
-        { label: 'Pay', desc: 'Lose {v}2 gems{/}. Gain a {y}charm{/}.', cond: B => B.run.gems >= 2, act: function* (B, S) { B.run.gems -= 2; yield* B.findCharm(true); S.result = 'He hands you a pouch "for your trouble". It is the nicest thing a raider has ever done.'; } },
+        { label: 'Pay', desc: 'Lose {v}2 shells{/}. Gain a {y}charm{/}.', cond: B => B.run.gems >= 2, act: function* (B, S) { B.run.gems -= 2; yield* B.findCharm(true); S.result = 'He hands you a pouch "for your trouble". It is the nicest thing a raider has ever done.'; } },
         { label: 'Play', desc: 'A {r}fight{/}, and his whole toll pot if you win.', act: function* (B, S) { S.fight = ['brute']; S.bonusGems = 4; S.result = 'He cracks his knuckles.'; } },
       ] },
     { id: 'berries', title: 'STRANGE BERRIES', spr: 'ti_berries', scale: 3,
@@ -249,7 +247,7 @@ const BOARD_EVENTS = {
       text: 'The cave goes down and down. You can hear water, and something breathing, and your own heart.',
       choices: [
         { label: 'Go deep', desc: 'A {r}hard fight{/} guarding a {y}rare relic{/}.', act: function* (B, S) { S.fight = B.encounter('elite'); S.relicWin = ['rare', 'uncommon']; S.result = 'The breathing stops. Something stands up in the dark.'; } },
-        { label: 'Poke around the entrance', desc: '{v}+2 gems{/}. You get {p}cave dust{/} on you.', act: function* (B, S) { B.addGems(2); B.touch('dark', 1); S.result = 'Two gems in the gravel, and a lot of bat droppings.'; } },
+        { label: 'Poke around the entrance', desc: '{v}+2 shells{/}. You get {p}cave dust{/} on you.', act: function* (B, S) { B.addGems(2); B.touch('dark', 1); S.result = 'Two shells in the gravel, and a lot of bat droppings.'; } },
       ] },
     { id: 'echo', title: 'THE ECHO CAVE', spr: 'v_cave', scale: 1.3,
       text: 'Every sound comes back three times. Somebody painted a big smiling face on the back wall.',
@@ -260,7 +258,7 @@ const BOARD_EVENTS = {
     { id: 'hoard', title: 'A RAIDER HOARD', spr: 'v_basket', scale: 2,
       text: 'Baskets and pots and bones piled to the roof. The raiders who own it are asleep. Mostly.',
       choices: [
-        { label: 'Fill your arms', desc: '{v}+5 gems{/} and a {y}charm{/}, then a {r}fight{/}.', act: function* (B, S) { B.addGems(5); yield* B.findCharm(true); S.fight = ['brute', 'brute']; S.result = 'You drop a pot. Everyone wakes up.'; } },
+        { label: 'Fill your arms', desc: '{v}+5 shells{/} and a {y}charm{/}, then a {r}fight{/}.', act: function* (B, S) { B.addGems(5); yield* B.findCharm(true); S.fight = ['brute', 'brute']; S.result = 'You drop a pot. Everyone wakes up.'; } },
         { label: 'Take one thing', desc: 'A random {y}artifact{/}.', act: function* (B, S) { const id = B.randomRelic(['common', 'uncommon']); if (id) B.giveRelic(id); S.result = `You slip out with {y}${id ? RELICS[id].name : 'nothing'}{/}.`; } },
       ] },
   ],

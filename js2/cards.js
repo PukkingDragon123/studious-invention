@@ -234,23 +234,6 @@ const CARDS = {
     effect: function* (c, card, t, r) { const d = card.v.per * (r ? r.hits : 6); Juice.flash('#ffb0cf', 0.6, 3); Juice.shake(12, 0.6); AudioSys.sfx('encore'); yield* c.dealAll(d, { heavy: true }); } },
 };
 
-// Enchantments: a gem pressed into the stone. Each one is a small, permanent
-// change to one card, bought at an altar with gems you dug out of the valley.
-const ENCHANTS = {
-  flint:   { name: 'Flint',   col: '#ef6a5e', lit: '#ffb0a8', text: '+3 damage',
-    ok: v => v.dmg != null || v.min != null,
-    apply: v => { if (v.dmg != null) v.dmg += 3; if (v.min != null) { v.min += 3; v.max += 3; } } },
-  granite: { name: 'Granite', col: '#6aa9ee', lit: '#a8d8ff', text: '+4 block',
-    ok: v => v.block != null,
-    apply: v => { v.block += 4; } },
-  feather: { name: 'Feather', col: '#a8e878', lit: '#e8ffd0', text: 'costs 1 less',
-    ok: v => v.cost > 0,
-    apply: v => { v.cost = Math.max(0, v.cost - 1); } },
-  amber:   { name: 'Amber',   col: '#ffa832', lit: '#ffe98a', text: 'draws a card when played',
-    ok: () => true,
-    apply: v => { v.enchDraw = (v.enchDraw || 0) + 1; } },
-};
-const ENCHANT_COST = 3;
 
 const Cards = {
   uid: 1,
@@ -259,23 +242,13 @@ const Cards = {
     const def = c.def || CARDS[c.id]; c.def = def;
     const v = Object.assign({ cost: def.cost }, deepClone(def.v || {}));
     if (c.up && def.up) def.up(v);
-    if (c.ench && ENCHANTS[c.ench]) ENCHANTS[c.ench].apply(v);
     c.v = v; c.cost = v.cost; c.name = def.name + (c.up ? '+' : '');
     return c;
   },
-  // can this card take this enchantment? (a card holds one gem)
-  canEnchant(c, id) {
-    if (c.ench) return false;
-    const def = c.def || CARDS[c.id];
-    const v = Object.assign({ cost: def.cost }, deepClone(def.v || {}));
-    if (c.up && def.up) def.up(v);
-    return !!(ENCHANTS[id] && ENCHANTS[id].ok(v));
-  },
-  enchant(c, id) { c.ench = id; this.refresh(c); return c; },
-  fromSave(s) { const c = this.make(s.id, s.up); if (s.ench) this.enchant(c, s.ench); return c; },
-  toSave(c) { return c.ench ? { id: c.id, up: !!c.up, ench: c.ench } : { id: c.id, up: !!c.up }; },
+  fromSave(s) { return this.make(s.id, s.up); },
+  toSave(c) { return { id: c.id, up: !!c.up }; },
   dmg(base, c) { return c ? String(c.previewDamage(base)) : String(base); },
-  desc(c, combat) { const d = c.def.desc(c.v, combat || null); return c.v.enchDraw ? `${d} {g}Draw ${c.v.enchDraw}.{/}` : d; },
+  desc(c, combat) { return c.def.desc(c.v, combat || null); },
   // the cards a hero can be dealt: the family's shared ones and their own
   pool(rarity, hero) { return Object.keys(CARDS).filter(k => CARDS[k].rarity === rarity && (!CARDS[k].hero || CARDS[k].hero === hero)); },
   randomReward(rng, n = 3, exclude = [], hero, boost = 0) {
@@ -418,15 +391,6 @@ const Cards = {
     if (c.def.exhaust && !c.v.noExhaust) Gfx.sprite('icon_fire', ax + aw - 9, ay + 10, { anchor: 'c', scale: 0.8, tint: '#ffa832', tintAmount: 0.5 });
     if (c.def.terrain && TERRAIN[c.def.terrain]) { const T = TERRAIN[c.def.terrain]; Gfx.rect(ax + 3, ay + ah - 10, 22 * s, 7, STONE.ink); Gfx.rect(ax + 4, ay + ah - 9, 20 * s, 5, T.col); }
     if (c.echoCopy) { ctx.globalAlpha = (o.alpha ?? 1) * 0.28; this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.fillStyle = '#86e8d2'; ctx.fill(); ctx.globalAlpha = o.alpha ?? 1; }
-    // an enchanted card has its gem set into the bottom edge, and it glints
-    if (c.ench && ENCHANTS[c.ench]) {
-      const E = ENCHANTS[c.ench], gx = x + w / 2, gy = y + h - 7;
-      Gfx.glow(gx, gy, 22 * s, E.col, 0.35 + Math.sin(Time.t * 4 + c.uid) * 0.12);
-      Gfx.circle(gx, gy, 7 * s, STONE.ink);
-      Gfx.circle(gx, gy, 5.5 * s, E.col);
-      Gfx.circle(gx - 1.6 * s, gy - 1.6 * s, 2.2 * s, E.lit);
-      if (((Time.t * 0.7 + c.uid * 0.37) % 1) < 0.08) Gfx.rect(gx + 2 * s, gy - 4 * s, 2, 2, '#ffffff');
-    }
     if (o.hover || o.selected) { ctx.save(); this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.strokeStyle = o.selected ? '#ffe98a' : '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore(); }
     else if (o.playable) { ctx.save(); this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.globalAlpha = (o.alpha ?? 1) * 0.75; ctx.strokeStyle = '#a8e878'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
     if (o.alpha !== undefined) ctx.globalAlpha = 1;

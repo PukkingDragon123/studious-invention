@@ -8,7 +8,7 @@
 //   - everything sits on an 8px grid, 12px in from the screen edge
 //   - one plate per job, never stacked, never more than three corners used
 //   - text on glass is always light; colour carries meaning (red life,
-//     green breath, blue energy, purple gems, pink hype)
+//     green breath, blue energy, golden shells, pink hype)
 // ---------------------------------------------------------------------------
 'use strict';
 
@@ -19,7 +19,7 @@ const HUD = {
     ink: '#07050a', rim: '#3b3048', gold: '#e0b93a', goldDim: '#8a6a1c',
     text: '#fffaea', dim: '#a79bb4', faint: '#6e6b80',
     life: '#e0404a', lifeDark: '#5c1420', breath: '#58c85a', breathDark: '#14331e',
-    energy: '#5aa2ff', hype: '#ff7ab8', shell: '#ffe98a', gem: '#c28cff',
+    energy: '#5aa2ff', hype: '#ff7ab8', shell: '#ffe98a', gem: '#ffd08a',
   },
   // A plate of dark glass. Corners are cut, not rounded: it is still a stone
   // age, the glass is obsidian.
@@ -79,13 +79,9 @@ const HUD = {
     UI.hit(x, y, w, h, cb, { disabled: o.disabled });
     return hov;
   },
-  // the gem, drawn by hand rather than from the sheet: the only money there is
-  gem(x, y, s = 1) {
-    const c = Gfx.ctx;
-    c.fillStyle = HUD.C.ink; c.beginPath(); c.moveTo(x, y - 9 * s); c.lineTo(x + 7 * s, y); c.lineTo(x, y + 9 * s); c.lineTo(x - 7 * s, y); c.fill();
-    c.fillStyle = '#7c3eb2'; c.beginPath(); c.moveTo(x, y - 7 * s); c.lineTo(x + 5 * s, y); c.lineTo(x, y + 7 * s); c.lineTo(x - 5 * s, y); c.fill();
-    c.fillStyle = HUD.C.gem; c.beginPath(); c.moveTo(x, y - 7 * s); c.lineTo(x - 5 * s, y); c.lineTo(x, y); c.fill();
-  },
+  // the money: an ammonite shell
+  // (it is an ammonite shell now: the name stayed, the money changed)
+  gem(x, y, s = 1) { Gfx.sprite('ti_gem', x, y, { anchor: 'c', scale: 0.9 * s }); },
   // A face in a round frame: whose status this is.
   portrait(cx, cy, r, spr, o = {}) {
     const c = Gfx.ctx;

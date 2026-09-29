@@ -27,7 +27,7 @@ const BIOMES = {
     base: 'grass', ground: 'meadow', music: 'map', weather: 'pollen',
     features: [{ type: 'river', at: 0.2 }, { type: 'rocks', at: 0.46, w: 120 }, { type: 'river', at: 0.7 }, { type: 'bones', at: 0.88, w: 70 }],
     forks: [['stone', 'grass'], ['wet', 'grass'], ['grass', 'bone']],
-    weights: { path: 13, berries: 7, meat: 2, gem: 9, card: 6, charm: 6, trap: 4, rocks: 2, battle: 10, event: 11, npc: 6, choice: 6, totem: 2, vine: 2 },
+    weights: { path: 13, berries: 7, meat: 2, gem: 6, card: 6, charm: 6, trap: 4, rocks: 2, battle: 17, event: 11, npc: 6, choice: 6, totem: 2, vine: 2 },
     dinos: ['boar', 'raptor'], nDinos: 2,
     boss: { ids: ['blaze'], name: 'BLAZE', sub: 'the family cook, gone feral', spr: 'blaze_boss', rescue: 1 },
     sky: ['#2b5aa6', '#3f74c0', '#5a92d6', '#7eb0e6', '#a8cff2', '#d4ecfa'],
@@ -45,7 +45,7 @@ const BIOMES = {
     base: 'grass', ground: 'jungle', music: 'event', weather: 'rain',
     features: [{ type: 'river', at: 0.14, w: 1.3 }, { type: 'cave', at: 0.4, w: 90 }, { type: 'river', at: 0.56 }, { type: 'river', at: 0.84, w: 1.2 }],
     forks: [['wet', 'grass'], ['dark', 'wet'], ['grass', 'wet']],
-    weights: { path: 12, berries: 8, meat: 2, gem: 9, card: 6, charm: 6, trap: 5, rocks: 1, battle: 11, event: 11, npc: 5, choice: 6, totem: 2, vine: 4, geyser: 2 },
+    weights: { path: 12, berries: 8, meat: 2, gem: 6, card: 6, charm: 6, trap: 5, rocks: 1, battle: 18, event: 11, npc: 5, choice: 6, totem: 2, vine: 4, geyser: 2 },
     dinos: ['raptor', 'ptero', 'stego'], nDinos: 3,
     boss: { ids: ['horace'], name: 'HORACE', sub: 'a triceratops who has had enough', spr: 'tricera_idle', rescue: 2 },
     sky: ['#17333a', '#1f4648', '#2a5a58', '#3a716a', '#548a7e', '#76a494'],
@@ -63,7 +63,7 @@ const BIOMES = {
     base: 'sand', ground: 'sand', music: 'village', weather: 'heat',
     features: [{ type: 'bones', at: 0.16, w: 150 }, { type: 'tar', at: 0.34 }, { type: 'vents', at: 0.52, w: 100 }, { type: 'bones', at: 0.7, w: 160 }, { type: 'tar', at: 0.86 }],
     forks: [['bone', 'sand'], ['hot', 'stone'], ['sand', 'bone']],
-    weights: { path: 12, berries: 4, meat: 3, gem: 10, card: 6, charm: 6, trap: 6, rocks: 3, battle: 11, event: 11, npc: 5, choice: 6, totem: 2, vine: 1, tar: 3 },
+    weights: { path: 12, berries: 4, meat: 3, gem: 7, card: 6, charm: 6, trap: 6, rocks: 3, battle: 18, event: 11, npc: 5, choice: 6, totem: 2, vine: 1, tar: 3 },
     dinos: ['lizard', 'tarblob', 'raptor'], nDinos: 3,
     boss: { ids: ['tarking'], name: 'THE TAR KING', sub: 'he rose out of the pit and never stopped', spr: 'tarblob_idle', rescue: 3 },
     sky: ['#5c2a2a', '#8a3a2a', '#b8582e', '#d67a3a', '#eaa052', '#f4c67a'],
@@ -81,7 +81,7 @@ const BIOMES = {
     base: 'stone', ground: 'snow', music: 'rest', weather: 'snow',
     features: [{ type: 'ice', at: 0.18 }, { type: 'river', at: 0.36, w: 0.8 }, { type: 'ice', at: 0.54 }, { type: 'cave', at: 0.7, w: 110 }, { type: 'ice', at: 0.88 }],
     forks: [['ice', 'stone'], ['dark', 'ice'], ['stone', 'ice']],
-    weights: { path: 12, berries: 3, meat: 4, gem: 10, card: 6, charm: 7, trap: 5, rocks: 4, battle: 11, event: 11, npc: 5, choice: 6, totem: 2, vine: 1 },
+    weights: { path: 12, berries: 3, meat: 4, gem: 7, card: 6, charm: 7, trap: 5, rocks: 4, battle: 18, event: 11, npc: 5, choice: 6, totem: 2, vine: 1 },
     dinos: ['mammothw', 'ptero', 'raptor'], nDinos: 3,
     boss: { ids: ['rexmond'], name: 'REXMOND', sub: "Grandma's other grandson. He heard.", spr: 'trex_idle', rescue: 0 },
     sky: ['#4a5a8a', '#5c6e9e', '#7084b2', '#8a9cc4', '#a8b8d8', '#cad6ea'],
@@ -100,7 +100,7 @@ const BIOMES = {
     base: 'stone', ground: 'ash', music: 'blaze', weather: 'ash',
     features: [{ type: 'lava', at: 0.14 }, { type: 'bones', at: 0.3, w: 90 }, { type: 'lava', at: 0.46 }, { type: 'cave', at: 0.62, w: 120 }, { type: 'lava', at: 0.8 }],
     forks: [['hot', 'dark'], ['bone', 'hot'], ['dark', 'stone']],
-    weights: { path: 12, berries: 3, meat: 4, gem: 10, card: 6, charm: 6, trap: 6, rocks: 4, battle: 12, event: 10, npc: 4, choice: 6, totem: 2, geyser: 3, tar: 1 },
+    weights: { path: 12, berries: 3, meat: 4, gem: 7, card: 6, charm: 6, trap: 6, rocks: 4, battle: 19, event: 10, npc: 4, choice: 6, totem: 2, geyser: 3, tar: 1 },
     dinos: ['trex', 'lizard', 'raptor'], nDinos: 3,
     boss: { ids: ['grandma'], name: 'GRANDMA REX', sub: 'she only wanted her boy back', spr: 'grandma_idle', rescue: 0, final: true },
     sky: ['#1a0a14', '#2e0e18', '#4a1418', '#6e1e18', '#94301a', '#b8481e'],
@@ -217,7 +217,7 @@ const Board = {
     const byIdx = f => { const want = Math.round(f * (idx - 1)); let best = null, bd = 1e9; for (const t of mainT) { if (t.kind !== 'path') continue; const d = Math.abs(t.idx - want); if (d < bd) { bd = d; best = t; } } return best; };
     const place = (f, kind) => { const t = byIdx(f); if (t) t.kind = kind; return t; };
     place(0.36 + R.float(-0.06, 0.06), 'trader');
-    place(0.62 + R.float(-0.05, 0.05), 'altar');
+    { const el = place(0.62 + R.float(-0.05, 0.05), 'battle'); if (el) el.elite = true; }
     place(0.5 + R.float(-0.04, 0.04), 'camp');
     const pre = tiles.find(t => t.next.includes(boss.id)); if (pre && pre.kind === 'path') pre.kind = 'camp';
     // two big dinos, off in the lanes if there is a lane to put them in
@@ -258,7 +258,7 @@ const Board = {
     }
     // at least a few fights, spread out, even on a lucky seed
     const fights = ordered.filter(t => t.kind === 'battle').length;
-    for (let i = fights; i < 4 + b; i++) {
+    for (let i = fights; i < 7 + b; i++) {
       const cand = ordered.filter(t => t.kind === 'path' && t.idx > 4);
       if (!cand.length) break;
       R.pick(cand).kind = 'battle';

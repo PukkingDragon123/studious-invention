@@ -4,8 +4,7 @@
 //   BoardSky          the sky, the far country and the lair on the horizon,
 //                     the water and lava moving, the lights, the grade
 //   CardOfferOverlay  pick one of three cards, or none
-//   TraderOverlay     Trunks the mammoth, who only takes gems
-//   EnchantOverlay    the gem altar: press a gem into a card, for good
+//   TraderOverlay     Trunks the mammoth, who only takes ammonite shells
 //   HeroSelectScene   the family, before dinner: pick who you are
 // ---------------------------------------------------------------------------
 'use strict';
@@ -235,12 +234,12 @@ class TraderOverlay {
     for (let i = 0; i < 2; i++) this.stock.push({ kind: 'charm', id: rng.pick(CHARM_KEYS), price: 2, key: 'h' + i });
     this.stock.push({ kind: 'heal', price: 2, key: 'heal', label: 'A gourd of something warm', desc: 'Heal {g}20{/} HP.' });
     this.stock.push({ kind: 'remove', price: 3, key: 'rm', label: 'Trunks eats a card', desc: 'Remove a card from your deck.' });
-    this.msg = pick(['Ooo-ga. Trunk picked. Very fresh.', 'Gems only. Trunks has no use for pebbles.', 'Everything must go. Trunks is tired of carrying it.']);
+    this.msg = pick(['Ooo-ga. Trunk picked. Very fresh.', 'Shells only. Trunks has no use for pebbles.', 'Everything must go. Trunks is tired of carrying it.']);
   }
   sold(it) { return !!Game.run.board.shop.sold[it.key]; }
   buy(it) {
     const run = Game.run;
-    if ((run.gems || 0) < it.price) { AudioSys.sfx('error'); this.msg = 'No gems, no shopping. Trunks is firm.'; return false; }
+    if ((run.gems || 0) < it.price) { AudioSys.sfx('error'); this.msg = 'No shells, no shopping. Trunks is firm.'; return false; }
     run.gems -= it.price; AudioSys.sfx('gem');
     if (it.kind !== 'heal' && it.kind !== 'remove') run.board.shop.sold[it.key] = 1;
     Particles.spawn(Input.mx, Input.my, { n: 14, color: ['#c28cff', '#ffffff'], speed: 90, gravity: -30, life: 0.7, size: 3, shape: 'star', sizeEnd: 0, world: false });
@@ -295,7 +294,7 @@ class TraderOverlay {
           else if (it.kind === 'charm') { if (Game.run.board.charms.length >= 3) { AudioSys.sfx('error'); this.msg = 'Your pouch is full. Trunks cannot make it bigger.'; return; } if (this.buy(it)) { Game.run.board.charms.push(it.id); this.msg = 'Lucky. Probably.'; } }
           else if (it.kind === 'heal') { if (run.hp >= run.maxHp) { this.msg = 'You look fine. Trunks is a trader, not a doctor.'; return; } if (this.buy(it)) { run.hp = Math.min(run.maxHp, run.hp + 20); AudioSys.sfx('heal'); this.msg = 'Drink. Do not ask what is in it.'; } }
           else {
-            if ((run.gems || 0) < it.price) { AudioSys.sfx('error'); this.msg = 'No gems, no shopping.'; return; }
+            if ((run.gems || 0) < it.price) { AudioSys.sfx('error'); this.msg = 'No shells, no shopping.'; return; }
             const back = this;
             Game.overlay = new DeckOverlay(run.deck.slice(), 'FEED A CARD TO TRUNKS', { onPick: c => {
               run.gems -= it.price; const i = run.deck.indexOf(c); if (i >= 0) run.deck.splice(i, 1);
@@ -309,75 +308,9 @@ class TraderOverlay {
     // your gems
     HUD.plate(r.x + r.w - 150, r.y + r.h - 50, 140, 40, { gold: false, accent: HUD.C.gem });
     HUD.gem(r.x + r.w - 126, r.y + r.h - 30, 1.2);
-    HUD.text(`${run.gems || 0} GEMS`, r.x + r.w - 104, r.y + r.h - 38, { color: HUD.C.gem, scale: 1.4 });
+    HUD.text(`${run.gems || 0} SHELLS`, r.x + r.w - 104, r.y + r.h - 38, { color: HUD.C.gem, scale: 1.4 });
     UI.wbutton(r.x + r.w - 350, r.y + r.h - 52, 190, 44, 'BACK TO THE ROAD', () => this.close(), { scale: 1.1 });
     if (zoom) Cards.zoom(zoom, W / 2, H / 2 + 40);
   }
 }
 
-// --------------------------------------------------------- the gem altar
-class EnchantOverlay {
-  constructor() { this.card = null; this.scroll = 0; this.t = 0; }
-  update(dt) {
-    this.t += dt;
-    if (!this.card) {
-      const rows = Math.ceil(Game.run.deck.length / 6);
-      this.scroll = clamp(this.scroll + Input.wheel * 50 - Input.dragDY, 0, Math.max(0, rows * (CARD_H + 18) - 310));
-    }
-    if (Input.pressed('Escape')) { if (this.card) this.card = null; else Game.overlay = null; }
-  }
-  draw() {
-    const run = Game.run;
-    Gfx.rectA(0, 0, W, H, '#120c16', 0.82);
-    const r = UI.window(24, 20, W - 48, H - 40, 'THE GEM ALTAR', { onClose: () => { Game.overlay = null; } });
-    const gx = r.x + r.w - 150;
-    HUD.gem(gx + 10, r.y + 10, 1.1);
-    Gfx.text(`${run.gems || 0} GEMS`, gx + 30, r.y + 4, { color: SKIN.text, scale: 1.4 });
-    if (!this.card) {
-      Gfx.text(`Pick a card to enchant  -  ${ENCHANT_COST} gems`, r.x + 8, r.y + 4, { color: SKIN.textDim, scale: 1.2 });
-      const TOP = r.y + 28, BOT = r.y + r.h - 54;
-      const ctx = Gfx.ctx; ctx.save(); ctx.beginPath(); ctx.rect(r.x, TOP, r.w, BOT - TOP); ctx.clip();
-      const list = run.deck.slice().sort((a, b) => (a.ench ? 1 : 0) - (b.ench ? 1 : 0) || a.cost - b.cost || a.name.localeCompare(b.name));
-      let zoom = null;
-      list.forEach((c, i) => {
-        const x = r.x + 18 + (i % 6) * (CARD_W + 24), y = TOP + 6 + Math.floor(i / 6) * (CARD_H + 18) - this.scroll;
-        if (y > BOT || y + CARD_H < TOP) return;
-        const can = !c.ench && Object.keys(ENCHANTS).some(id => Cards.canEnchant(c, id));
-        const hov = UI.hovered(x, Math.max(TOP, y), CARD_W, Math.min(CARD_H, BOT - y));
-        Cards.draw(c, x, y, { hover: hov && can, alpha: can ? 1 : 0.45 });
-        if (hov) zoom = { c, x: x + CARD_W / 2 + (x < W / 2 ? 190 : -190), y: clamp(y + CARD_H / 2, 150, 380) };
-        if (can) UI.hit(x, y, CARD_W, CARD_H, () => { this.card = c; AudioSys.sfx('select'); });
-      });
-      ctx.restore();
-      if (zoom) Cards.zoom(zoom.c, zoom.x, zoom.y);
-      UI.wbutton(W / 2 - 90, r.y + r.h - 48, 180, 44, 'LEAVE', () => { Game.overlay = null; });
-      return;
-    }
-    const c = this.card;
-    Cards.draw(c, r.x + 40, r.y + 60, { scale: 1.5 });
-    Gfx.text(c.name, r.x + 40 + CARD_W * 0.75, r.y + 36, { color: SKIN.text, align: 'center', scale: 1.4 });
-    let y = r.y + 40;
-    const x = r.x + 260, bw = r.w - 290;
-    for (const [id, E] of Object.entries(ENCHANTS)) {
-      const ok = Cards.canEnchant(c, id), afford = (run.gems || 0) >= ENCHANT_COST;
-      UI.slab(x, y, bw, 70, { r: 4, shadow: true });
-      Gfx.circle(x + 36, y + 35, 17, SKIN.ink);
-      Gfx.circle(x + 36, y + 35, 14, ok ? E.col : SKIN.faceMid);
-      Gfx.circle(x + 31, y + 30, 5, ok ? E.lit : SKIN.face);
-      Gfx.text(E.name.toUpperCase(), x + 66, y + 14, { color: ok ? SKIN.text : SKIN.faceDark, scale: 1.5 });
-      Gfx.text(ok ? E.text : 'does not fit this card', x + 66, y + 38, { color: ok ? SKIN.textDim : SKIN.faceDark, scale: 1.1 });
-      UI.wbutton(x + bw - 150, y + 14, 136, 42, afford ? `${ENCHANT_COST} GEMS` : 'NEED GEMS', () => {
-        run.gems -= ENCHANT_COST;
-        Cards.enchant(c, id);
-        AudioSys.sfx('unlock'); AudioSys.sfx('relic');
-        Juice.flash(E.col, 0.35, 3);
-        Particles.sparkle(r.x + 40 + CARD_W * 0.75, r.y + 60 + CARD_H * 0.75, 40, [E.col, E.lit, '#ffffff']);
-        Popups.add(r.x + 40 + CARD_W * 0.75, r.y + 50, `${E.name.toUpperCase()}!`, E.col, { world: false, scale: 2, life: 1.6 });
-        Game.save();
-        this.card = null;
-      }, { disabled: !ok || !afford, scale: 1.2 });
-      y += 80;
-    }
-    UI.wbutton(W / 2 - 90, r.y + r.h - 48, 180, 44, 'BACK', () => { this.card = null; });
-  }
-}

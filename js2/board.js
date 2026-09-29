@@ -226,7 +226,7 @@ class BoardScene {
   foodHeal(n) { let k = n; if (this.run.hero === 'bronk') k *= 2; return k; }
   addGems(n) {
     this.run.gems = (this.run.gems || 0) + n;
-    if (!this.stage) Popups.add(this.me.x, this.me.top - 18, `+${n} GEM${n > 1 ? 'S' : ''}`, '#c28cff', { scale: 1.5 });
+    if (!this.stage) Popups.add(this.me.x, this.me.top - 18, `+${n} SHELL${n > 1 ? 'S' : ''}`, '#ffd08a', { scale: 1.5 });
     this.gemFly = { n, t: 0 };
     AudioSys.sfx('gem');
   }
@@ -419,7 +419,7 @@ class BoardScene {
       text: 'It is lying across the road, half asleep, and it is enormous. Beat it and whatever it has been guarding is yours.',
       choices: [
         { label: 'Fight it', desc: 'A {r}hard fight{/}. Win a {y}rare artifact{/}.', ok: true },
-        { label: 'Sneak past', desc: 'Roll: {y}4 or more{/} and you are by, with {v}2 gems{/} from its bed. Less, and it wakes up angry.', ok: true },
+        { label: 'Sneak past', desc: 'Roll: {y}4 or more{/} and you are by, with {v}2 shells{/} from its bed. Less, and it wakes up angry.', ok: true },
         { label: 'Throw it some honey', desc: 'Spend your {y}Honey Lump{/}: it eats, and lets you through.', ok: this.bd.charms.includes('honey') },
       ],
     };
@@ -427,14 +427,14 @@ class BoardScene {
     if (k === 0) { if (this.stage) yield* this.stage.squareUp(D.ids); yield* this.panelResult('You square up to it. It stands. And stands. And keeps standing.', 'FIGHT!'); yield* this.fight(D.ids.slice(), { kind: 'elite', relicWin: ['rare', 'uncommon'], dino: t.id }); return; }
     if (k === 1) {
       const v = yield* this.quickRoll();
-      if (v >= 4) { this.addGems(2); yield* this.panelResult(`A ${v}. You tiptoe past on the very tips of your toes. {v}+2 gems{/} from its nest.`); return; }
+      if (v >= 4) { this.addGems(2); yield* this.panelResult(`A ${v}. You tiptoe past on the very tips of your toes. {v}+2 shells{/} from its nest.`); return; }
       if (this.stage) yield* this.stage.squareUp(D.ids);
       yield* this.panelResult(`A ${v}. You tread on its tail.`, 'RUN? NO. FIGHT!');
       yield* this.fight(D.ids.slice(), { kind: 'elite', relicWin: ['uncommon'], advantage: 'ambushed', dino: t.id });
       return;
     }
     this.bd.charms.splice(this.bd.charms.indexOf('honey'), 1);
-    yield* this.panelResult('It sniffs the honey, eats the honey, and rolls over for a nap. You step over it. It purrs. Dinosaurs can purr, it turns out. {v}+1 gem{/}.');
+    yield* this.panelResult('It sniffs the honey, eats the honey, and rolls over for a nap. You step over it. It purrs. Dinosaurs can purr, it turns out. {v}+1 shell{/}.');
     this.addGems(1);
   }
   *bossTile(t) {
@@ -461,7 +461,7 @@ class BoardScene {
       yield* this.panelResult(`Behind a rock nobody has moved in a thousand years: {y}${id ? RELICS[id].name : 'nothing'}{/}.`);
     } else if (r === 1) {
       this.addGems(6);
-      yield* this.panelResult('A crack in the rock, packed with gems like seeds in a fruit. {v}+6 gems{/}.');
+      yield* this.panelResult('A crack in the rock, packed with old ammonites like seeds in a fruit. {v}+6 shells{/}.');
     } else {
       yield* this.findCharm(true); yield* this.findCharm(true);
       yield* this.panelResult('Somebody\'s stash: two charm pouches, still tied up with grass.');
@@ -486,10 +486,6 @@ class BoardScene {
     let done = false;
     Game.overlay = new TraderOverlay(this, () => { done = true; });
     yield () => done;
-  }
-  *openAltar() {
-    Game.overlay = new EnchantOverlay();
-    yield () => !Game.overlay;
   }
   // ------------------------------------------------------------ movement
   // swing, blow or walk along the road without rolling

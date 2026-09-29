@@ -575,7 +575,7 @@ class HowToOverlay {
       ['{y}THE STORY{/}', 'The Rockbottoms were halfway through dinner - a whole roast T-Rex head - when a very large old lady knocked at the cave. It was Grandma Rex. The head was her grandson. She took three of the family and ran for her mountain. You were in the toilet.', '',
         '{y}THE ROAD{/}', 'Five lands lie between the cave and her lair. Each is a board of stone tiles. Roll the bone die and move exactly that many tiles, forward OR back. Every tile you could land on glows: click one.'],
       ['{y}FORKS AND DEAD ENDS{/}', 'The road splits into two lanes and joins again: one lane is usually easier, the other richer. Side trails climb to caves and secrets and stop dead - walk back down them next turn.', '',
-        '{y}THE TILES{/}', '{b}Blue{/} tiles help you: food, gems, cards, charms. {r}Red{/} ones hurt. {o}Orange{/} ones are fights. {p}Purple{/} ones are mysteries, strangers and crossroads. {y}Gold{/} ones are camps, the trader and the gem altar. Point at any tile to read it.'],
+        '{y}THE TILES{/}', '{b}Blue{/} tiles help you: food, shells, cards, charms. {r}Red{/} ones hurt. {o}Orange{/} ones are fights. {p}Purple{/} ones are mysteries, strangers and crossroads. {y}Gold{/} ones are camps, the trader and the gem altar. Point at any tile to read it.'],
       ['{y}THE GROUND{/}', 'Every tile has ground: grass, water, hot rock, stone, bone, ice, sand or cave. The ground you walk over each round is counted in the corner, and lots of cards and artifacts care. {b}Wet Feet{/} doubles your next lightning if you splashed through water on the way to the fight.', '',
         'Hot ground stings when you stop on it. Ice makes you slide on. Tar pits stop you dead. Beasts cannot see you in grass.'],
       ['{y}CHARMS AND THE DICE{/}', 'Charms are one-use tricks you carry, three at most. Most bend the dice: pick your number, roll two and choose, roll high, roll low, nudge it one, roll again. Some keep you out of fights.', '',
@@ -584,7 +584,7 @@ class HowToOverlay {
         '{y}RIFF CARDS{/}', 'Cards marked ♪ are riffs: hit each note as it reaches the line with D F J K, the arrows, or the pads on a phone. Better timing, bigger hit. Landed notes fill Hype, and full Hype is a free ENCORE.'],
       ['{y}THE FAMILY{/}', '{r}BRONK{/} gets angrier when hurt, and Rage adds to every hit. {p}VELA{/} plays horn cards that echo back next turn, and controls the fight. {g}PEBBLE{/} plays lots of cheap cards fast. {c}ROXY{/} soaks beasts with water and zaps them with lightning.', '',
         'Every boss you beat hands back one of the family, and they fight beside you after that.'],
-      ['{y}GEMS{/}', 'Gems are the only money. Dig them out of gem tiles, win them in fights, find them in caves. Spend them with {y}Trunks the trader{/}, or press them into your cards at a {p}gem altar{/}: flint hits harder, granite blocks more, feather costs less, amber draws a card.'],
+      ['{y}SHELLS{/}', 'Ammonite shells are the only money. Dig them out of ammonite beds, win them in fights, find them in caves, and spend them with {y}Trunks the trader{/}.'],
     ];
     let y = r.y + 10;
     for (const line of pages[this.page]) {
