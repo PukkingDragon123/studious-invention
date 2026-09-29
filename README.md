@@ -77,14 +77,33 @@ heals you after the fight.
   buttons, and whatever happens is acted out (the bite, the heal, gems flying
   across, a relic held up, beasts running on to square up).
 - **Fights are a deck of cards.** Three energy a turn, Block, statuses and
-  enemy intents you can read ahead of time. Cards marked RIFF cut to the
-  Rock-Axe: rune-stones slide down four strings into a bone strum bar, you
-  strike them on the beat with A S D F, and how well you play sets the damage.
-  Between phrases you call the chant by clicking circles as their rings close.
+  enemy intents you can read ahead of time. Cards marked RIFF cut to your
+  instrument, you play on the beat with A S D F, and how well you play sets
+  the damage. Between phrases you call the chant by clicking circles as their
+  rings close.
+- **Every instrument plays differently.** Bronk's Rib-Axe slides runes down
+  four strings and throws in power chords. Vela's Tusk Horn rolls puffs of
+  breath into the tusk, every note is a held blow, and her lungs can run
+  out. Pebble's Skull Bongos drop pebbles that hop on the beat onto four
+  skull drums, with drum rolls. Roxy's Bone Flute blows leaves in on the wind
+  to its finger holes, with trills. Three more instruments come on cards you
+  find: the **Mammoth Marimba** (mallet stones hop along rib-bone keys, with
+  gliss runs), the **Stalactite Chimes** (drips fall faster and faster onto
+  singing crystals) and the **Boom-Log** (two ends of one trunk, and a double
+  BOOM on the downbeat). Each has its own painted body, notes and synth voice.
+- **The arena takes sides.** Each land stages its own show behind the fight:
+  a waterfall and passing pteros, lightning that lights up a brachiosaurus
+  far off, a giant's ribcage under circling vultures, the aurora, an erupting
+  volcano. Every fight also leaves props lying about: a boulder on the bank,
+  a beehive, icicles, a tar pit, a lava vent, a geyser. Click one on your turn
+  (1 energy) to use it on the beasts. When a beast *eyes* a prop (a red "!"),
+  it grabs it on its turn and uses it on you, unless you use it first. The
+  last blow of a fight gets a slow-motion K.O.
 
 Controls: SPACE rolls, click or tap a glowing tile, 1-3 use charms, Q is
 Roxy's Rain Dance, and A/D or the arrow keys look along the road. In fights: 1-9 plays
-a card, E ends the turn, A S D F strums during a riff, ESC opens the menu.
+a card, click a prop to use it, E ends the turn, A S D F plays during a riff
+(hold it for the horn), ESC opens the menu.
 On touch: tap ROLL, tap a tile, and tap a card once to read it and again to play it.
 
 ## The lands
@@ -110,6 +129,16 @@ instrument. The nine combat beasts come from `tools/dinos/zoo.py`, with walk
 cycles that plant every foot; the T-Rex, Blaze, Grandma Rex, the board tiles,
 charms, artifacts and props each have their own generator.
 
+The interface is painted the same way. Panels are slabs of chiselled
+sandstone, obsidian, lashed wooden planks, stitched hide or bone, each with
+an uneven edge, a bevel, texture and a dithered shadow, not flat rounded
+rectangles. Speech bubbles are drawn per pixel in ten moods: a round one for
+talking, a bouncing one with sparkles when happy, a drooping one that drips
+when sad, a trembling one when scared, spiky and steaming when angry, a cloud
+for thinking, a thin wisp for a whisper, a scroll for narration. They pop in
+with a squash, their letters wobble in one at a time, and they shrink away
+when they close. Titles and buttons are set in a chiselled capital font.
+
 The board's ground is baked per pixel from tiling noise with Bayer dithering, a
 chunk at a time just ahead of the camera. Light and colour are done in a WebGL
 pass: the world is lit in stepped, dithered bands at the art's own pixel size,
@@ -118,8 +147,9 @@ grain. Without WebGL, or with LIGHTING switched off, it falls back to plain 2D.
 
 ## What's in it
 
-- 4 playable heroes, 111 cards (46 shared, the rest split between the heroes)
-  and 35 artifacts
+- 4 playable heroes, 7 instruments, 114 cards (49 shared, the rest split
+  between the heroes) and 35 artifacts
+- 6 kinds of arena prop, usable by either side
 - 5 lands, 17 beasts including 5 bosses, 10 charms and 25 kinds of tile
 - An opening and an ending staged as cutscenes in the cave home
 - 20 original songs synthesized in Web Audio, plus about 80 sound effects
@@ -135,15 +165,19 @@ melody of the song that is playing.
 
 ```
 js2/core.js       math, seeded RNG, coroutines, tweens, camera, juice, particles
-js2/font.js       two bitmap fonts
+js2/font.js       three bitmap fonts, one of them chisel-cut capitals
 js2/gfx.js        palette, sprite compiler, drawing, input, immediate-mode UI
 js2/post.js       the WebGL light and colour pass
 js2/light.js      where the light comes from, scene by scene
 js2/anim.js       animated actors, effects, emotes
 js2/audio.js      synth voices, sequencer, sound effects
 js2/songs.js      every song
-js2/dialogue.js   speech bubbles with tails and typewriter text
-js2/rhythm.js     the Rock-Axe: strings, strum bar and the chant
+js2/bubble.js     speech bubbles painted per pixel, in ten moods
+js2/pixui.js      panels painted as stone, obsidian, wood, hide and bone
+js2/dialogue.js   who says what, and how the bubbles move
+js2/rhythm.js     the riff: timing, scoring and the chant
+js2/instruments.js the seven instruments: layouts, twists, art and voices
+js2/arena.js      the fight's set pieces, framing and usable props
 js2/cards.js      cards, enchantments and the card renderer
 js2/relics.js     artifacts
 js2/heroes.js     the four heroes, their cards and their artifacts
@@ -174,5 +208,6 @@ sprite against the palette and the manifest, `sheet.js` renders a contact
 sheet, and `check-songs.js` validates the music. `boot2.js`, `intro3.js`,
 `board2.js`, `journey.js` and `touch.js` drive the game headlessly: the menus
 and every hero, the opening, the board, all five lands to the ending, and a
-phone. `audiocheck.js` measures loudness. Serve the folder
+phone. `audiocheck.js` measures loudness, and `soak.js` plays on its own for a few
+minutes watching memory, caches and frame time. Serve the folder
 (`python3 -m http.server 8765`) before running them.

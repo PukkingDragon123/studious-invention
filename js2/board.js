@@ -37,6 +37,35 @@ const KIND_PAINT = {
 // edge of the world going by in front.
 const BZ = 2, BCAM_Y = 234;
 
+// little painted icons for the board's HUD
+const BoardIcons = {
+  foot: flip => Pix.make('bi_foot' + flip, 10, 14, P => {
+    const R = ['#5c3a20', '#85562f', '#b07a45', '#d8a86b', '#ffe0a8'];
+    P.ball(5, 8, 3.6, R, 4.8);
+    for (let t = 0; t < 4; t++) P.ball(2 + t * 2 + (flip ? 0.5 : 0), 2.2 + Math.abs(t - 1.5) * 0.6, 1.1, R);
+  }),
+  feet: () => Pix.make('bi_feet', 22, 22, P => {
+    const R = ['#5c3a20', '#85562f', '#b07a45', '#d8a86b', '#ffe0a8'];
+    for (const [ox, oy] of [[5, 8], [14, 3]]) { P.ball(ox + 2, oy + 9, 3.4, R, 4.4); for (let t = 0; t < 4; t++) P.ball(ox + t * 1.6, oy + 3 + Math.abs(t - 1.5) * 0.5, 1, R); }
+  }),
+  // a swatch of the ground itself: grass tufts, a puddle, embers, cobbles...
+  ground: k => Pix.make('bi_g_' + k, 18, 16, P => {
+    const T = TERRAIN[k], R = Pix.ramp(T.col);
+    for (let y = 2; y < 15; y++) for (let x = 1; x < 17; x++) {
+      const nx = (x - 9) / 8, ny = (y - 8.5) / 6.5; if (nx * nx + ny * ny > 1) continue;
+      let l = 0.55 - ny * 0.25 + (P.hash(x, y, k.length) - 0.5) * 0.3;
+      if (k === 'wet') l = 0.45 + Math.sin(x * 0.9 + y * 0.3) * 0.25 * (Math.abs(ny) < 0.6 ? 1 : 0.3);
+      if (k === 'hot') l = P.hash(x >> 1, y >> 1, 3) > 0.6 ? 0.95 : 0.3;
+      if (k === 'stone') l = ((x >> 2) + (y >> 2)) % 2 ? 0.65 : 0.35;
+      if (k === 'ice') l = x + y < 14 ? 0.9 : 0.45;
+      P.put(x, y, R[clamp(Math.floor(l * 5 + P.dith(x, y)), 0, 4)]);
+    }
+    if (k === 'grass') for (const x of [4, 7, 11, 14]) { P.put(x, 5, '#a8e878'); P.put(x, 4, '#a8e878'); P.put(x + 1, 3, '#6cc95c'); }
+    if (k === 'bone') { P.tube(4, 7, 14, 10, 1.3, 1.3, ['#8a7f68', '#c4b89a', '#e8dfc6', '#fffaea', '#ffffff']); P.ball(4, 7, 1.8, ['#8a7f68', '#c4b89a', '#e8dfc6', '#fffaea', '#ffffff']); }
+    if (k === 'dark') { P.put(6, 7, '#ffe98a'); P.put(11, 9, '#ffe98a'); }
+  }),
+};
+
 class BoardScene {
   constructor(o = {}) {
     this.run = Game.run; this.bd = this.run.board;
@@ -1121,20 +1150,20 @@ class BoardScene {
       }
       if (this.pending) HUD.text(`${CHARMS[this.pending].name.toUpperCase()} READY`, x + 4, y - 14, { color: '#86e8d2', scale: 0.9 });
     }
-    // ---- what you have walked on this round
+    // ---- what you have walked on this round: a painted swatch of each ground
     {
       const keys = Object.keys(this.bd.touched).filter(k => this.bd.touched[k] > 0);
-      const w = Math.max(132, 36 + keys.length * 44), x = W - E - w, y = H - E - 48;
+      const w = Math.max(64, 48 + keys.length * 46), x = W - E - w, y = H - E - 48;
       HUD.plate(x, y, w, 48, { gold: false });
-      HUD.text('THIS ROUND', x + 8, y + 5, { color: C.faint, scale: 0.8 });
-      if (!keys.length) HUD.text('nothing yet', x + 8, y + 24, { color: C.faint, scale: 0.9 });
+      Pix.draw(BoardIcons.feet(), x + 22, y + 24, { alpha: keys.length ? 1 : 0.4 });
       keys.forEach((k, i) => {
-        const T = TERRAIN[k], cx = x + 10 + i * 44;
-        Gfx.rect(cx, y + 20, 38, 20, HUD.C.ink); Gfx.rect(cx + 1, y + 21, 36, 18, T.dark); Gfx.rect(cx + 1, y + 21, 36, 5, T.col);
-        HUD.text(`${T.name}`, cx + 19, y + 24, { color: '#fffaea', align: 'center', scale: 0.7 });
-        HUD.text(`x${this.bd.touched[k]}`, cx + 19, y + 31, { color: '#fffaea', align: 'center', scale: 0.8 });
-        if (UI.hovered(cx, y + 20, 38, 20)) UI.tooltip(cx - 100, y - 50, [`{y}${T.name}{/}: touched ${this.bd.touched[k]} this round`, T.desc], { width: 220 });
+        const cx = x + 44 + i * 46, pop = this._tally && this._tally[k] !== this.bd.touched[k] ? 1 : 0;
+        Pix.draw(BoardIcons.ground(k), cx + 18, y + 24 - pop * 3);
+        Gfx.text(String(this.bd.touched[k]), cx + 33, y + 29, { color: '#120c16', align: 'center', font: 'rock' });
+        Gfx.text(String(this.bd.touched[k]), cx + 32, y + 28, { color: '#fffaea', align: 'center', font: 'rock' });
+        if (UI.hovered(cx, y + 6, 40, 36)) UI.tooltip(cx - 100, y - 50, [`{y}${TERRAIN[k].name}{/} x${this.bd.touched[k]}`, TERRAIN[k].desc], { width: 220 });
       });
+      this._tally = Object.assign({}, this.bd.touched);
     }
     // ---- the roll, and whatever you can do to it
     const R = this.rollRect();
@@ -1147,8 +1176,15 @@ class BoardScene {
       }
     } else if (this.phase === 'choose') {
       HUD.plate(R.x - 60, R.y - 4, R.w + 120, R.h + 8, { gold: false });
-      HUD.text(`${this.moves}  ${this.moves === 1 ? 'STEP' : 'STEPS'}`, W / 2, R.y + 6, { color: C.shell, align: 'center', scale: 1.6 });
-      HUD.text(Input.touch ? 'tap a glowing tile' : 'click a glowing tile', W / 2, R.y + 32, { color: C.dim, align: 'center', scale: 1 });
+      // the number, big, and a footprint for every step, hopping in turn
+      const n = this.moves, fw = Math.min(n, 8) * 16;
+      Gfx.text(String(n), W / 2 - fw / 2 - 16, R.y + 11, { color: '#120c16', align: 'center', scale: 3, font: 'rock' });
+      Gfx.text(String(n), W / 2 - fw / 2 - 18, R.y + 9, { color: C.shell, align: 'center', scale: 3, font: 'rock' });
+      for (let i = 0; i < Math.min(n, 8); i++) {
+        const hop = Math.max(0, Math.sin(this.t * 6 - i * 0.7)) * 4;
+        Pix.draw(BoardIcons.foot(i % 2), W / 2 - fw / 2 + 14 + i * 16, R.y + 26 + (i % 2 ? 4 : -2) - hop);
+      }
+      if ((this.run.stats && this.run.stats.rolls || 0) < 3) HUD.text(Input.touch ? 'tap a glowing tile' : 'click a glowing tile', W / 2, R.y - 18, { color: C.dim, align: 'center', scale: 1, outline: true });
       if (!this.adjusted && A.id === 'steady') {
         HUD.button(R.x - 52, R.y + 8, 44, 40, '-1', () => { this.adjusted = true; this.adjust(-1); }, { accent: this.hero.color });
         HUD.button(R.x + R.w + 8, R.y + 8, 44, 40, '+1', () => { this.adjusted = true; this.adjust(1); }, { accent: this.hero.color });

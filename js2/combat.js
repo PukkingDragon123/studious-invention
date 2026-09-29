@@ -89,6 +89,8 @@ const Backdrops = {
     const Ls = BoardSky.bands(b);
     Vista.drawAt(Ls[0], null, px, -600, 1800, 12, 2);
     Vista.drawAt(Ls[1], null, px, -600, 1800, 84, 2);
+    if (Backdrops.scene) Arena.drawSky(Backdrops.scene);
+    if (Backdrops.scene) Arena.drawFar(Backdrops.scene, b, t, px);
     Vista.drawAt(Ls[2], null, px, -600, 1800, 200, 2);
     const hz = { 1: '#c0d8ee', 2: '#7aa89a', 3: '#f0c890', 4: '#dce6f4', 5: '#6e2a24' }[b];
     Gfx.rectA(-600, 230, 2400, 70, hz, 0.14);
@@ -169,6 +171,7 @@ class Combat {
     this.drawPile = this.rng.shuffle(this.run.deck.map(c => Cards.refresh(c)));
     for (const id of this.ids) this.spawn(id, true);
     this.layout();
+    Arena.setup(this);
     this.hype = this.run.startHype || 0;
     // who got the jump on whom, out in the grass, decides how turn one goes
     if (this.advantage === 'ambush') {
@@ -186,7 +189,7 @@ class Combat {
     Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
     this.co = Co.run(this.intro(), this);
   }
-  exit() { Co.stop(this.co); Game.worldToScreen = null; Juice.letterbox(false); }
+  exit() { Co.stop(this.co); Game.worldToScreen = null; Juice.letterbox(false); Backdrops.scene = null; }
   spawn(id, initial) {
     const e = Enemies.make(id, this.rng, this.act);
     e.actor.y = STAGE_Y; e.spawnT = initial ? 0 : 1;
@@ -254,6 +257,7 @@ class Combat {
     this.energy = this.maxEnergy + Relics.mod('energy') + (this.powers.groove || 0) + (this.turn === 1 ? (this.energyBonus || 0) : 0);
     if (this.powers.anthem) this.addHype(this.powers.anthem);
     for (const e of this.alive()) e.intent = Enemies.pickMove(e, this, this.rng);
+    Arena.eye(this);
     this.drawCards(this.handSize + Relics.mod('draw') + (this.turn === 1 ? (this.drawBonus || 0) : 0));
     // last turn's horn blasts come back round the cave
     for (const s of this.echoNext) {
@@ -284,6 +288,11 @@ class Combat {
     yield* Relics.trigger('onTurnEnd', this);
     while (this.hand.length) this.discard.push(this.hand.pop());
     yield 0.3;
+    // a beast that had its eye on a prop grabs it first
+    yield* Arena.enemyTurn(this);
+    if (this.hp <= 0) { yield* this.defeat(); return; }
+    this.checkDeaths();
+    if (!this.alive().length) { yield* this.victory(); return; }
     for (const e of this.enemies.slice()) {
       if (!e.alive) continue;
       if (e.st.burn > 0) { AudioSys.sfx('fire_whoosh'); this.damageEnemy(e, e.st.burn, { src: 'burn', fire: true, pierce: true }); e.st.burn--; yield 0.3; if (!e.alive) continue; }
@@ -336,6 +345,15 @@ class Combat {
   *victory() {
     if (this.won) return; this.won = true;
     this.phase = 'won'; this.busy = true; this.selected = null;
+    // the final blow, in slow motion: push in on it, flash, K.O.
+    const last = this.lastKill;
+    if (last) {
+      Juice.letterbox(true);
+      this.cam.lookAt(last.actor.x, last.actor.cy); this.cam.zoomTo(1.9);
+      Juice.flash('#ffffff', 0.6, 2.2); Juice.stop(0.3); AudioSys.sfx('bighit');
+      Toon.word(last.actor.x, last.actor.top - 10, 'K.O.!', { size: 3, col: '#ffe98a', burst: '#c2333c', life: 1.1 });
+      yield 0.75;
+    }
     AudioSys.stop(0.7); AudioSys.sfx('victory');
     this.me.play('play');
     Juice.letterbox(true);
@@ -531,7 +549,8 @@ class Combat {
   }
   kill(e) {
     if (!e.alive) return;
-    e.alive = false; e.dieT = 0.01; e.intent = null;
+    e.alive = false; e.dieT = 0.01; e.intent = null; this.lastKill = e;
+    for (const p of this.props || []) if (p.eyed === e) p.eyed = null;
     AudioSys.sfx('die'); Juice.stop(0.1); Juice.shake(8, 0.3);
     FX.burst(e.actor.x, e.actor.cy, { scale: 2 });
     Particles.spawn(e.actor.x, e.actor.cy, { n: 30, color: ['#ffffff', '#ffe98a', '#a79bb4'], speed: 320, life: 0.7, size: 4 });
@@ -639,6 +658,7 @@ class Combat {
     }
     if (this.riff) { this.riff.update(dt); this.me.play(this.riff.chanting ? 'sing' : 'play'); }
     this.me.update(dt);
+    Arena.update(this, dt);
     for (const e of this.enemies) {
       e.actor.update(dt);
       e.hitT = Math.max(0, e.hitT - dt); e.shake = Math.max(0, e.shake - dt * 24);
@@ -677,13 +697,16 @@ class Combat {
   click(x, y, button) {
     if (this.riff) return;
     if (button === 2) { this.selected = null; this.preview = null; return; }
+    if (!this.selected && Arena.click(this, x, y)) return;
     if (this.selected) { const e = this.enemyAt(x, y); if (e) this.play(this.selected, e); else if (y < H - 190) this.selected = null; }
   }
   // -------------------------------------------------------------------- draw
   draw() {
     Gfx.clear('#120c16');
     this.cam.apply(Gfx.ctx);
+    Backdrops.scene = this;
     Backdrops.draw(this.act, this.t, this.cam);
+    Arena.drawProps(this, false);
     // actors, sorted so the player never hides behind a beast
     const list = [];
     for (const e of this.enemies) {
@@ -693,7 +716,10 @@ class Combat {
     list.push({ y: this.me.y + 1, f: () => this.drawHeroActor() });
     list.sort((a, b) => a.y - b.y);
     for (const it of list) it.f();
+    Arena.drawProps(this, true);
     Particles.draw(Gfx.ctx, true);
+    Emotes.draw(); Toon.draw();
+    Arena.drawFront(this);
     FX.draw(true);
     if (Settings.lighting !== false) lightCombat(this);
     Popups.draw(true);
@@ -704,6 +730,7 @@ class Combat {
     FX.draw(false);
     if (this.riff) this.riff.draw();
     this.drawHud();
+    if (!this.riff) Arena.drawUI(this);
     if (!this.riff) this.drawHand();
     if (this.selected) this.drawTargeting();
     Popups.draw(false);

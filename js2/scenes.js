@@ -172,6 +172,37 @@ class BootScene {
   click() { }
 }
 
+// the title menu's icons, painted: a bone die, a torch, a carved tablet,
+// crossed bones and an ochre hand
+const MenuIcons = {
+  die: () => Pix.make('mi_die', 18, 18, P => {
+    const B = ['#8a7f68', '#c4b89a', '#dcd2b6', '#f2ead4', '#fffaea'];
+    for (let y = 2; y < 16; y++) for (let x = 2; x < 16; x++) { const e = Math.min(x - 2, y - 2, 15 - x, 15 - y); if (e === 0 && (x === 2 || x === 15) && (y === 2 || y === 15)) continue; P.put(x, y, B[clamp(Math.floor(3.2 - (x + y) / 16 + P.dith(x, y)), 0, 4)]); }
+    for (const [px, py] of [[5, 5], [9, 9], [12, 12], [12, 5], [5, 12]]) { P.rect(px, py, 2, 2, '#3a2415'); }
+  }),
+  torch: () => Pix.make('mi_torch', 14, 22, P => {
+    P.tube(7, 10, 7, 21, 1.6, 1.4, ['#241109', '#3a2415', '#5c3a20', '#85562f', '#b07a45']);
+    P.ball(7, 7, 4.5, ['#9c3510', '#e06a1b', '#ffa832', '#ffe08a', '#fffaea'], 6);
+    P.ball(7, 4, 2, ['#ffa832', '#ffe08a', '#ffe98a', '#fffaea', '#ffffff'], 3);
+  }),
+  tablet: () => Pix.make('mi_tab', 18, 20, P => {
+    const S = ['#5c503c', '#8a7f68', '#a89c80', '#c4b89a', '#d8cfb4'];
+    for (let y = 2; y < 19; y++) for (let x = 2; x < 16; x++) { if (y < 5 && (x < 4 || x > 13)) continue; P.put(x, y, S[clamp(Math.floor(2.6 - (x + y) / 30 + P.dith(x, y)), 0, 4)]); }
+    for (let r = 0; r < 4; r++) for (let x = 5; x < 13; x++) if ((x + r) % 3) P.put(x, 7 + r * 3, '#5c3a20');
+  }),
+  bones: () => Pix.make('mi_bones', 20, 20, P => {
+    const B = ['#8a7f68', '#c4b89a', '#dcd2b6', '#f2ead4', '#fffaea'];
+    P.tube(4, 4, 16, 16, 1.6, 1.6, B); P.tube(16, 4, 4, 16, 1.6, 1.6, B);
+    for (const [x, y] of [[3, 4], [4, 3], [16, 3], [17, 4], [3, 16], [4, 17], [16, 17], [17, 16]]) P.ball(x, y, 1.9, B);
+  }),
+  hand: () => Pix.make('mi_hand', 18, 20, P => {
+    const O = ['#5c1420', '#7d1d2b', '#9c2a34', '#c2333c', '#e0404a'];
+    P.ball(9, 13, 5, O, 4.5);
+    for (const [x, h] of [[5, 6], [8, 8], [11, 8], [14, 5]]) P.tube(x, 13, x + (x - 9) * 0.15, 13 - h, 1.3, 1.1, O);
+    P.tube(4, 14, 1, 10, 1.3, 1.1, O);
+  }),
+};
+
 class TitleScene {
   constructor() { this.t = 0; this.saved = Game.hasSave(); }
   enter() { AudioSys.play('rest', { fade: 0.9 }); }
@@ -188,17 +219,15 @@ class TitleScene {
     // the menu, sized to fit whatever it holds: five entries with a save,
     // four without, and never off the bottom of the stone
     const items = [];
-    if (this.saved) items.push(['CONTINUE', () => Game.continueRun()]);
-    items.push([this.saved ? 'NEW STORY' : 'START', () => Game.newRun()]);
-    items.push(['HOW TO PLAY', () => Game.overlay = new HowToOverlay()]);
-    items.push(['SETTINGS', () => Game.overlay = new PauseOverlay(true)]);
-    items.push(['CREDITS', () => Game.overlay = new CreditsOverlay()]);
+    if (this.saved) items.push(['CONTINUE', () => Game.continueRun(), 'torch']);
+    items.push([this.saved ? 'NEW STORY' : 'START', () => Game.newRun(), 'die']);
+    items.push(['HOW TO PLAY', () => Game.overlay = new HowToOverlay(), 'tablet']);
+    items.push(['SETTINGS', () => Game.overlay = new PauseOverlay(true), 'bones']);
+    items.push(['CREDITS', () => Game.overlay = new CreditsOverlay(), 'hand']);
     const bw = 260, bx = st.cx - bw / 2;
     const bh = items.length > 4 ? 40 : 46, gap = bh + 8;
     let y = Math.max(st.y + 236, st.y + st.h - 26 - items.length * gap + 8);
-    for (const [label, cb] of items) { UI.wbutton(bx, y, bw, bh, label, cb, { scale: 1.4 }); y += gap; }
-    Gfx.text(Input.touch ? 'roll the bone, save the family' : 'roll the bone, save the family  -  SPACE rolls, A S D F strums',
-      W / 2, H - 22, { color: '#c4b89a', align: 'center', outline: true });
+    for (const [label, cb, ic] of items) { UI.wbutton(bx, y, bw, bh, label, cb, { scale: 1.4, pix: MenuIcons[ic]() }); y += gap; }
   }
   click() { }
 }

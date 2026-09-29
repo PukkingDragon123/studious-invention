@@ -719,8 +719,16 @@ const UI = {
     const font = o.font || 'rock', scale = font === 'rock' ? UI.fitRock(label, w - 28 - (o.icon ? 28 : 0), o.scale || 1.5) : (o.scale || 1.5);
     const ty = y + dy + Math.round((h - Gfx.fontOf(font).gh * scale) / 2) - 1;
     if (o.icon) Gfx.sprite(o.icon, x + 18, y + dy + h / 2, { anchor: 'c', scale: o.iconScale || 1.4 });
-    Gfx.text(label, x + w / 2 + (o.icon ? 10 : 0), ty + scale, { color: SKIN.ink, align: 'center', scale, font });
-    Gfx.text(label, x + w / 2 + (o.icon ? 10 : 0), ty, { color: o.disabled ? '#5c3a20' : SKIN.textLit, align: 'center', scale, font });
+    // a painted icon that hops and tips when you point at it
+    if (o.pix) {
+      const ctx = Gfx.ctx, cx = x + 26, cy = y + dy + h / 2 - Math.abs(Math.sin(Time.t * 9)) * 4 * k;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.sin(Time.t * 6) * 0.18 * k);
+      Pix.draw(o.pix, 0, 0);
+      ctx.restore();
+    }
+    const off = o.icon ? 10 : o.pix ? 16 : 0;
+    Gfx.text(label, x + w / 2 + off, ty + scale, { color: SKIN.ink, align: 'center', scale, font });
+    Gfx.text(label, x + w / 2 + off, ty, { color: o.disabled ? '#5c3a20' : SKIN.textLit, align: 'center', scale, font });
     this.items.push({ x, y, w, h: h + 5, cb, disabled: o.disabled || this.locked });
     return hov;
   },
