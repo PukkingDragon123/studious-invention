@@ -39,6 +39,7 @@ const Game = {
       else { this.goWith('iris', () => new CutsceneScene(pickScript, { noBars: true })); return; }
     }
     const H = Heroes.get(hero);
+    Profile.add('runs');
     const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
     this.run = {
       seed, hero, hp: H.hp, maxHp: H.hp, gems: 2,
@@ -99,13 +100,14 @@ const Game = {
     r.hp = Math.min(r.maxHp, r.hp + Math.round(r.maxHp * 0.3));
     const caps = Heroes.captives(r.hero);
     let freed = null;
-    if (B.boss.final) { for (const id of caps) if (!r.band.includes(id)) r.band.push(id); this.save(); this.go(new EndingScene()); return; }
+    if (B.boss.final) { for (const id of caps) if (!r.band.includes(id)) r.band.push(id); this.save(); Profile.add('wins'); this.go(new EndingScene()); return; }
     if (B.boss.rescue) { freed = caps.find(id => !r.band.includes(id)) || null; if (freed) r.band.push(freed); }
     this.save();
     this.go(new ActStory(b, freed, () => this.nextBiome(b + 1)));
   },
   nextBiome(b) {
     const r = this.run;
+    if (b >= 3) Profile.unlock('over_hill');
     r.board = this.freshBoard(b, { charms: r.board.charms });
     r.seenFights = [];
     this.save();
@@ -150,6 +152,7 @@ const Game = {
       Juice.drawOverlay(Gfx.ctx);
       Transition.draw(Gfx.ctx);
       if (this.overlay) { UI.locked = false; this.overlay.draw(); }
+      Profile.drawToast();
       UI.drawTips();
       Post.end();
       Gfx.canvas.style.cursor = Input.touch ? 'none' : (UI.hoverAny ? 'pointer' : 'default');

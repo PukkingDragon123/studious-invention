@@ -114,6 +114,7 @@ class Combat {
     this.drawPile = this.rng.shuffle(this.run.deck.map(c => Cards.refresh(c)));
     for (const id of this.ids) this.spawn(id, true);
     this.layout();
+    for (const e of this.enemies) Profile.seen(e.id);
     Arena.setup(this);
     Gore.clear(); Gore.setGround(STAGE_Y + 4);
     this.hype = this.run.startHype || 0;
@@ -162,6 +163,7 @@ class Combat {
     const pick = this.enc.choice >= 0 ? this.enc.opts[this.enc.choice].id : 'charge';
     this.enc = null; AudioSys.sfx('select');
     const res = yield* this['enc_' + pick](lead, foes);
+    if (res === 'ambush') Profile.unlock('ambusher');
     this.advantage = res; this.applyAdvantage();
     for (const e of foes) { e.lookAway = false; e.hold = false; }
     me.play(Heroes.has(this.heroDef.id, 'walk') ? 'walk' : 'idle');
@@ -261,6 +263,7 @@ class Combat {
     const head = this.rng.chance(0.35);
     AudioSys.sfx('bighit'); Juice.shake(10, 0.25); Juice.stop(0.08);
     this.damageEnemy(lead, this.calcDamage(7 + this.act * 2 + (head ? 4 : 0), lead, {}));
+    if (head) Profile.unlock('sniper');
     if (head && lead.alive) { this.stun(lead, 1); Toon.word(x1, y1 - 30, 'HEADSHOT!', { size: 1.6, col: '#ffe98a', life: 1 }); }
     for (const e of foes) { e.lookAway = false; if (e !== lead) Emotes.show(e.actor, '!', 0.8); }
     yield 0.5;
@@ -481,6 +484,7 @@ class Combat {
     this.cam.lookAt(this.me.x + 40, 300 + CAM_DY * 0.5); this.cam.zoomTo(1.6);
     for (let i = 0; i < 40; i++) { Particles.confetti(rnd(0, W), -10, 2); }
     yield 0.4;
+    Profile.add('fights');
     yield* Relics.trigger('onCombatEnd', this);
     if (this.band.includes('roxy') && this.heroDef.id !== 'roxy') this.heal(5, true);
     if (this.powers.hungry) this.heal(this.powers.hungry, true);
@@ -690,6 +694,7 @@ class Combat {
     e.alive = false; e.dieT = 0.01; e.intent = null; this.lastKill = e;
     for (const p of this.props || []) if (p.eyed === e) p.eyed = null;
     AudioSys.sfx('die'); Juice.stop(0.1); Juice.shake(8, 0.3);
+    if (!e.def.boss) Profile.kill(e.id);
     const a = e.actor, col = Gore.colOf(e);
     const bossFight = this.enemies.some(x => x.def.boss);
     if (e.def.boss) {
@@ -702,7 +707,7 @@ class Combat {
       // a brutality: it just comes apart
       e.gibbed = true;
       if (this.rng.chance(0.5)) Gore.gib(a.sprite, a.frame, a.scale, true, a.x, a.y, col, 3, 3, 0.9);
-      else { const n = Gore.behead(a.sprite, a.frame, a.scale, true, a.x, a.y, col); Gore.spray(n.neckX, n.neckY, { n: 40, col, speed: 380, dir: -Math.PI / 2, spread: 0.3 }); }
+      else { Profile.add('beheads'); const n = Gore.behead(a.sprite, a.frame, a.scale, true, a.x, a.y, col); Gore.spray(n.neckX, n.neckY, { n: 40, col, speed: 380, dir: -Math.PI / 2, spread: 0.3 }); }
       Gore.splash(3, col); AudioSys.sfx('crunch');
     } else {
       Gore.spray(a.x, a.cy, { n: 30, col, speed: 300, spread: Math.PI });
@@ -970,7 +975,8 @@ class Combat {
     Gfx.shadow(a.x, a.y, Gfx.spr(a.sprite).w * a.scale * 0.55, 0.3);
     const hov = this.selected && !this.riff && this.enemyAt(Input.mx, Input.my) === e;
     if (hov) Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: !e.lookAway, tint: '#ffe98a', tintAmount: 1, sx: 1.06, sy: 1.06, alpha: 0.55 });
-    Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: !e.lookAway, tint: e.hitT > 0 ? '#ffffff' : null, sx: a.sx, sy: a.sy });
+    const br = Math.sin(this.t * 2.1 + a.x * 0.1) * 0.02;              // it breathes, it is alive
+    Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: !e.lookAway, tint: e.hitT > 0 ? '#ffffff' : null, sx: a.sx * (1 - br * 0.5), sy: a.sy * (1 + br), rot: (a.x - (e.tx ?? a.x)) * -0.0015 });
     if (this.phase === 'encounter') return;          // no bars or intents while they do not know you are there
     // name, bar, intent
     const top = y - Gfx.spr(a.sprite).h * a.scale;

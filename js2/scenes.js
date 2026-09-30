@@ -7,6 +7,10 @@
 // Rib-Axe, the Tusk Horn, the Skull Bongos and the Bone Flute. Whoever you
 // have not unlocked yet is only a shadow by the fire. In the bushes behind
 // them, a very large grandmother's glasses catch the light.
+// What you have poked at on the title screen: who is soloing, whether the
+// fire has just been stirred, whether Grandma has been spotted.
+const TitleFX = { solo: {}, fire: 0, gran: 0, star: null, CAM_X: 150, FX: 566 };
+function titleWorldAt(sx, sy) { return { x: sx / VIEW + TitleFX.CAM_X, y: sy / VIEW + (GY - VH * 0.76) }; }
 function drawTitleWorld(t) {
   const ctx = Gfx.ctx;
   const camX = 150, camY = GY - VH * 0.76, FX = 566;
@@ -23,15 +27,19 @@ function drawTitleWorld(t) {
     Gfx.rect(sx, sy, 1, 1, i % 5 ? '#fffaea' : '#ffe98a');
   }
   ctx.globalAlpha = 1;
+  if (!TitleFX.star && chance(Time.dt * 0.12)) TitleFX.star = { x: camX + 60 + Math.random() * 300, y: camY + 10, t: 0 };
+  if (TitleFX.star) { const S = TitleFX.star; S.t += Time.dt; for (let i = 0; i < 6; i++) Gfx.rectA(Math.round(S.x + S.t * 160 - i * 4), Math.round(S.y + S.t * 50 - i * 1.3), 2, 1, '#fffaea', 1 - i * 0.15); if (S.t > 1.2) TitleFX.star = null; }
   // ---- Grandma Rex, in the bushes, watching the fire
-  const RX = 408, RY = GY + 20;
-  Gfx.sprite('grandma_idle', RX, RY, { anchor: 'bc', scale: 1, frame: Math.floor(t * 1.5) % 2, tint: '#0d0a1c', tintAmount: 0.86 });
-  const gx = RX + 28, gy = RY - 124;
+  const RX = 408, RY = GY + 20, ducked = TitleFX.gran > 0 ? Math.sin(Math.min(1, TitleFX.gran) * Math.PI) * 26 : 0;
+  TitleFX.gran = Math.max(0, TitleFX.gran - Time.dt * 0.6);
+  Gfx.sprite('grandma_idle', RX, RY + ducked, { anchor: 'bc', scale: 1, frame: Math.floor(t * 1.5) % 2, tint: '#0d0a1c', tintAmount: 0.86 });
+  const gx = RX + 28, gy = RY - 124 + ducked;
+  // her glasses catch the firelight, a pixel at a time; they go red when she is spotted
+  const lens = TitleFX.gran > 0.2 ? '#ef6a5e' : '#ffe98a';
   if (Math.sin(t * 0.6) > -0.9) for (const [ex, r] of [[gx, 5], [gx - 14, 4]]) {
-    Gfx.ctx.strokeStyle = '#ffe98a'; Gfx.ctx.lineWidth = 1.2; Gfx.ctx.globalAlpha = 0.85;
-    Gfx.ctx.beginPath(); Gfx.ctx.arc(ex, gy, r, 0, Math.PI * 2); Gfx.ctx.stroke();
-    Gfx.rectA(ex - 2, gy - 2, 2, 2, '#fffaea', 0.9); Gfx.ctx.globalAlpha = 1;
-    if (window.Post) Post.light(ex, gy, 16, '#ffa832', 0.3);
+    for (let a = 0; a < 12; a++) Gfx.rect(Math.round(ex + Math.cos(a / 12 * 6.283) * r), Math.round(gy + Math.sin(a / 12 * 6.283) * r), 1, 1, lens);
+    Gfx.rectA(ex - 2, gy - 2, 2, 2, '#fffaea', 0.9);
+    if (window.Post) Post.light(ex, gy, 16, TitleFX.gran > 0.2 ? '#ef6a5e' : '#ffa832', 0.3);
   }
   for (const [bx, sc] of [[RX - 40, 2.4], [RX + 12, 2.8], [RX + 60, 2.2]])
     Gfx.sprite('v_bush', bx, GY + 8, { anchor: 'bc', scale: sc * 0.85, tint: '#0b0a18', tintAmount: 0.92 });
@@ -40,7 +48,8 @@ function drawTitleWorld(t) {
   const BAND = [['bronk', FX - 116, 1, 0], ['vela', FX - 74, 1, 0.25], ['pebble', FX - 40, 1, 0.5], ['roxy', FX + 36, -1, 0.75]];
   for (const [id, x, face, ph] of BAND) {
     const H0 = Heroes.get(id), on = open.includes(id);
-    const hop = on ? Math.abs(Math.sin((beat + ph) * Math.PI)) * 3 : 0;
+    const solo = TitleFX.solo[id] || 0; if (solo > 0) TitleFX.solo[id] = solo - Time.dt;
+    const hop = on ? Math.abs(Math.sin((beat + ph) * Math.PI)) * 3 + (solo > 0 ? Math.abs(Math.sin(solo * 14)) * 10 : 0) : 0;
     const spr = on && SPRITES[H0.base + '_play'] ? H0.base + '_play' : H0.base + '_idle';
     Gfx.shadow(x, GY + 1, 30, 0.35);
     Gfx.sprite(spr, x, GY + 1 - hop, { anchor: 'bc', frame: Math.floor(beat * 2 + ph * 4), flip: face < 0, tint: on ? null : '#0d0a1c', tintAmount: on ? 0 : 0.9 });
@@ -80,33 +89,16 @@ function titleStone(t) {
     Gfx.glow(tx, y + 130, 190, '#ffa832', 0.26 + Math.sin(t * 8 + tx) * 0.05);
     if (chance(0.4)) Particles.fire(tx + rnd(-8, 8), y + 140, 1);
   }
-  // ---- the stone: a slab with a broken crown and a heap of rubble at its foot
-  UI.slab(x, y + 26, w, h - 26, { r: 6 });
-  for (let i = 0; i < 6; i++) {                           // broad weathering on the face
-    const px = x + 16 + ((i * 97) % (w - 110)), py = y + 46 + ((i * 131) % (h - 150));
-    ctx.globalAlpha = 0.14;
-    Gfx.round(px, py, 64 + (i % 3) * 44, 30 + (i % 2) * 28, 13, i % 2 ? SKIN.faceLit : SKIN.faceMid);
-    ctx.globalAlpha = 1;
-  }
-  { let px = x + 2;                                       // the crown, broken off
-    for (let i = 0; px < x + w - 14; i++) {
-      const k = (px - x) / w;
-      const bw = 16 + ((i * 53) % 26);
-      const hgt = Math.round(9 + ((i * 37) % 19) - Math.abs(k - 0.5) * 20);
-      if (hgt > 3) {
-        Gfx.round(px - 2, y + 26 - hgt, bw + 4, hgt + 10, 3, SKIN.ink);
-        Gfx.round(px, y + 28 - hgt, bw, hgt + 8, 2, SKIN.faceMid);
-        Gfx.round(px + 1, y + 28 - hgt, bw - 2, 4, 2, SKIN.faceLit);
-        Gfx.rectA(px + 3, y + 34 - hgt, bw - 6, 2, SKIN.faceDark, 0.4);
-      }
-      px += bw + (i % 3 ? 0 : 7);
+  // ---- the stone: a painted slab with a broken crown and rubble at its foot
+  PixUI.panel('stone', x, y + 26, w, h - 26, { seed: 21 });
+  { let px = x + 6;
+    for (let i = 0; px < x + w - 20; i++) {
+      const bw = 18 + ((i * 53) % 26), hgt = Math.round(10 + ((i * 37) % 18) - Math.abs((px - x) / w - 0.5) * 20);
+      if (hgt > 4) PixUI.panel('stone', px, y + 30 - hgt, bw, hgt + 8, { seed: i + 40, cut: 1, moss: false });
+      px += bw + (i % 3 ? 2 : 9);
     }
   }
-  for (let i = 0; i < 10; i++) {                          // rubble round the base
-    const rx = x + 10 + ((i * 71) % (w - 30));
-    Gfx.round(rx, y + h - 12 + (i % 3) * 4, 16 + (i % 4) * 7, 11, 4, i % 2 ? '#574a66' : '#3b3048');
-    Gfx.round(rx + 2, y + h - 12 + (i % 3) * 4, 10 + (i % 4) * 4, 3, 2, '#7a6d8a');
-  }
+  for (let i = 0; i < 9; i++) { const rx = x + 8 + ((i * 71) % (w - 40)); PixUI.panel('stone', rx, y + h - 10 + (i % 3) * 3, 18 + (i % 4) * 8, 14, { seed: i + 60, cut: 2, moss: i % 2 === 0 }); }
   // ---- the name, cut in and then painted with ochre
   const cx = x + w / 2;
   const carve = (txt, ty, sc, col) => {
@@ -120,9 +112,13 @@ function titleStone(t) {
     const wd = Gfx.measure(txt, sc, 'rock'); let lx = cx - wd / 2;
     [...txt].forEach((ch, i) => {
       const dy = -Math.abs(Math.sin((beat * 0.5 + ph + i * 0.12) * Math.PI)) * 4;
-      Gfx.text(ch, lx, ty + 3 + dy, { color: SKIN.faceHi, scale: sc, font: 'rock' });
-      Gfx.text(ch, lx + 2, ty + 2 + dy, { color: '#3a2415', scale: sc, font: 'rock' });
+      // a block of stone for every letter: dark sides going down, then the face
+      for (let k = 7; k >= 1; k--) Gfx.text(ch, lx + k * 0.6, ty + k + dy, { color: k > 5 ? '#120c16' : k > 2 ? '#3a2415' : '#5c1607', scale: sc, font: 'rock' });
       Gfx.text(ch, lx, ty + dy, { color: col, scale: sc, font: 'rock' });
+      // the lit top edge of the face
+      const ctx2 = Gfx.ctx; ctx2.save(); ctx2.beginPath(); ctx2.rect(lx - 2, ty + dy - 4, Gfx.measure(ch, sc, 'rock') + 4, Gfx.lineHeight(sc, 'rock') * 0.3); ctx2.clip();
+      Gfx.text(ch, lx, ty + dy, { color: '#ffa832', scale: sc, font: 'rock' });
+      ctx2.restore();
       lx += Gfx.measure(ch, sc, 'rock');
     });
   };
@@ -132,13 +128,8 @@ function titleStone(t) {
   Gfx.rect(x + 40, y + 191, w - 80, 2, SKIN.faceHi);
   carve('A STONE AGE BOARD GAME SAGA', y + 200, 1.3, '#3a2415');
   // ---- hand prints, the way you sign a wall
-  for (const [hx, hy, fl] of [[x + 34, y + 96, false], [x + w - 46, y + 128, true]]) {
-    ctx.globalAlpha = 0.5;
-    Gfx.round(hx, hy, 14, 17, 5, '#5c1607');
-    for (let i = 0; i < 4; i++) Gfx.round(hx + 1 + i * 4, hy - 7 + (i === 0 || i === 3 ? 2 : 0), 3, 9, 1, '#5c1607');
-    Gfx.round(hx + (fl ? 13 : -4), hy + 3, 6, 4, 2, '#5c1607');
-    ctx.globalAlpha = 1;
-  }
+  Pix.draw(MenuIcons.hand(), x + 40, y + 104, { alpha: 0.55, scale: 1.4 });
+  Pix.draw(MenuIcons.hand(), x + w - 40, y + 136, { alpha: 0.55, scale: 1.4, sx: -1 });
   return { x, y, w, h, cx };
 }
 
@@ -195,6 +186,18 @@ const MenuIcons = {
     P.tube(4, 4, 16, 16, 1.6, 1.6, B); P.tube(16, 4, 4, 16, 1.6, 1.6, B);
     for (const [x, y] of [[3, 4], [4, 3], [16, 3], [17, 4], [3, 16], [4, 17], [16, 17], [17, 16]]) P.ball(x, y, 1.9, B);
   }),
+  skull: () => Pix.make('mi_skull', 20, 20, P => {
+    const B = ['#8a7f68', '#c4b89a', '#dcd2b6', '#f2ead4', '#fffaea'];
+    P.ball(10, 8, 7.5, B, 6.5); P.rect(6, 13, 9, 5, '#dcd2b6');
+    for (const ex of [7, 13]) P.ball(ex, 9, 2, ['#120c16', '#120c16', '#241c2e', '#241c2e', '#3b3048']);
+    for (let x = 6; x < 15; x += 2) P.put(x, 17, '#5c503c');
+  }),
+  trophy: () => Pix.make('mi_trophy', 20, 20, P => {
+    const G = ['#5c3a20', '#a3663a', '#e0b93a', '#ffe98a', '#fffaea'];
+    P.ball(10, 7, 6.5, G, 5); P.rect(3, 3, 14, 3, '#e0b93a');
+    P.tube(10, 11, 10, 15, 1.5, 1.5, G); P.rect(5, 15, 10, 3, '#a3663a'); P.rect(5, 15, 10, 1, '#ffe98a');
+    P.put(3, 6, '#e0b93a'); P.put(2, 7, '#e0b93a'); P.put(16, 6, '#e0b93a'); P.put(17, 7, '#e0b93a');
+  }),
   hand: () => Pix.make('mi_hand', 18, 20, P => {
     const O = ['#5c1420', '#7d1d2b', '#9c2a34', '#c2333c', '#e0404a'];
     P.ball(9, 13, 5, O, 4.5);
@@ -223,11 +226,23 @@ class TitleScene {
     items.push([this.saved ? 'NEW STORY' : 'START', () => Game.newRun(), 'die']);
     items.push(['HOW TO PLAY', () => Game.overlay = new HowToOverlay(), 'tablet']);
     items.push(['SETTINGS', () => Game.overlay = new PauseOverlay(true), 'bones']);
-    items.push(['CREDITS', () => Game.overlay = new CreditsOverlay(), 'hand']);
     const bw = 260, bx = st.cx - bw / 2;
-    const bh = items.length > 4 ? 40 : 46, gap = bh + 8;
-    let y = Math.max(st.y + 236, st.y + st.h - 26 - items.length * gap + 8);
+    const bh = items.length > 3 ? 36 : 42, gap = bh + 7;
+    let y = st.y + 232;
     for (const [label, cb, ic] of items) { UI.wbutton(bx, y, bw, bh, label, cb, { scale: 1.4, pix: MenuIcons[ic]() }); y += gap; }
+    // the extras, as a row of square stones along the bottom
+    const extras = [['BEASTS', () => Game.overlay = new BestiaryOverlay(), 'skull'], ['TROPHIES', () => Game.overlay = new TrophiesOverlay(), 'trophy'], ['CREDITS', () => Game.overlay = new CreditsOverlay(), 'hand']];
+    const ew = 80, eg = 10, ex0 = st.cx - (extras.length * ew + (extras.length - 1) * eg) / 2, ey = st.y + st.h - 68;
+    extras.forEach(([label, cb, ic], i) => {
+      const ex = ex0 + i * (ew + eg), hov = UI.hovered(ex, ey, ew, 52);
+      PixUI.panel(hov ? 'woodhot' : 'wood', ex, ey - (hov ? 3 : 0), ew, 52, { seed: i + 30, hot: hov });
+      Pix.draw(MenuIcons[ic](), ex + ew / 2, ey + 20 - (hov ? 3 : 0) - (hov ? Math.abs(Math.sin(this.t * 9)) * 3 : 0));
+      Gfx.text(label, ex + ew / 2, ey + 36 - (hov ? 3 : 0), { color: '#ffe0a8', align: 'center', font: 'classic' });
+      UI.hit(ex, ey, ew, 52, cb);
+    });
+    const got = TROPHIES.filter(T => Profile.has(T.id)).length;
+    if (got) Gfx.text(`${got}/${TROPHIES.length}`, ex0 + ew * 1.5 + eg + ew / 2 - 6, ey - 2, { color: '#ffe98a', align: 'right', font: 'classic' });
+    Toon.draw(true);
   }
   click() { }
 }
@@ -338,7 +353,33 @@ class GameOverScene {
     UI.button(W / 2 - 230, 450, 210, 46, 'TRY AGAIN', () => Game.newRun(), { scale: 1.2 });
     UI.button(W / 2 + 20, 450, 210, 46, 'TITLE', () => Game.go(new TitleScene()), { scale: 1.2 });
   }
-  click() { }
+  // the clearing answers back: poke the band, the fire, the bushes
+  click(sx, sy) {
+    const p = titleWorldAt(sx, sy), FX = TitleFX.FX;
+    const BAND = [['bronk', FX - 116], ['vela', FX - 74], ['pebble', FX - 40], ['roxy', FX + 36]];
+    for (const [id, x] of BAND) {
+      if (Math.abs(p.x - x) < 16 && p.y > GY - 70 && p.y < GY + 4) {
+        if (!Heroes.isUnlocked(id)) { AudioSys.sfx('error'); Toon.word(sx, sy - 30, '?', { size: 1.6, col: '#a79bb4', life: 0.6 }); return; }
+        TitleFX.solo[id] = 1.4;
+        const I = Instruments.DEF[Instruments.HERO_INST[id]];
+        for (let i = 0; i < 4; i++) setTimeout(() => AudioSys.playInst(I.voice, 60 + [0, 4, 7, 12][i], 0.25, 0.9), i * 120);
+        Particles.notes(sx, sy - 40, 6);
+        Toon.word(sx, sy - 60, { bronk: 'ROCK!', vela: 'TOOT!', pebble: 'BOOM!', roxy: 'TWEET!' }[id], { size: 1.4, col: '#ffe98a', life: 0.8 });
+        return;
+      }
+    }
+    if (Math.abs(p.x - FX) < 26 && p.y > GY - 50 && p.y < GY + 8) {
+      AudioSys.sfx('fire_whoosh'); Juice.shake(3, 0.2);
+      for (let i = 0; i < 30; i++) Particles.fire(sx + rnd(-30, 30), sy + rnd(-10, 10), 1);
+      Toon.word(sx, sy - 50, 'WHOOSH', { size: 1.3, col: '#ffa832', life: 0.7 });
+      return;
+    }
+    if (p.x > 360 && p.x < 480 && p.y > GY - 150 && p.y < GY + 20) {
+      TitleFX.gran = 1; AudioSys.sfx('growl');
+      Toon.word(sx, sy - 40, 'YOO-HOO!', { size: 1.4, col: '#ef6a5e', life: 1 });
+      return;
+    }
+  }
 }
 
 // ------------------------------------------------------------------ overlays
@@ -575,13 +616,15 @@ class HowToOverlay {
       ['{y}THE STORY{/}', 'The Rockbottoms were halfway through dinner - a whole roast T-Rex head - when a very large old lady knocked at the cave. It was Grandma Rex. The head was her grandson. She took three of the family and ran for her mountain. You were in the toilet.', '',
         '{y}THE ROAD{/}', 'Five lands lie between the cave and her lair. Each is a board of stone tiles. Roll the bone die and move exactly that many tiles, forward OR back. Every tile you could land on glows: click one.'],
       ['{y}FORKS AND DEAD ENDS{/}', 'The road splits into two lanes and joins again: one lane is usually easier, the other richer. Side trails climb to caves and secrets and stop dead - walk back down them next turn.', '',
-        '{y}THE TILES{/}', '{b}Blue{/} tiles help you: food, shells, cards, charms. {r}Red{/} ones hurt. {o}Orange{/} ones are fights. {p}Purple{/} ones are mysteries, strangers and crossroads. {y}Gold{/} ones are camps, the trader and the gem altar. Point at any tile to read it.'],
+        '{y}THE TILES{/}', '{b}Blue{/} tiles help you: food, shells, cards, charms. {r}Red{/} ones hurt. {o}Orange{/} ones are fights. {p}Purple{/} ones are mysteries, strangers and crossroads. {y}Gold{/} ones are camps and the trader. Point at any tile to read it.'],
       ['{y}THE GROUND{/}', 'Every tile has ground: grass, water, hot rock, stone, bone, ice, sand or cave. The ground you walk over each round is counted in the corner, and lots of cards and artifacts care. {b}Wet Feet{/} doubles your next lightning if you splashed through water on the way to the fight.', '',
         'Hot ground stings when you stop on it. Ice makes you slide on. Tar pits stop you dead. Beasts cannot see you in grass.'],
       ['{y}CHARMS AND THE DICE{/}', 'Charms are one-use tricks you carry, three at most. Most bend the dice: pick your number, roll two and choose, roll high, roll low, nudge it one, roll again. Some keep you out of fights.', '',
         '{y}THE BEASTS{/}', 'Beasts roam the road between the tiles. After you move, they move. One that catches you gets the first hit; land on one yourself and you get the jump on it.'],
       ['{y}A FIGHT{/}', 'You get {b}3 energy{/} a turn and draw your hand. Each card costs the number in its corner. END TURN and the beasts act. The icon over a beast is what it will do next.', '',
         '{y}RIFF CARDS{/}', 'Cards marked ♪ are riffs: hit each note as it reaches the line with D F J K, the arrows, or the pads on a phone. Better timing, bigger hit. Landed notes fill Hype, and full Hype is a free ENCORE.'],
+      ['{y}IN THE WILD{/}', 'Most fights start before the first card. You walk into a clearing and the beasts have not seen you. {g}Sneak up{/} (hold SPACE to creep, freeze when one turns round), {g}hide{/} in a bush and jump them, {y}charge{/} for a free hit, or {y}throw a rock{/} for a headshot. Get there unseen and it is an ambush. Get caught and they are on you.', '',
+        '{y}THE GROUND FIGHTS TOO{/}', 'Boulders, hives, icicles, tar, lava and geysers lie about the clearing. Click one on your turn (1 energy) to use it on them. A beast that eyes one (a red {r}!{/}) grabs it on its turn. The last beast standing gets a {r}FATALITY{/}.'],
       ['{y}THE FAMILY{/}', '{r}BRONK{/} gets angrier when hurt, and Rage adds to every hit. {p}VELA{/} plays horn cards that echo back next turn, and controls the fight. {g}PEBBLE{/} plays lots of cheap cards fast. {c}ROXY{/} soaks beasts with water and zaps them with lightning.', '',
         'Every boss you beat hands back one of the family, and they fight beside you after that.'],
       ['{y}SHELLS{/}', 'Ammonite shells are the only money. Dig them out of ammonite beds, win them in fights, find them in caves, and spend them with {y}Trunks the trader{/}.'],

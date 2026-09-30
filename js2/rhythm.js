@@ -409,6 +409,8 @@ class Riff {
     };
     r.grade = acc >= 0.97 ? 'S+' : acc >= 0.9 ? 'S' : acc >= 0.8 ? 'A' : acc >= 0.65 ? 'B' : acc >= 0.5 ? 'C' : acc >= 0.3 ? 'D' : 'F';
     r.fc = this.misses === 0 && r.hits === total;
+    if (r.grade === 'S+') Profile.unlock('virtuoso');
+    if (r.fc && total >= 4) Profile.unlock('no_mistakes');
     this.result = r;
     if (this.o.onDone) this.o.onDone(r);
   }

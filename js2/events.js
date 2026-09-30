@@ -19,6 +19,7 @@ class RewardScene {
     AudioSys.play('mammoth', { fade: 0.9 });
     Game.run.gems = (Game.run.gems || 0) + this.o.gems;
     if (this.o.gems) AudioSys.sfx('gem');
+    if (Game.run.gems >= 30) Profile.unlock('hoarder');
   }
   exit() { }
   update(dt) {

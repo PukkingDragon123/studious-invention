@@ -222,6 +222,7 @@ const Fatality = {
       }
       AudioSys.sfx('bighit'); Juice.shake(16, 0.5); Juice.stop(0.2); Juice.flash('#ffffff', 0.4, 5);
       e.gibbed = true;
+      Profile.add('beheads');
       const n2 = Gore.behead(spr, frame, sc, true, a.x, fy, col);
       for (let i = 0; i < 24; i++) { Gore.spray(n2.neckX, n2.neckY, { n: 6, col, speed: 420, dir: -Math.PI / 2, spread: 0.35 }); yield 0.05; }
       Gore.splash(6, col);

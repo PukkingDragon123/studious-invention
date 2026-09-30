@@ -76,6 +76,7 @@ const Heroes = {
     const u = this.unlocked(), next = HERO_ORDER.find(id => !u.includes(id));
     if (!next) return null;
     Settings.unlocked = u.concat(next); Game.saveSettings();
+    if (HERO_ORDER.every(id => Settings.unlocked.includes(id) || id === 'bronk')) Profile.unlock('full_band');
     return next;
   },
   captives(id) { return ['pebble', 'roxy', 'vela', 'bronk'].filter(k => k !== id); },

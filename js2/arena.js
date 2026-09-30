@@ -194,6 +194,7 @@ const Arena = (() => {
   // ---------------------------------------------------------------- the show
   function* use(S, p, enemy) {
     const wasBusy = S.busy; S.busy = true; p.used = true; const who = p.eyed; p.eyed = null;
+    if (!enemy) Profile.unlock('prop_comic');
     const act = S.act, fx = p.x, fy = p.y - p.h / 2;
     Juice.letterbox(true);
     // frame the prop and whoever it is about to land on

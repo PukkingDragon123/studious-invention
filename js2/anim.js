@@ -57,6 +57,9 @@ class Actor {
     this.tint = null; this.tintT = 0; this.alpha = 1; this.rot = 0; this.rotVel = 0;
     this.shadow = o.shadow !== false; this.shadowW = o.shadowW || 0;
     this.visible = true; this.speed = o.speed || 120; this.onFrame = null;
+    // the life in them: a breath, a lean into the walk, a squash on turning
+    this.seed = Math.random() * 10; this._lx = this.x; this.vx = 0; this.lean = 0; this._face = this.facing; this.fidgetT = 3 + Math.random() * 5;
+    this.alive = o.alive !== false;
     this.play(o.clip || 'idle');
   }
   get sprite() { return this.clip ? this.clip.spr : this.base + '_idle'; }
@@ -110,6 +113,16 @@ class Actor {
     } else if (this.bobAmp) this.bob = Math.sin(Time.t * this.bobRate) * this.bobAmp;
     if (this.tintT > 0) { this.tintT -= dt; if (this.tintT <= 0) this.tint = null; }
     this.rot += this.rotVel * dt;
+    // how fast it is going, from how far it went
+    if (dt > 0) { const v = (this.x - this._lx) / dt; this.vx = damp(this.vx, clamp(v, -600, 600), 10, dt); }
+    this._lx = this.x;
+    this.lean = damp(this.lean, clamp(this.vx / 900, -0.1, 0.1), 8, dt);
+    if (this.facing !== this._face) { this._face = this.facing; this.sx = 0.72; this.sy = 1.08; }   // a turn is a squash
+    const idle = !this.clipName || this.clipName === 'idle' || this.clipName === 'sit';
+    if (idle && this.alive && Math.abs(this.vx) < 5 && this.z === 0) {
+      this.fidgetT -= dt;
+      if (this.fidgetT <= 0) { this.fidgetT = 4 + Math.random() * 6; if (Math.random() < 0.5) this.squash(0.06); else this.stretch(0.05); }
+    }
   }
   draw(o = {}) {
     if (!this.visible) return;
@@ -119,9 +132,13 @@ class Actor {
       const sw = (this.shadowW || w * 0.6) * clamp(1 - this.z / 260, 0.45, 1);
       Gfx.shadow(this.x, this.y + 1, sw, 0.32 * clamp(1 - this.z / 300, 0.3, 1));
     }
+    // breathing when it is standing about, leaning when it moves
+    const moving = Math.abs(this.vx) > 8, idle = !moving && this.z === 0 && this.alive;
+    const breath = idle ? Math.sin(Time.t * 2.3 + this.seed) * 0.016 : 0;
+    const sway = moving ? Math.sin(Time.t * 12 + this.seed) * 0.025 : 0;
     Gfx.sprite(spr, this.x, this.y - this.z + this.bob, {
       scale: this.scale, frame: this.frame, flip: this.facing < 0,
-      sx: this.sx, sy: this.sy, rot: this.rot, alpha: this.alpha * (o.alpha ?? 1),
+      sx: this.sx * (1 - breath * 0.5), sy: this.sy * (1 + breath), rot: this.rot + this.lean + sway, alpha: this.alpha * (o.alpha ?? 1),
       tint: this.tint, anchor: 'bc',
     });
   }
