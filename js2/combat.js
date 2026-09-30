@@ -172,6 +172,7 @@ class Combat {
     for (const id of this.ids) this.spawn(id, true);
     this.layout();
     Arena.setup(this);
+    Gore.clear(); Gore.setGround(STAGE_Y + 4);
     this.hype = this.run.startHype || 0;
     // who got the jump on whom, out in the grass, decides how turn one goes
     if (this.advantage === 'ambush') {
@@ -347,7 +348,10 @@ class Combat {
     this.phase = 'won'; this.busy = true; this.selected = null;
     // the final blow, in slow motion: push in on it, flash, K.O.
     const last = this.lastKill;
-    if (last) {
+    if (last && last.fatalPending) {
+      yield* Fatality.run(this, last);
+      last.fatalPending = false;
+    } else if (last) {
       Juice.letterbox(true);
       this.cam.lookAt(last.actor.x, last.actor.cy); this.cam.zoomTo(1.9);
       Juice.flash('#ffffff', 0.6, 2.2); Juice.stop(0.3); AudioSys.sfx('bighit');
@@ -500,9 +504,21 @@ class Combat {
   previewEnemyDamage(e, base) { let d = base + e.st.str; if (e.st.weak > 0) d *= 0.75; if (this.player.st.vuln > 0) d *= 1.5; d -= Relics.mod('reduce'); return Math.max(0, Math.floor(d)); }
   *dealDamage(t, amount, o = {}) {
     if (!t || !t.alive) { t = this.randomEnemy(); if (!t) return 0; }
-    const home = this.me.x;
+    const home = this.me.x, heavy = o.heavy || amount >= 12;
+    // the camera goes in with you: a push for a jab, a close-up for a beating
+    const cine = !o.quick && !this.riff;
+    if (cine) { this.cam.lookAt(lerp(home, t.actor.x, 0.62), t.actor.cy + 30); this.cam.zoomTo(heavy ? 1.5 : 1.22); }
     if (!o.projectile) {
       yield* Co.over(o.quick ? 0.09 : 0.13, k => { this.me.x = lerp(home, t.actor.x - 90, Ease.inQuad(k)); });
+      if (heavy && !o.quick) {
+        // two quick ones first, then the real one
+        for (let i = 0; i < 2; i++) {
+          this.me.x += 8; this.me.squash(0.12); t.hitT = 0.06; t.shake = 4;
+          AudioSys.sfx('hit', { vol: 0.6 }); Juice.stop(0.04); Juice.shake(4, 0.08);
+          Gore.spray(t.actor.x - 10, t.actor.cy - 10 + i * 12, { n: 8, col: Gore.colOf(t), dir: -0.6 + i * 0.5, speed: 200 });
+          yield 0.09; this.me.x -= 8;
+        }
+      }
     } else {
       Particles.spawn(this.me.x + 30, this.me.cy, { n: 8, color: ['#9391a6', '#bdbccd'], angle: 0, spread: 0.25, speed: 520, gravity: 90, life: 0.25 });
       yield 0.13;
@@ -515,8 +531,10 @@ class Combat {
     Juice.stop(o.heavy ? 0.09 : 0.045);
     Juice.shake(o.heavy ? 11 : 6, 0.22);
     Juice.punch(o.heavy ? 0.05 : 0.025);
+    if (t.alive || t.fatalPending) t.actor.x += heavy ? 34 : 14;          // knocked back; it slides home
     if (!o.projectile) yield* Co.over(0.2, k => { this.me.x = lerp(t.actor.x - 90, home, Ease.outBack(k)); });
     this.me.x = home;
+    if (cine) { this.cam.zoomTo(1); this.cam.lookAt(W / 2, 288 + CAM_DY); }
     yield o.quick ? 0.06 : 0.14;
     return dmg;
   }
@@ -541,7 +559,11 @@ class Combat {
       Juice.pow(p2.x, p2.y, { r: 40 + Math.min(40, dmg), spikes: 11, col: '#ffe98a' });
     }
     Popups.add(e.actor.x + rnd(-10, 10), e.actor.cy - 10, String(dmg), dmg === 0 ? '#7a6d8a' : o.fire ? '#ffa832' : '#ffffff', { scale: dmg >= 18 ? 2.6 : 1.8, shake: dmg >= 18 ? 1.5 : 0 });
-    Particles.spawn(e.actor.x, e.actor.cy, { n: Math.min(22, 6 + dmg), color: o.fire ? ['#ffa832', '#e06a1b', '#ffe08a'] : ['#c2333c', '#ef6a5e', '#ffffff'], speed: 260, life: 0.45, size: 4, sizeEnd: 0 });
+    if (dmg > 0) {
+      const col = o.fire ? ['#9c3510', '#e06a1b', '#ffa832', '#ffe08a'] : Gore.colOf(e);
+      Gore.spray(e.actor.x + rnd(-10, 10), e.actor.cy, { n: Math.min(46, 8 + dmg * 1.6), col, dir: -0.55, spread: 0.9, speed: 220 + Math.min(260, dmg * 9) });
+      if (dmg >= 15) Gore.splash(2 + (dmg >= 25 ? 3 : 0), col);
+    }
     if (e.def.onHurt && e.alive) e.def.onHurt(e, this);
     if (e.hp <= 0) { e.hp = 0; this.kill(e); }
     return dmg;
@@ -551,8 +573,24 @@ class Combat {
     e.alive = false; e.dieT = 0.01; e.intent = null; this.lastKill = e;
     for (const p of this.props || []) if (p.eyed === e) p.eyed = null;
     AudioSys.sfx('die'); Juice.stop(0.1); Juice.shake(8, 0.3);
-    FX.burst(e.actor.x, e.actor.cy, { scale: 2 });
-    Particles.spawn(e.actor.x, e.actor.cy, { n: 30, color: ['#ffffff', '#ffe98a', '#a79bb4'], speed: 320, life: 0.7, size: 4 });
+    const a = e.actor, col = Gore.colOf(e);
+    const bossFight = this.enemies.some(x => x.def.boss);
+    if (e.def.boss) {
+      // bosses are knocked out, not killed: they sit by the fire later
+      e.ko = true; Toon.stars(a, 99);
+    } else if (!this.alive().length && !bossFight) {
+      // the last one stands there, swaying: it is waiting for its fatality
+      e.fatalPending = true; Toon.stars(a, 99);
+    } else if (this.rng.chance(0.4)) {
+      // a brutality: it just comes apart
+      e.gibbed = true;
+      if (this.rng.chance(0.5)) Gore.gib(a.sprite, a.frame, a.scale, true, a.x, a.y, col, 3, 3, 0.9);
+      else { const n = Gore.behead(a.sprite, a.frame, a.scale, true, a.x, a.y, col); Gore.spray(n.neckX, n.neckY, { n: 40, col, speed: 380, dir: -Math.PI / 2, spread: 0.3 }); }
+      Gore.splash(3, col); AudioSys.sfx('crunch');
+    } else {
+      Gore.spray(a.x, a.cy, { n: 30, col, speed: 300, spread: Math.PI });
+      Gore.pool(a.x + 10, a.y + 2, col, Math.round(Gfx.spr(a.sprite).w * a.scale * 0.8));
+    }
     this.gemsEarned += e.def.boss ? 6 : e.def.elite ? 3 : this.rng.chance(0.55) ? 1 : 0;
     this.run.stats.kills++;
     Co.run(Relics.trigger('onKill', this, e), this);
@@ -574,7 +612,8 @@ class Combat {
       setTimeout(() => { if (this.phase !== 'lost') this.me.play('idle'); }, 380);
       AudioSys.sfx('hurt'); Juice.shake(Math.min(16, 5 + dmg / 2), 0.32); Juice.flash('#c2333c', 0.3, 4); Juice.stop(0.06);
       Popups.add(this.me.x, this.me.cy - 20, `-${dmg}`, '#ef6a5e', { scale: 2.2, shake: 1.5 });
-      Particles.blood(this.me.x, this.me.cy, ['#c2333c', '#ef6a5e'], 12);
+      Gore.spray(this.me.x, this.me.cy, { n: Math.min(40, 8 + dmg * 1.5), dir: -Math.PI + 0.55, spread: 0.8, speed: 240 + dmg * 6 });
+      if (dmg >= 12) Gore.splash(2 + (dmg >= 20 ? 2 : 0));
       this.run.stats.taken += dmg;
     } else Popups.add(this.me.x, this.me.cy - 20, '0', '#7a6d8a');
   }
@@ -658,6 +697,7 @@ class Combat {
     if (this.riff) { this.riff.update(dt); this.me.play(this.riff.chanting ? 'sing' : 'play'); }
     this.me.update(dt);
     Arena.update(this, dt);
+    Gore.update(dt);
     for (const e of this.enemies) {
       e.actor.update(dt);
       e.hitT = Math.max(0, e.hitT - dt); e.shake = Math.max(0, e.shake - dt * 24);
@@ -706,15 +746,18 @@ class Combat {
     Backdrops.scene = this;
     Backdrops.draw(this.act, this.t, this.cam);
     Arena.drawProps(this, false);
+    Gore.drawGround();
+    if (this.fatal) Gfx.rectA(-800, -600, 2800, 1600, '#1a0508', this.fatal.dark);
     // actors, sorted so the player never hides behind a beast
     const list = [];
     for (const e of this.enemies) {
-      if (!e.alive && e.dieT > 0.75) continue;
-      list.push({ y: e.actor.y, f: () => this.drawEnemy(e) });
+      if (e.gibbed) continue;
+      list.push({ y: e.actor.y - (e.alive || e.fatalPending ? 0 : 30), f: () => this.drawEnemy(e) });
     }
     list.push({ y: this.me.y + 1, f: () => this.drawHeroActor() });
     list.sort((a, b) => a.y - b.y);
     for (const it of list) it.f();
+    Gore.drawChunks();
     Arena.drawProps(this, true);
     Particles.draw(Gfx.ctx, true);
     Emotes.draw(); Toon.draw();
@@ -725,8 +768,10 @@ class Combat {
     this.cam.restore(Gfx.ctx);
     if (Settings.lighting !== false) gradeCombat(this);
     Post.ui();
+    Gore.drawLens();
     Particles.draw(Gfx.ctx, false);
     FX.draw(false);
+    Fatality.draw(this);
     if (this.riff) this.riff.draw();
     this.drawHud();
     if (!this.riff) Arena.drawUI(this);
@@ -772,8 +817,24 @@ class Combat {
   drawEnemy(e) {
     const a = e.actor;
     if (!e.alive) {
-      const k = Math.min(1, e.dieT / 0.7);
-      Gfx.sprite(a.sprite, a.x, a.y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: true, alpha: 1 - k, sy: 1 - k * 0.7, sx: 1 + k * 0.3, tint: '#ffffff', tintAmount: k });
+      const h = Gfx.spr(a.sprite).h * a.scale;
+      if (e.fatalPending) {
+        // dazed, swaying, waiting
+        Gfx.shadow(a.x, a.y, Gfx.spr(a.sprite).w * a.scale * 0.55, 0.3);
+        Gfx.sprite(a.sprite, a.x, a.y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: true, rot: Math.sin(this.t * 2.4) * 0.07, sx: a.sx, sy: a.sy * (0.96 + Math.sin(this.t * 3) * 0.02), tint: e.hitT > 0 ? '#ffffff' : e.charred ? '#120c16' : '#3f0e18', tintAmount: e.hitT > 0 ? 1 : e.charred ? 0.9 : 0.15 });
+        return;
+      }
+      if (e.ko) {
+        // a boss, sat down hard and seeing stars
+        const k = Math.min(1, e.dieT / 0.4);
+        Gfx.sprite(a.sprite, a.x, a.y, { anchor: 'bc', scale: a.scale, frame: 0, flip: true, sy: 1 - k * 0.22, sx: 1 + k * 0.08, rot: k * -0.12 });
+        return;
+      }
+      // tipped over onto its back, legs in the air, where it fell
+      const k = Math.min(1, e.dieT / 0.45), rot = Ease.outBack(k) * Math.PI * 0.94;
+      Gfx.sprite(a.sprite, a.x + k * 16, a.y - h / 2 - Math.sin(k * Math.PI) * 26 + k * 6, { anchor: 'c', scale: a.scale, frame: 0, flip: true, rot, tint: '#3f0e18', tintAmount: k * 0.35 });
+      // the flies find it
+      if (e.dieT > 1.5) for (let i = 0; i < 3; i++) { const q = this.t * (3 + i) + i * 2; Gfx.rect(Math.round(a.x + 16 + Math.cos(q) * (14 + i * 5)), Math.round(a.y - h * 0.8 + Math.sin(q * 1.7) * 8), 2, 2, '#120c16'); }
       return;
     }
     const sx = e.shake ? rnd(-e.shake, e.shake) : 0;

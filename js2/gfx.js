@@ -178,6 +178,13 @@ const Gfx = {
       c.fillRect(Math.round(x - w), yy, Math.max(st, Math.round(w * 2)), st);
     }
   },
+  // a hit pop in pixels: eight chunky squares flying out, never a ring
+  spark(x, y, r, col, sz = 4) {
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4, q = i % 2 ? 0.7 : 1, s = i % 2 ? sz - 1 : sz;
+      this.rect(Math.round((x + Math.cos(a) * r * q) / 2) * 2 - (s >> 1), Math.round((y + Math.sin(a) * r * q) / 2) * 2 - (s >> 1), s, s, col);
+    }
+  },
   ring(x, y, r, color, lw = 2) {
     const c = this.ctx, st = this.circleStep, ir = Math.max(0, r - Math.max(lw, st));
     c.fillStyle = color;

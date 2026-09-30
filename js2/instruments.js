@@ -424,7 +424,7 @@ const Instruments = (() => {
       bed(R, ctx, now, bop) { Pix.draw(bedRib(), 0, BED_Y() - bop, { ax: 0, ay: 0 }); drawStrings(R, ctx, bop, ROW4, i => STR_Y[i], true); },
       front(R, ctx, now, bop) {
         Pix.draw(strumBone(), STRUM_X, (NECK_TOP + NECK_BOT) / 2 - bop - 6);
-        for (let i = 0; i < 4; i++) if (R.strPress[i] > 0) { const k = R.strPress[i] / 0.16; Gfx.ring(STRUM_X, STR_Y[i] - bop, 10 + (1 - k) * 18, STR_COL[i], 3); }
+        for (let i = 0; i < 4; i++) if (R.strPress[i] > 0) { const k = R.strPress[i] / 0.16; Gfx.spark(STRUM_X, STR_Y[i] - bop, 10 + (1 - k) * 18, STR_COL[i], 3); }
       },
       note(R, n, x, y) {
         Pix.draw(runeStone(n.lane), x, y);
@@ -483,7 +483,7 @@ const Instruments = (() => {
         for (let i = 0; i < 4; i++) {
           const k = R.kick[i];
           Pix.draw(skullDrum(i), COL_X[i], HIT_Y + 30 - bop, { ay: 1, sx: 1 + k * 0.12, sy: 1 - k * 0.14 });
-          if (k > 0.05) Gfx.ring(COL_X[i], HIT_Y + 4 - bop, 20 + (1 - k) * 30, STR_COL[i], 3);
+          if (k > 0.05) Gfx.spark(COL_X[i], HIT_Y + 4 - bop, 20 + (1 - k) * 30, STR_COL[i], 3);
         }
       },
       note(R, n, x, y) {
@@ -509,7 +509,7 @@ const Instruments = (() => {
       },
       front(R, ctx, now, bop) {
         Pix.draw(fluteBone(), STRUM_X, NECK_TOP - 36 - bop, { ay: 0 });
-        for (let i = 0; i < 4; i++) if (R.strPress[i] > 0 || R.kick[i] > 0.05) Gfx.ring(STRUM_X, STR_Y[i] - bop, 8 + (1 - R.kick[i]) * 18, STR_COL[i], 2);
+        for (let i = 0; i < 4; i++) if (R.strPress[i] > 0 || R.kick[i] > 0.05) Gfx.spark(STRUM_X, STR_Y[i] - bop, 8 + (1 - R.kick[i]) * 18, STR_COL[i], 2);
       },
       note(R, n, x, y) { Pix.draw(leaf(n.lane, ((Time.t * 8 + n.time * 3) | 0) % 8), x, y, { scale: 1.3 }); },
     },
@@ -564,7 +564,7 @@ const Instruments = (() => {
           const k = R.kick[i];
           if (k > 0.02) Gfx.rectA(COL_X[i] - 26, HIT_Y - 30 - bop, 52, 60, CRYS[i], k * 0.25);
           Pix.draw(crystal(i), COL_X[i], HIT_Y + 36 - bop, { ay: 1, sy: 1 + k * 0.06 });
-          if (k > 0.05) for (let r = 0; r < 2; r++) Gfx.ring(COL_X[i], HIT_Y - bop, 12 + (1 - k) * (26 + r * 18), CRYS[i], 2);
+          if (k > 0.05) for (let r = 0; r < 2; r++) Gfx.spark(COL_X[i], HIT_Y - bop, 12 + (1 - k) * (26 + r * 18), CRYS[i], 2);
         }
       },
       note(R, n, x, y) { const k = clamp((n.time - Riff.now()) / R.travel, 0, 1); Pix.draw(drop(n.lane), x, y, { sy: 1 + (1 - k) * 0.35, sx: 1 - (1 - k) * 0.12 }); },
@@ -585,8 +585,8 @@ const Instruments = (() => {
       front(R, ctx, now, bop) {
         for (const l of [1, 2]) {
           const k = R.kick[l], y = LOG_Y[l] - bop;
-          Gfx.ring(STRUM_X, y, 22 + k * 8, k > 0.05 ? '#ffe98a' : '#b07a45', 3);
-          Gfx.ring(STRUM_X, y, 15, '#5c3a20', 2);
+          Gfx.spark(STRUM_X, y, 22 + k * 8, k > 0.05 ? '#ffe98a' : '#b07a45', 3);
+          Gfx.spark(STRUM_X, y, 15, '#5c3a20', 2);
         }
       },
       note(R, n, x, y) {

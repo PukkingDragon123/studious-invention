@@ -210,36 +210,9 @@ const Juice = {
   drawOverlay(ctx) {
     for (const f of this.flashes) { ctx.globalAlpha = clamp(f.a, 0, 1); ctx.fillStyle = f.color; ctx.fillRect(0, 0, W, H); }
     ctx.globalAlpha = 1;
-    if (this.speed > 0.02) {                       // speed lines raked in from the sides
-      const n = 16;
-      for (let i = 0; i < n; i++) {
-        const t = (i / n + (Time.t * 1.7) % 1) % 1;
-        const y = t * H;
-        const len = (40 + Math.sin(i * 31.7) * 30) * this.speed * (0.4 + Math.abs(y - H / 2) / H);
-        const a = this.speed * (0.10 + (i % 3) * 0.05);
-        ctx.globalAlpha = a; ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, y, len, 2 + (i % 2));
-        ctx.fillRect(W - len, y + 7, len, 2 + (i % 2));
-      }
-      ctx.globalAlpha = 1;
-    }
-    for (const p of this.pows) {                   // cartoon impact stars
-      const k = p.t / p.life;
-      const r = p.r * (0.35 + Ease.outCubic(k) * 0.9);
-      ctx.globalAlpha = clamp(1 - k, 0, 1);
-      for (const [rr, col] of [[r, '#120c16'], [r - 4, p.col], [r * 0.46, '#ffffff']]) {
-        ctx.beginPath();
-        for (let i = 0; i <= p.spikes * 2; i++) {
-          const a = (i / (p.spikes * 2)) * Math.PI * 2 + k * 0.6;
-          const rad = rr * (i % 2 ? 0.52 : 1) * (1 + Math.sin(i * 12.9) * 0.08);
-          const px = p.x + Math.cos(a) * rad, py = p.y + Math.sin(a) * rad;
-          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-        }
-        ctx.closePath(); ctx.fillStyle = col; ctx.fill();
-      }
-      if (p.word) Gfx.text(p.word, p.x, p.y - 10, { color: '#120c16', align: 'center', scale: 2.2, outline: true, outlineWidth: 2 });
-      ctx.globalAlpha = 1;
-    }
+    // (the old speed lines and spiked impact stars are gone: vector strokes
+    // over pixel art looked cheap. Juice.lines() and Juice.pow() still exist
+    // so nothing that calls them breaks; they just draw nothing now.)
     if (this.bars > 0.5) {
       ctx.fillStyle = '#080510';
       ctx.fillRect(0, 0, W, this.bars); ctx.fillRect(0, H - this.bars, W, this.bars);
@@ -335,7 +308,6 @@ const Particles = {
           ctx.restore(); break;
         }
         case 'drop': ctx.fillRect(x, y - s, Math.max(1, s / 2), s * 1.6); break;
-        case 'ring': { ctx.globalAlpha *= 0.8; Gfx.ring(x, y, (1 - k) * p.size * 6 + 2, p.color, 3); break; }
         default: ctx.fillRect(x - (s >> 1), y - (s >> 1), s, s);
       }
     }

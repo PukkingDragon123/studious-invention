@@ -431,7 +431,7 @@ class Riff {
       if (n.time + n.sustain < now) continue;
       if (I.tailDraw) I.tailDraw(this, n, now);
       else Instruments.tail(this, n, now, 12, STR_COL[n.lane], n.mine ? (n.brokeHold ? 0.18 : 0.6) : 0.22);
-      if (n.held) { const p = I.hitPt(this, n.lane); Gfx.ring(p.x, p.y - bop, 14 + Math.sin(Time.t * 30) * 3, '#ffffff', 2); }
+      if (n.held) { const p = I.hitPt(this, n.lane); Gfx.spark(p.x, p.y - bop, 14 + Math.sin(Time.t * 30) * 3, '#ffffff', 2); }
     }
     let labelled = false;
     for (const n of this.notes) {
@@ -453,7 +453,7 @@ class Riff {
       if (n.pop <= 0) continue;
       const k = 1 - n.pop, p = I.hitPt(this, n.lane);
       ctx.globalAlpha = n.pop;
-      Gfx.ring(p.x, p.y - bop, 12 + k * 30, STR_COL[n.lane], 3);
+      Gfx.spark(p.x, p.y - bop, 12 + k * 30, STR_COL[n.lane], 3);
       ctx.globalAlpha = 1;
     }
   }
@@ -487,7 +487,7 @@ class Riff {
         const col = ['#ffe98a', '#86e8d2', '#a8e878', '#ffa832'][d.n % 4];
         if (d.judged) {                                   // the burst it leaves
           const k = 1 - d.pop;
-          Gfx.ring(d.x, d.y, CH_R0 * (1 + k * 1.4), `rgba(255,233,138,${d.pop * 0.8})`, 3);
+          Gfx.spark(d.x, d.y, CH_R0 * (1 + k * 1.4), `rgba(255,233,138,${d.pop * 0.8})`, 3);
           continue;
         }
         const fade = clamp((CH_APPROACH - lead) / 0.22, 0, 1) * v;
@@ -511,7 +511,7 @@ class Riff {
     for (const q of this.chantPops) {
       const k = q.t / 0.45;
       ctx.globalAlpha = clamp(1 - k, 0, 1) * 0.8;
-      Gfx.ring(q.x, q.y, CH_R0 * (1 + k * 1.8), q.col, 2);
+      Gfx.spark(q.x, q.y, CH_R0 * (1 + k * 1.8), q.col, 2);
       ctx.globalAlpha = 1;
     }
     if (this.chantJudge) {

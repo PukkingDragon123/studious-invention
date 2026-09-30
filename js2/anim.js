@@ -142,7 +142,7 @@ const FX = {
     });
   },
   burst(x, y, o) { this.play('fx_burst', x, y, Object.assign({ scale: 1.2 }, o)); },
-  ring(x, y, o) { this.play('fx_ring', x, y, Object.assign({ fps: 16 }, o)); },
+  ring() { },                                   // no more ring bursts
   slash(x, y, o) { this.play('fx_slash', x, y, Object.assign({ fps: 20 }, o)); },
   smoke(x, y, o) { this.play('fx_smoke', x, y, Object.assign({ fps: 12 }, o)); },
   update(dt) {
@@ -166,16 +166,29 @@ const FX = {
 // a head, a tummy that rumbles in rings, stars, steam out of the ears, sweat
 // flying off, hearts, and sound words with a burst behind them. All of them
 // hang off an actor (or a point) in world space and clear themselves.
+// pixel art for the cartoon bits: a steam puff, a rain cloud
+const ToonArt = {
+  puff: f => Pix.make('toon_puff' + f, 14, 12, P => {
+    const R = ['#8a7f68', '#c4b89a', '#e8dfc6', '#f2ead4', '#fffaea'];
+    P.ball(5 + f, 7, 4.2, R, 3.6); P.ball(9 - f * 0.5, 5, 3.6, R); P.ball(8, 8, 3, R);
+  }, { ink: '#3b3048' }),
+  cloud: () => Pix.make('toon_cloud', 40, 22, P => {
+    const R = ['#3b3048', '#574a66', '#7a6d8a', '#a79bb4', '#c8c0d8'];
+    P.ball(11, 13, 7, R, 6); P.ball(20, 9, 9, R, 8); P.ball(29, 13, 7, R, 6); P.ball(20, 15, 8, R, 5);
+  }, { ink: '#120c16' }),
+};
+
 const Toon = {
   list: [],
   add(kind, at, o = {}) { const e = Object.assign({ kind, at, t: 0, life: o.life || 1, seed: Math.random() * 99 }, o); this.list.push(e); return e; },
-  shock(a, life = 0.7) { return this.add('shock', a, { life }); },
-  rumble(a, life = 1.4) { return this.add('rumble', a, { life }); },
+  // a jolt: the pixel '!' pops over their head (the old radiating strokes are gone)
+  shock(a, life = 0.7) { if (a && typeof Emotes !== 'undefined') Emotes.show(a, '!', life); return null; },
+  rumble(a, life = 1.4) { if (a) a.squash && a.squash(0.12); return null; },
   stars(a, life = 2) { return this.add('stars', a, { life }); },
   steam(a, life = 1.6) { return this.add('steam', a, { life }); },
   sweat(a, life = 1.2) { return this.add('sweat', a, { life }); },
   hearts(a, life = 1.8) { return this.add('hearts', a, { life }); },
-  focus(a, life = 0.8) { return this.add('focus', a, { life }); },
+  focus() { return null; },
   word(x, y, text, o = {}) { return this.add('word', null, Object.assign({ x, y, text, life: 1.1, col: '#ffe98a', size: 2 }, o)); },
   head(a) { return { x: a.x + (a.facing || 1) * 2, y: a.top + 14 }; },
   update(dt) {
@@ -191,35 +204,11 @@ const Toon = {
   draw(screen = false) {
     const ctx = Gfx.ctx;
     for (const e of this.list) {
-      if ((e.kind === 'focus' || e.kind === 'word') !== screen) continue;
+      if ((e.kind === 'word') !== screen) continue;
       const k = e.t / e.life, fade = clamp(k < 0.15 ? k / 0.15 : (1 - k) / 0.3, 0, 1);
       const a = e.at, h = a ? this.head(a) : null;
       ctx.save(); ctx.globalAlpha = fade;
-      if (e.kind === 'shock') {
-        // eight quick strokes bursting out round the head
-        const g = Ease.outBack(clamp(k * 3, 0, 1));
-        ctx.strokeStyle = '#120c16'; ctx.lineWidth = 3; ctx.lineCap = 'round';
-        for (let i = 0; i < 8; i++) {
-          const an = -Math.PI / 2 + (i - 3.5) * 0.36, r0 = 20 + g * 6, r1 = r0 + 8 + g * 4;
-          ctx.beginPath(); ctx.moveTo(h.x + Math.cos(an) * r0, h.y + Math.sin(an) * r0 * 0.9); ctx.lineTo(h.x + Math.cos(an) * r1, h.y + Math.sin(an) * r1 * 0.9); ctx.stroke();
-        }
-        ctx.strokeStyle = '#fffaea'; ctx.lineWidth = 1.2;
-        for (let i = 0; i < 8; i++) {
-          const an = -Math.PI / 2 + (i - 3.5) * 0.36, r0 = 20 + g * 6, r1 = r0 + 8 + g * 4;
-          ctx.beginPath(); ctx.moveTo(h.x + Math.cos(an) * r0, h.y + Math.sin(an) * r0 * 0.9); ctx.lineTo(h.x + Math.cos(an) * r1, h.y + Math.sin(an) * r1 * 0.9); ctx.stroke();
-        }
-      } else if (e.kind === 'rumble') {
-        // rings off the belly, one after another
-        const bx = a.x + (a.facing || 1) * 6, by = a.y - (a.y - a.top) * 0.36;
-        for (let j = 0; j < 3; j++) {
-          const q = ((e.t * 2.4) + j / 3) % 1, r = 6 + q * 22;
-          ctx.globalAlpha = fade * (1 - q);
-          ctx.strokeStyle = '#120c16'; ctx.lineWidth = 3.5;
-          ctx.beginPath(); ctx.arc(bx, by, r, -0.9, 0.9); ctx.stroke(); ctx.beginPath(); ctx.arc(bx, by, r, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
-          ctx.strokeStyle = '#ffe98a'; ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.arc(bx, by, r, -0.9, 0.9); ctx.stroke(); ctx.beginPath(); ctx.arc(bx, by, r, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
-        }
-      } else if (e.kind === 'stars') {
+      if (e.kind === 'stars') {
         for (let j = 0; j < 4; j++) {
           const an = e.t * 4 + j * Math.PI / 2, sx = h.x + Math.cos(an) * 18, sy = h.y - 16 + Math.sin(an) * 5;
           const c = Math.sin(an) > 0 ? '#ffe98a' : '#e0b93a';
@@ -227,11 +216,12 @@ const Toon = {
           Gfx.rect(sx, sy - 3, 1, 7, c); Gfx.rect(sx - 3, sy, 7, 1, c); Gfx.rect(sx - 1, sy - 1, 3, 3, c);
         }
       } else if (e.kind === 'steam') {
+        // puffs of pixel steam off an angry head
         for (let j = 0; j < 6; j++) {
           const q = ((e.t * 1.6) + j / 6) % 1, sd = j % 2 ? 1 : -1;
-          const px = h.x + sd * (14 + q * 10), py = h.y - 4 - q * 22, r = 3 + q * 5;
-          ctx.globalAlpha = fade * (1 - q) * 0.9;
-          Gfx.circle(px, py, r + 1, '#574a66'); Gfx.circle(px, py, r, '#e8dfc6');
+          const px = h.x + sd * (14 + q * 10), py = h.y - 4 - q * 22;
+          ctx.globalAlpha = fade * (1 - q) * 0.95;
+          Pix.draw(ToonArt.puff((j + (q * 3 | 0)) % 3), px, py, { scale: 0.5 + q * 0.6 });
         }
       } else if (e.kind === 'hearts') {
         for (let j = 0; j < 4; j++) {
@@ -249,12 +239,10 @@ const Toon = {
           Gfx.text('Z', a.x + (a.facing || 1) * -18 - q * 20 + Math.sin(q * 6) * 3, top - q * 34, { color: '#fffaea', scale: 1 + q * 1.4, outline: true });
         }
       } else if (e.kind === 'rain') {
-        // a little grey cloud of its own, raining on one sad head
+        // a little grey pixel cloud of its own, raining on one sad head
         const cx = h.x, cy = h.y - 34 + Math.sin(e.t * 2) * 1.5;
-        for (const [dx, dy, r] of [[-9, 2, 6], [0, -2, 8], [9, 2, 6], [0, 4, 6]]) Gfx.circle(cx + dx, cy + dy, r + 1, '#120c16');
-        for (const [dx, dy, r] of [[-9, 2, 6], [0, -2, 8], [9, 2, 6], [0, 4, 6]]) Gfx.circle(cx + dx, cy + dy, r, '#7a6d8a');
-        Gfx.circle(cx - 3, cy - 4, 3, '#a79bb4');
-        for (let j = 0; j < 5; j++) { const q = ((e.t * 2.2) + j / 5) % 1; Gfx.rect(cx - 10 + j * 5, cy + 9 + q * 16, 1, 3, '#6aa9ee'); }
+        Pix.draw(ToonArt.cloud(), cx, cy, { scale: 0.5 });
+        for (let j = 0; j < 5; j++) { const q = ((e.t * 2.2) + j / 5) % 1; Gfx.rect(Math.round(cx - 10 + j * 5), Math.round(cy + 9 + q * 16), 1, 3, '#6aa9ee'); }
       } else if (e.kind === 'word') {
         // a sound word in a white pixel burst with a black ink line: it slams
         // in oversized, squashes, wobbles, and pops away. The same size on
@@ -276,23 +264,11 @@ const Toon = {
         Gfx.text(e.text, 2, -th / 2 + 3, { color: e.col && e.col !== '#fffaea' && e.col !== '#e8dfc6' ? e.col : '#c2333c', scale: ts, align: 'center', font: 'rock' });
         Gfx.text(e.text, 0, -th / 2 + 1, { color: '#08060c', scale: ts, align: 'center', font: 'rock' });
         ctx.restore();
-      } else if (e.kind === 'focus') {
-        // anime focus lines closing in on somebody, drawn over the screen
-        const p = Game.worldToScreen ? Game.worldToScreen(h.x, h.y) : h;
-        ctx.fillStyle = '#120c16';
-        for (let j = 0; j < 40; j++) {
-          const an = j / 40 * Math.PI * 2 + ((j * 97) % 13) * 0.01, r0 = 150 + ((j * 53 + Math.floor(e.t * 20) * 7) % 70), r1 = 700;
-          const w = 0.012 + ((j * 31) % 5) * 0.004;
-          ctx.beginPath();
-          ctx.moveTo(p.x + Math.cos(an) * r0, p.y + Math.sin(an) * r0);
-          ctx.lineTo(p.x + Math.cos(an - w) * r1, p.y + Math.sin(an - w) * r1);
-          ctx.lineTo(p.x + Math.cos(an + w) * r1, p.y + Math.sin(an + w) * r1);
-          ctx.closePath(); ctx.fill();
-        }
       }
       ctx.restore();
     }
   },
+  drop(a) { this.list = this.list.filter(e => e.at !== a); },
   clear() { this.list.length = 0; }
 };
 
