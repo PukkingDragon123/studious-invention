@@ -785,8 +785,10 @@ class BoardScene {
     if (this.phase === 'choose' && this.reach.size) {
       let mn = 1e9, mx = -1e9;
       for (const id of this.reach.keys()) { mn = Math.min(mn, this.T[id].x); mx = Math.max(mx, this.T[id].x); }
+      const rmn = mn, rmx = mx;
       mn = Math.min(mn, this.me.x); mx = Math.max(mx, this.me.x);
-      tx = mx - mn < VWb - 90 ? (mn + mx) / 2 : this.me.x + 110;
+      // frame you and the lit tiles; if that is too wide, the lit tiles win
+      tx = mx - mn < VWb - 90 ? (mn + mx) / 2 : rmx - rmn < VWb - 90 ? clamp(this.me.x + 110, rmx - VWb / 2 + 50, rmn + VWb / 2 - 50) : this.me.x + 110;
     }
     if (this.phase === 'move' || this.phase === 'world') tx = this.me.x + 70 * this.me.facing;
     if (Input.down && !this.panel && !Game.overlay && Math.abs(Input.dragDX) > 0) this.pan -= Input.dragDX / BZ;

@@ -59,6 +59,8 @@ class Actor {
     this.visible = true; this.speed = o.speed || 120; this.onFrame = null;
     // the life in them: a breath, a lean into the walk, a squash on turning
     this.seed = Math.random() * 10; this._lx = this.x; this.vx = 0; this.lean = 0; this._face = this.facing; this.fidgetT = 3 + Math.random() * 5;
+    // a fighter's stance, the groove when it plays, a knock when it is hit
+    this.stance = !!o.stance; this.groove = 0; this.tilt = 0; this.tiltV = 0;
     this.alive = o.alive !== false;
     this.play(o.clip || 'idle');
   }
@@ -74,6 +76,7 @@ class Actor {
   squash(a = 0.25) { this.sx = 1 + a; this.sy = 1 - a; }
   stretch(a = 0.25) { this.sx = 1 - a; this.sy = 1 + a; }
   hop(v = 220) { this.vz = v; }
+  knock(dir = -1, a = 1) { this.tiltV += dir * 7 * a * this.facing; this.squash(0.16 * a); }
   flash(color = '#ffffff', t = 0.12) { this.tint = color; this.tintT = t; }
   moveTo(x, y, dt, speed) {
     const sp = speed ?? this.speed, dx = x - this.x, dy = y - this.y, d = Math.hypot(dx, dy);
@@ -113,6 +116,9 @@ class Actor {
     } else if (this.bobAmp) this.bob = Math.sin(Time.t * this.bobRate) * this.bobAmp;
     if (this.tintT > 0) { this.tintT -= dt; if (this.tintT <= 0) this.tint = null; }
     this.rot += this.rotVel * dt;
+    // the knock: a sprung tilt that wobbles back upright
+    this.tiltV += (-this.tilt * 160 - this.tiltV * 11) * dt; this.tilt += this.tiltV * dt;
+    this.groove = damp(this.groove, this.clipName === 'play' || this.clipName === 'sing' ? 1 : 0, 6, dt);
     // how fast it is going, from how far it went
     if (dt > 0) { const v = (this.x - this._lx) / dt; this.vx = damp(this.vx, clamp(v, -600, 600), 10, dt); }
     this._lx = this.x;
@@ -136,9 +142,23 @@ class Actor {
     const moving = Math.abs(this.vx) > 8, idle = !moving && this.z === 0 && this.alive;
     const breath = idle ? Math.sin(Time.t * 2.3 + this.seed) * 0.016 : 0;
     const sway = moving ? Math.sin(Time.t * 12 + this.seed) * 0.025 : 0;
-    Gfx.sprite(spr, this.x, this.y - this.z + this.bob, {
+    let dx = 0, dy = 0, qx = 1, qy = 1, tr = 0;
+    // fighting stance: up on the toes, bouncing, the weight rocking foot to foot
+    if (this.stance && idle && this.clipName === 'idle') {
+      const b = Math.abs(Math.sin(Time.t * 5.2 + this.seed));
+      dy -= b * 3 * this.scale; qy += (b - 0.5) * 0.05; qx -= (b - 0.5) * 0.04;
+      dx += Math.sin(Time.t * 2.6 + this.seed) * 2 * this.scale; tr += Math.sin(Time.t * 2.6 + this.seed) * 0.035 * this.facing;
+    }
+    // the groove: a headbang on every beat of the song, harder on the one
+    if (this.groove > 0.02 && typeof AudioSys !== 'undefined' && AudioSys.songStart) {
+      const beat = (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur(), p = ((beat % 1) + 1) % 1;
+      const hit = Math.pow(1 - p, 3) * this.groove * (Math.floor(beat) % 4 === 0 ? 1.4 : 1);
+      tr += hit * 0.12 * this.facing; qy -= hit * 0.07; qx += hit * 0.05; dy += hit * 2;
+      dx += Math.sin(beat * Math.PI) * 2.5 * this.groove;
+    }
+    Gfx.sprite(spr, this.x + dx, this.y - this.z + this.bob + dy, {
       scale: this.scale, frame: this.frame, flip: this.facing < 0,
-      sx: this.sx * (1 - breath * 0.5), sy: this.sy * (1 + breath), rot: this.rot + this.lean + sway, alpha: this.alpha * (o.alpha ?? 1),
+      sx: this.sx * (1 - breath * 0.5) * qx, sy: this.sy * (1 + breath) * qy, rot: this.rot + this.lean + sway + tr + this.tilt, alpha: this.alpha * (o.alpha ?? 1),
       tint: this.tint, anchor: 'bc',
     });
   }

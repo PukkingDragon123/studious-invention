@@ -37,7 +37,8 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/${HERO}_2_choose.png` });
   const from = await ev(() => Game.run.board.pos);
-  const spot = await ev(() => { const s = Game.scene; const id = [...s.reach.keys()][0]; const t = s.T[id]; const p = s.cam.toScreen(t.x, t.y); return { id, x: p.x, y: p.y }; });
+  // the lit tile nearest the middle of the screen: a big roll can light one off the edge
+  const spot = await ev(() => { const s = Game.scene; return [...s.reach.keys()].map(id => { const t = s.T[id], p = s.cam.toScreen(t.x, t.y); return { id, x: p.x, y: p.y }; }).sort((a, b) => Math.abs(a.x - W / 2) - Math.abs(b.x - W / 2))[0]; });
   await tap(spot.x, spot.y);
   ok('a tap on a lit tile walks there', await until(() => Game.scene.phase !== 'choose', 4000), `tile ${spot.id} at ${Math.round(spot.x)},${Math.round(spot.y)}`);
   await until(n => Game.run.board.pos === n || Game.scene.panel || Game.scene.constructor.name !== 'BoardScene', 12000, spot.id);

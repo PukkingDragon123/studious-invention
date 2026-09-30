@@ -104,7 +104,7 @@ class Combat {
     this.player = { st: { str: 0, weak: 0, vuln: 0, thorns: 0, regen: 0 }, block: 0 };
     this.cam = new Camera(); this.cam.zoom = 1; this.cam.lookAt(W / 2, 288 + CAM_DY, true);
     // with the whole family behind you the stage needs a step more room
-    this.me = new Actor({ base: this.heroDef.base, x: 210 + 26 * Math.max(0, Math.min(3, this.band.length) - 1), y: STAGE_Y, scale: ACTOR_SCALE, facing: 1 });
+    this.me = new Actor({ base: this.heroDef.base, x: 210 + 26 * Math.max(0, Math.min(3, this.band.length) - 1), y: STAGE_Y, scale: ACTOR_SCALE, facing: 1, stance: true });
     this.banner = null; this.won = false; this.gemsEarned = 0; this.handSlide = 0; this.zoomed = 0;
     this.hitStop = 0; this.beatPulse = 0;
   }
@@ -444,7 +444,10 @@ class Combat {
       const hits = m.hits || 1;
       for (let i = 0; i < hits; i++) {
         const home = e.actor.x;
-        yield* Co.over(0.16, k => { e.actor.x = lerp(home, home - 90, Ease.inCubic(k)); }, null);
+        // it rears back before it comes at you
+        e.actor.squash(0.14); yield* Co.over(i ? 0.06 : 0.12, k => { e.actor.x = home + 14 * Ease.outQuad(k); }, null);
+        e.actor.stretch(0.12);
+        yield* Co.over(0.16, k => { e.actor.x = lerp(home + 14, home - 90, Ease.inCubic(k)); }, null);
         FX.slash(this.me.x + 30, this.me.cy, { flip: true, scale: 1.2 });
         this.damagePlayer(this.previewEnemyDamage(e, m.dmg), { from: e });
         if (this.player.st.thorns > 0 && e.alive) this.damageEnemy(e, this.player.st.thorns, { src: 'thorns' });
@@ -526,8 +529,18 @@ class Combat {
     AudioSys.sfx('card');
     this.playing = card;
     let r = null;
-    if (card.def.riff) r = yield* this.riffCo(card, target);
-    yield* card.def.effect(this, card, target, r);
+    // every card is played on the instrument now, each kind its own way
+    const perform = !Game.testFast || card.def.riff;
+    if (perform) r = yield* this.riffCo(card, target);
+    // a card that is not a riff at heart still plays better for playing well:
+    // its numbers are scaled by how you did, then put back
+    const saved = {};
+    if (r && !card.def.riff) {
+      const f = clamp(r.mult, 0.6, 1.35);
+      for (const k of ['dmg', 'block', 'heal', 'hype']) if (typeof card.v[k] === 'number') { saved[k] = card.v[k]; card.v[k] = Math.max(1, Math.round(card.v[k] * f)); }
+    }
+    yield* card.def.effect(this, card, target, card.def.riff ? r : null);
+    Object.assign(card.v, saved);
     if (card.def.echo && !card.echoCopy) this.echoNext.push({ id: card.id, up: card.up });
     if (this.powers.rkid) this.gainBlock(this.powers.rkid);
     if (Relics.has('skull_bongos') && this.played % 3 === 0) { const e = this.randomEnemy(); if (e) { this.flashRelic(RELICS.skull_bongos); this.damageEnemy(e, 4, { src: 'relic' }); AudioSys.sfx('hit'); } }
@@ -560,8 +573,12 @@ class Combat {
     this.me.play(this.heroDef && SPRITES[this.heroDef.base + '_play'] ? 'play' : 'idle');
     this.flags.tuned = false;
     let done = false, result = null;
+    // how this card wants to be played
+    const STY = { attack: 'smash', skill: 'guard', power: 'echo', rally: 'hype', special: 'strike' };
+    const style = card.def.riffStyle || (card.def.riff ? (card.def.riff.callResponse ? 'echo' : 'strike') : STY[card.def.type] || 'guard');
+    const cfg = card.def.riff || { bars: 1, density: card.def.type === 'attack' ? 1 : 0, callResponse: style === 'echo' };
     this.riff = new Riff({
-      bars: card.def.riff.bars, density: card.def.riff.density, callResponse: card.def.riff.callResponse,
+      bars: cfg.bars, density: cfg.density, callResponse: cfg.callResponse, style,
       title: card.name.toUpperCase(), windowMult: windowMul, act: this.act, encore: card.id === 'encore', inst: card.def.inst,
       onNote: (rating, n) => {
         if (!rating) { this.me.flash('#ef6a5e', 0.1); Juice.shake(3, 0.1); return; }
@@ -630,7 +647,11 @@ class Combat {
     const cine = !o.quick && !this.riff;
     if (cine) { this.cam.lookAt(lerp(home, t.actor.x, 0.62), t.actor.cy + 30); this.cam.zoomTo(heavy ? 1.5 : 1.22); }
     if (!o.projectile) {
-      yield* Co.over(o.quick ? 0.09 : 0.13, k => { this.me.x = lerp(home, t.actor.x - 90, Ease.inQuad(k)); });
+      // the wind-up: rock back, crouch, then go
+      if (!o.quick) { this.me.squash(heavy ? 0.2 : 0.12); yield* Co.over(heavy ? 0.1 : 0.07, k => { this.me.x = home - (heavy ? 16 : 9) * Ease.outQuad(k); }); }
+      const from = this.me.x;
+      this.me.stretch(0.16);
+      yield* Co.over(o.quick ? 0.09 : 0.13, k => { this.me.x = lerp(from, t.actor.x - 90, Ease.inQuad(k)); });
       if (heavy && !o.quick) {
         // two quick ones first, then the real one
         for (let i = 0; i < 2; i++) {
@@ -674,7 +695,7 @@ class Combat {
       const b = Math.min(e.block, dmg); e.block -= b; dmg -= b;
       if (b > 0) { AudioSys.sfx('block'); Popups.add(e.actor.x + 18, e.actor.cy, `-${b}`, '#6aa9ee'); }
     }
-    e.hp -= dmg; e.hitT = 0.16; e.actor.flash('#ffffff', 0.12); e.actor.squash(0.2); e.shake = 6;
+    e.hp -= dmg; e.hitT = 0.16; e.actor.flash('#ffffff', 0.12); e.actor.squash(0.2); e.actor.tiltV = (e.actor.tiltV || 0) + clamp(3 + dmg / 3, 3, 9); e.shake = 6;
     if (dmg >= 12) {                                      // a big one gets a cartoon star
       const p2 = this.cam.toScreen(e.actor.x, e.actor.cy);
       Juice.pow(p2.x, p2.y, { r: 40 + Math.min(40, dmg), spikes: 11, col: '#ffe98a' });
@@ -730,7 +751,7 @@ class Combat {
       this.hp = Math.max(0, this.hp - dmg);
       if (this.hp > 0) this.gainRage(1);
       if (SPRITES[this.heroDef.base + '_hurt']) this.me.play('hurt');
-      this.me.flash('#ffffff', 0.14); this.me.squash(0.22);
+      this.me.flash('#ffffff', 0.14); this.me.squash(0.22); this.me.knock(-1, clamp(dmg / 10, 0.5, 1.4));
       setTimeout(() => { if (this.phase !== 'lost') this.me.play('idle'); }, 380);
       AudioSys.sfx('hurt'); Juice.shake(Math.min(16, 5 + dmg / 2), 0.32); Juice.flash('#c2333c', 0.3, 4); Juice.stop(0.06);
       Popups.add(this.me.x, this.me.cy - 20, `-${dmg}`, '#ef6a5e', { scale: 2.2, shake: 1.5 });
@@ -977,7 +998,7 @@ class Combat {
     const hov = this.selected && !this.riff && this.enemyAt(Input.mx, Input.my) === e;
     if (hov) Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: !e.lookAway, tint: '#ffe98a', tintAmount: 1, sx: 1.06, sy: 1.06, alpha: 0.55 });
     const br = Math.sin(this.t * 2.1 + a.x * 0.1) * 0.02;              // it breathes, it is alive
-    Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: !e.lookAway, tint: e.hitT > 0 ? '#ffffff' : null, sx: a.sx * (1 - br * 0.5), sy: a.sy * (1 + br), rot: (a.x - (e.tx ?? a.x)) * -0.0015 });
+    Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: !e.lookAway, tint: e.hitT > 0 ? '#ffffff' : null, sx: a.sx * (1 - br * 0.5), sy: a.sy * (1 + br), rot: (a.x - (e.tx ?? a.x)) * -0.0015 + (a.tilt || 0) });
     if (this.phase === 'encounter') return;          // no bars or intents while they do not know you are there
     // name, bar, intent
     const top = y - Gfx.spr(a.sprite).h * a.scale;

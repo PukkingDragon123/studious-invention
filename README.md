@@ -114,10 +114,20 @@ heals you after the fight.
   click hurries it along. Bosses are only knocked out: they are at the
   campfire later.)
 - **Fights are a deck of cards.** Three energy a turn, Block, statuses and
-  enemy intents you can read ahead of time. Cards marked RIFF cut to your
-  instrument, you play on the beat with A S D F, and how well you play sets
-  the damage. Between phrases you call the chant by clicking circles as their
-  rings close.
+  enemy intents you can read ahead of time. Every card is played on your
+  instrument, on the beat with A S D F, and how well you play scales what it
+  does. Cards marked RIFF are the big numbers; for the rest, the card's kind
+  sets how it is played:
+  - **SMASH** (attacks): fewer notes, all on the strong beats, each one a
+    two-lane chord you hit at once.
+  - **GUARD** (skills): long holds, and skull bombs you must leave alone.
+  - **HYPE** (rallies): drum rolls. Mash the lane for as long as the bar runs.
+  - **ECHO** (powers): the band plays a phrase, then you play it back from
+    memory, as ghost notes that fade before they land.
+  - **STRIKE** (riffs): the full chart, with a chord, a roll and a bomb or two.
+  The timing windows are tight, and only the first few riffs of a run go
+  easy on you. Between phrases you call the chant by clicking circles as
+  their rings close.
 - **Every instrument plays differently.** Bronk's Rib-Axe slides runes down
   four strings and throws in power chords. Vela's Tusk Horn rolls puffs of
   breath into the tusk, every note is a held blow, and her lungs can run

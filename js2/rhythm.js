@@ -41,10 +41,10 @@ const CH_APPROACH = 1.05;                // how long the ring takes to close
 const CH_WIN = [0.10, 0.18, 0.28];       // perfect / good / late, in seconds
 
 const RATINGS = [
-  { name: 'SICK!', win: 0.048, mult: 1.0, col: '#86e8d2', heal: 0.030, score: 350 },
-  { name: 'GOOD', win: 0.095, mult: 0.72, col: '#a8e878', heal: 0.020, score: 200 },
-  { name: 'BAD', win: 0.135, mult: 0.42, col: '#ffa832', heal: 0.004, score: 100 },
-  { name: 'AWFUL', win: 0.175, mult: 0.18, col: '#ef6a5e', heal: -0.010, score: 50 },
+  { name: 'SICK!', win: 0.040, mult: 1.0, col: '#86e8d2', heal: 0.030, score: 350 },
+  { name: 'GOOD', win: 0.082, mult: 0.72, col: '#a8e878', heal: 0.020, score: 200 },
+  { name: 'BAD', win: 0.118, mult: 0.42, col: '#ffa832', heal: 0.004, score: 100 },
+  { name: 'AWFUL', win: 0.150, mult: 0.18, col: '#ef6a5e', heal: -0.010, score: 50 },
 ];
 
 class Riff {
@@ -68,8 +68,8 @@ class Riff {
     // enormous timing windows, stones that drift in slowly, half the notes and
     // no vocal line at all until you have got the hang of strumming.
     const played = (typeof Game !== 'undefined' && Game.run && Game.run.riffsPlayed) || 0;
-    this.lesson = played < 3 ? 2 : played < 7 ? 1 : 0;
-    const ew = [1, 1.5, 2.6][this.lesson], et = [1, 1.22, 1.55][this.lesson];
+    this.lesson = played < 2 ? 2 : played < 4 ? 1 : 0;
+    const ew = [1, 1.25, 1.7][this.lesson], et = [1, 1.1, 1.3][this.lesson];
     this.windowMul = dm * (o.windowMult || 1) * ew;
     this.travel = (typeof Settings !== 'undefined' ? Settings.noteSpeed : 1.15) / (o.speedMul || 1) * et;
     // which instrument is in your hands decides how the notes come at you
@@ -77,6 +77,58 @@ class Riff {
     if (this.inst.layout === 'col') this.travel *= 0.85;
     this.kick = [0, 0, 0, 0]; this.breath = 1;
     this.build();
+  }
+  // ------------------------------------------------------------- the styles
+  // STRIKE  the riff as written, with a chord, a bomb or two and a drum roll
+  // SMASH   only the big beats, every one a two-string chord
+  // GUARD   long holds to brace behind, and bombs you must not touch
+  // HYPE    drum rolls: mash for the crowd
+  // ECHO    the beast plays a line, you play it back - and yours fade out
+  //         before they land, so you have to remember them
+  static style(R, style, notes) {
+    const hard = !R.lesson, step = AudioSys.stepDur || 0.125, L = R.inst.lanes;
+    const fresh = (n, o) => Object.assign({}, n, { judged: false, hit: false, holdT: 0, held: false, brokeHold: false, pop: 0, chord: false, rollHits: 0 }, o);
+    const other = lane => { const i = L.indexOf(lane); return L[(i + 1 + Math.floor(Math.random() * (L.length - 1))) % L.length]; };
+    const bombs = (list, k) => {
+      const out = [];
+      for (let i = 0; i < k && list.length > 2; i++) {
+        const a = list[1 + Math.floor(Math.random() * (list.length - 2))];
+        out.push(fresh(a, { time: a.time + step * 2, step: a.step + 2, lane: other(a.lane), bomb: true, sustain: 0 }));
+      }
+      return out;
+    };
+    if (style === 'smash') {
+      const keep = notes.filter(n => ((n.step - R.startBar * 16) % 4) === 0);
+      const base = keep.length >= 2 ? keep : notes.slice(0, 3);
+      const out = [];
+      for (const n of base) { n.sustain = 0; out.push(n); if (L.length > 1) out.push(fresh(n, { lane: other(n.lane), midi: n.midi + 7, chord: true })); n.chord = L.length > 1; }
+      return out;
+    }
+    if (style === 'guard') {
+      const out = [];
+      let last = -99;
+      for (const n of notes) { if (n.step - last < 4) continue; last = n.step; n.sustain = Math.max(n.sustain, step * 3); out.push(n); }
+      return out.concat(hard ? bombs(out, 3) : []);
+    }
+    if (style === 'hype') {
+      const out = notes.filter((n, i) => i % 2 === 0);
+      // two drum rolls, where the gaps are
+      for (let k = 0; k < 2 && out.length > 1; k++) {
+        const a = out[Math.floor(out.length * (k + 0.5) / 2)];
+        a.sustain = 0; a.rollDur = step * 5; a.rollNeed = hard ? 6 : 4;
+      }
+      return out;
+    }
+    if (style === 'echo') { for (const n of notes) { n.ghost = hard; n.sustain = 0; } return notes; }
+    // strike: the song as it is, dressed up
+    const out = notes.slice();
+    if (hard) {
+      const plain = out.filter(n => !n.chord && !n.sustain);
+      if (plain.length > 3 && L.length > 1) { const a = plain[Math.floor(plain.length / 2)]; a.chord = true; out.push(fresh(a, { lane: other(a.lane), midi: a.midi + 5, chord: true })); }
+      const tail = out[out.length - 1]; if (tail && !tail.chord) { tail.sustain = 0; tail.rollDur = step * 4; tail.rollNeed = 5; }
+      out.push(...bombs(out, R.o.density >= 2 ? 2 : 1));
+    }
+    return out;
   }
   static latency() { const c = AudioSys.ctx; return c ? (c.outputLatency || 0) + (typeof Settings !== 'undefined' ? Settings.offset : 0) : 0; }
   static now() { const c = AudioSys.ctx; return c ? c.currentTime - Riff.latency() : 0; }
@@ -103,9 +155,12 @@ class Riff {
       for (const e of evs) { const rel = e.step - this.startBar * 16; if (rel % 2) continue; if (e.step - last < 2) continue; keep.push(e); last = e.step; }
       evs = keep.length >= 3 ? keep : evs;
     }
-    if (!this.lesson && evs.length < 3 * bars) {
-      const have = new Set(evs.map(e => e.step));
-      for (let i = 0; i < bars * 16; i += 4) {
+    // a proper workout once you know how: a note on every beat at least, and
+    // on the off-beats too for the hard ones
+    const want = density >= 2 ? 8 : density >= 1 ? 6 : 3;
+    if (!this.lesson && evs.length < want * bars) {
+      const have = new Set(evs.map(e => e.step)), stride = density >= 2 ? 2 : 4;
+      for (let i = 0; i < bars * 16; i += stride) {
         const gs = this.startBar * 16 + i;
         if (!have.has(gs)) { const near = evs.length ? evs.reduce((a, b) => Math.abs(b.step - gs) < Math.abs(a.step - gs) ? b : a) : null; evs.push({ time: AudioSys.stepTime(gs), step: gs, midi: near ? near.midi : 64, len: 2, dur: 0.22, vel: 1 }); }
       }
@@ -134,8 +189,13 @@ class Riff {
     this.notes = this.inst.chart(this, this.notes.filter(n => !n.mine).sort(byT))
       .concat(this.inst.chart(this, this.notes.filter(n => n.mine).sort(byT)));
     this.notes.sort(byT);
+    // and the card reshapes it again: how this card wants to be played
+    if (!this.lesson || this.lesson < 2) {
+      const mine = this.notes.filter(n => n.mine), theirs = this.notes.filter(n => !n.mine);
+      this.notes = theirs.concat(Riff.style(this, o.style || 'strike', mine)).sort(byT);
+    }
     this.mine = this.notes.filter(n => n.mine);
-    this.total = this.mine.length;
+    this.total = this.mine.filter(n => !n.bomb).length;
     if (this.lesson < 2) this.buildChant();
     AudioSys.muteLead(this.startTime - 0.02, this.endTime + 0.06);
     this.lastTime = Math.max(...this.notes.map(n => n.time + n.sustain));
@@ -236,9 +296,32 @@ class Riff {
   press(lane, at) {
     if (lane < 0 || this.done) return;
     this.strPress[lane] = 0.16;
+    // a drum roll takes every press you give it while it lasts
+    const widest0 = RATINGS[RATINGS.length - 1].win * this.windowMul;
+    for (const n of this.mine) {
+      if (n.rollDur && !n.judged && n.lane === lane && at >= n.time - widest0 && at <= n.time + n.rollDur) {
+        n.rollHits = (n.rollHits || 0) + 1; n.pop = 0.6; this.kick[lane] = 1; this.strVib[lane] = 8;
+        AudioSys.playInst(this.inst.voice, n.midi + (n.rollHits % 2 ? 0 : 12), 0.1, 0.7);
+        this.score += 40; this.setJudge(`${n.rollHits}/${n.rollNeed}`, n.rollHits >= n.rollNeed ? '#86e8d2' : '#ffe98a');
+        return;
+      }
+    }
+    // a bomb: hit it and it goes off in your hands
+    for (const n of this.mine) {
+      if (!n.bomb || n.judged || n.lane !== lane || Math.abs(at - n.time) > RATINGS[1].win * this.windowMul) continue;
+      const real = this.mine.some(m => !m.bomb && !m.judged && m.lane === lane && Math.abs(at - m.time) < Math.abs(at - n.time));
+      if (real) break;
+      n.judged = true; n.hit = false; n.pop = 1; n.blew = true;
+      this.misses++; this.combo = 0; this.health = clamp(this.health - 0.09, 0, 1);
+      this.setJudge('BOOM!', '#ef6a5e'); AudioSys.sfx('bighit'); Juice.shake(9, 0.25); Juice.flash('#ef6a5e', 0.25, 5);
+      const hp = this.inst.hitPt(this, lane);
+      Particles.spawn(hp.x, hp.y, { n: 18, color: ['#ef6a5e', '#ffa832', '#120c16'], speed: 260, life: 0.5, size: 5, sizeEnd: 0, gravity: 300 });
+      if (this.o.onNote) this.o.onNote(null, n);
+      return;
+    }
     let best = null, bestD = 1e9;
     for (const n of this.mine) {
-      if (n.judged || n.lane !== lane) continue;
+      if (n.judged || n.lane !== lane || n.bomb || n.rollDur) continue;
       const d = Math.abs(at - n.time);
       if (d < bestD) { bestD = d; best = n; }
     }
@@ -306,7 +389,18 @@ class Riff {
     }
     // ---- missed notes fall off the left edge
     const late = RATINGS[RATINGS.length - 1].win * this.windowMul;
-    for (const n of this.mine) if (!n.judged && now > n.time + late) this.miss(n);
+    for (const n of this.mine) {
+      if (n.judged) continue;
+      if (n.bomb) { if (now > n.time + late) { n.judged = true; n.hit = true; this.score += 60; } continue; }   // left alone: good
+      if (n.rollDur) {
+        if (now > n.time + n.rollDur + late) {
+          const k = (n.rollHits || 0) / n.rollNeed;
+          if (k >= 0.3) this.hit(n, RATINGS[k >= 1 ? 0 : k >= 0.7 ? 1 : k >= 0.5 ? 2 : 3], 0); else this.miss(n);
+        }
+        continue;
+      }
+      if (now > n.time + late) this.miss(n);
+    }
     // ---- the opponent's call plays itself
     for (const n of this.notes) {
       if (n.mine || n.judged || now < n.time) continue;
@@ -437,12 +531,33 @@ class Riff {
     }
     let labelled = false;
     for (const n of this.notes) {
-      if (n.judged && (n.hit || !n.mine)) continue;
+      if (n.judged && (n.hit || !n.mine || n.blew)) continue;
       const dt = n.time - now; if (dt / this.travel > 1.04) continue;
       const p = I.at(this, n.lane, dt);
       if (p.x < -40 || p.x > W + 70 || p.y > H + 30) continue;
-      ctx.globalAlpha = n.mine ? 1 : 0.4;
-      I.note(this, n, p.x, p.y - bop);
+      if (n.rollDur) {
+        // a drum roll: a striped bar you mash down the length of
+        const q = I.at(this, n.lane, dt + n.rollDur), col = I.layout === 'col';
+        const x0 = Math.min(p.x, q.x), y0 = Math.min(p.y, q.y), len = col ? Math.abs(q.y - p.y) : Math.abs(q.x - p.x);
+        for (let k = 0; k < len; k += 8) {
+          const c2 = (k / 8) % 2 ? '#ffe98a' : '#e06a1b';
+          if (col) Gfx.rect(Math.round(p.x - 8), Math.round(y0 + k - bop), 16, 6, c2); else Gfx.rect(Math.round(x0 + k), Math.round(p.y - 8 - bop), 6, 16, c2);
+        }
+        ctx.globalAlpha = n.mine ? 1 : 0.4; I.note(this, n, p.x, p.y - bop); ctx.globalAlpha = 1;
+        Gfx.text(n.rollHits ? `${n.rollHits}/${n.rollNeed}` : 'MASH!', p.x + (col ? 14 : 0), p.y - bop - 30, { color: '#ffe98a', align: 'center', font: 'rock', outline: true });
+        continue;
+      }
+      if (n.bomb) {
+        // a skull stone: leave it alone
+        const wob = Math.sin(Time.t * 20 + n.time) * 2;
+        Gfx.sprite('icon_skull', p.x + wob, p.y - bop, { anchor: 'c', scale: 1.6, tint: '#ef6a5e', tintAmount: 0.5 });
+        if (Math.floor(Time.t * 8) % 2) Gfx.rect(Math.round(p.x) - 2, Math.round(p.y - bop - 20), 4, 4, '#ffa832');
+        continue;
+      }
+      // a ghost note fades out before it lands: you have to remember it
+      const ghostA = n.ghost ? clamp((dt / this.travel - 0.35) / 0.25, 0, 1) : 1;
+      ctx.globalAlpha = (n.mine ? 1 : 0.4) * ghostA;
+      if (ghostA > 0.02) I.note(this, n, p.x, p.y - bop);
       ctx.globalAlpha = 1;
       // name the trick the first time one comes at you
       if (!labelled && n.mine && (n.chord || n.roll === 1 || n.trill === 1 || (n.gliss && n.lane === 0)) && dt > 0.1) {
@@ -545,12 +660,20 @@ class Riff {
       ctx.globalAlpha = 1;
     }
     if (this.o.title) Gfx.text(this.o.title, W / 2, 50, { color: '#ffe98a', align: 'center', scale: 2, font: 'rock', outline: true, outlineWidth: 2 });
+    const now = Riff.now();
+    // how this one is played, on a plank under the name
+    const SN = { strike: ['STRIKE', 'PLAY IT'], smash: ['SMASH', 'HIT BOTH AT ONCE'], guard: ['GUARD', 'HOLD ON - NEVER TOUCH A SKULL'], hype: ['HYPE', 'MASH THE ROLLS'], echo: ['ECHO', 'LISTEN, THEN PLAY IT BACK'] }[this.o.style];
+    if (SN && now < this.startTime + 1.6) {
+      const tw = Gfx.measure(SN[1], 1, 'rock') + 110;
+      PixUI.panel('wood', W / 2 - tw / 2, 78, tw, 26, { seed: 3 });
+      Gfx.text(SN[0], W / 2 - tw / 2 + 12, 84, { color: '#ffe98a', font: 'rock' });
+      Gfx.text(SN[1], W / 2 + 40, 84, { color: '#fffaea', align: 'center', font: 'rock' });
+    }
     // what is in your hands
     const nm = this.inst.name, nw = Gfx.measure(nm, 1, 'rock') + 22;
     PixUI.panel('obsidian', 10, NECK_TOP - 58, nw, 22, { seed: 9 });
     Gfx.text(nm, 10 + nw / 2, NECK_TOP - 52, { color: '#ffe98a', align: 'center', font: 'rock' });
     // what to press: a little stone key cap on every lane
-    const now = Riff.now();
     if (!Input.touch) {
       const ka = now < this.startTime + 1.2 ? 1 : 0.55;
       ctx.globalAlpha = ka;

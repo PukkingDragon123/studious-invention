@@ -105,10 +105,18 @@ const AudioSys = {
     return g;
   },
   send(node, level) { if (level > 0 && this.reverbIn) { const g = this.ctx.createGain(); g.gain.value = level; node.connect(g).connect(this.reverbIn); } },
+  // the distortion curve is worked out once per amount and shared; and no
+  // oversampling - with a song and a riff going at once, oversampled shapers
+  // on every note were what dragged the whole game down on a real device
   shaper(k) {
-    const n = 1024, curve = new Float32Array(n);
-    for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; curve[i] = (1 + k) * x / (1 + k * Math.abs(x)); }
-    const ws = this.ctx.createWaveShaper(); ws.curve = curve; ws.oversample = '2x'; return ws;
+    this._curves = this._curves || new Map();
+    let curve = this._curves.get(k);
+    if (!curve) {
+      const n = 512; curve = new Float32Array(n);
+      for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; curve[i] = (1 + k) * x / (1 + k * Math.abs(x)); }
+      this._curves.set(k, curve);
+    }
+    const ws = this.ctx.createWaveShaper(); ws.curve = curve; ws.oversample = 'none'; return ws;
   },
   osc(type, freq, t, end, detune = 0) { const o = this.ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t); if (detune) o.detune.value = detune; o.start(t); o.stop(end); return o; },
 
@@ -366,6 +374,12 @@ const AudioSys = {
   // one note of whichever instrument is being played, straight into the song
   playInst(voice, midi, dur, vel = 1) {
     if (!this.ready) return;
+    // no more than a handful of your own notes ringing at once: past that the
+    // oldest are still sounding and nobody can hear a new one anyway
+    const now = this.now();
+    this._voices = (this._voices || []).filter(e => e > now);
+    if (this._voices.length >= 6) return;
+    this._voices.push(now + Math.min(1.2, dur + 0.3));
     const fn = this[voice] && voice !== 'lead' ? this[voice] : null;
     if (fn) fn.call(this, this.now(), midi, dur, vel, this.songGain || this.musicBus);
     else this.lead(this.now(), midi, dur, vel, this.songGain || this.musicBus);
@@ -484,7 +498,7 @@ const AudioSys = {
     }
     return out;
   },
-  playLeadNote(midi, dur, vel = 1) { if (this.ready) this.lead(this.now(), midi, dur, vel, this.songGain || this.musicBus); },
+  playLeadNote(midi, dur, vel = 1) { if (this.ready && (this._voices || []).filter(e => e > this.now()).length < 6) this.lead(this.now(), midi, dur, vel, this.songGain || this.musicBus); },
   // the player's own voice, pitched wherever they are actually holding the chant
   singNow(midi, dur = 0.3, vel = 1, vowel = 'ah') { if (this.ready) this.chant(this.now(), midi, dur, vel, this.songGain || this.musicBus, vowel); },
   playChordNow(midis, dur, vel = 1) { if (this.ready) this.chord(this.now(), midis, dur, vel, this.songGain || this.musicBus); },
