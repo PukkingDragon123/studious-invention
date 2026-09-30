@@ -759,6 +759,7 @@ class BoardScene {
     if (this.mini) { this.mini.update(dt); this.me.update(dt); return; }
     Dialogue.update();
     this.me.update(dt);
+    Wildlife.update(this, dt);
     for (const b of this.band) b.a.update(dt);
     for (const D of this.dinoActors) D.a.update(dt);
     this.die.update(dt); if (this.die2) this.die2.update(dt);
@@ -852,7 +853,6 @@ class BoardScene {
       Toon.draw(true);
       Particles.draw(Gfx.ctx, false);
       if (this.riff) { this.riff.draw(); Popups.draw(false); return; }
-    if (this.mini) { this.mini.draw(); Toon.draw(true); Popups.draw(false); return; }
       if (this.mini) { this.mini.draw(); Toon.draw(true); Popups.draw(false); return; }
       this.stage.drawUI();
       if (this.dieChoice) this.drawDiePick();
@@ -881,8 +881,10 @@ class BoardScene {
     for (const D of this.dinoActors) if (D.d.alive) list.push({ y: D.a.y, f: () => this.drawDino(D) });
     for (const b of this.band) list.push({ y: b.a.y, f: () => b.a.draw() });
     list.push({ y: this.me.y + 0.5, f: () => this.drawHero() });
+    Wildlife.collect(this, list, L, R);
     list.sort((a, b) => a.y - b.y);
     for (const it of list) it.f();
+    Wildlife.drawOver(this);
     Particles.draw(ctx, true); FX.draw(true);
     if (this.dieShow && !this.riff) { this.die.draw(); if (this.die2) this.die2.draw(); }
     Floaters.draw(); Emotes.draw(); Toon.draw(false);

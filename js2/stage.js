@@ -283,6 +283,13 @@ class EventStage {
     const P = this.BI.props, id = this.ev.id;
     const back = [[70, STAGE.HZ + 6, P.back[0]], [590, STAGE.HZ + 8, P.back[1 % P.back.length]], [520, STAGE.HZ + 4, P.mid[2 % P.mid.length]]];
     for (const [x, y, s] of back) Gfx.sprite(s, x, y, Object.assign({ anchor: 'bc' }, this.BI.tint || {}));
+    // the animals of the place, going about their business along the far edge
+    if (!this.wild) this.wild = (Backdrops.WANDER[this.b] || Backdrops.WANDER[1]).slice(0, 3).map((id, i) => ({ id, x: 60 + i * 230 + Math.random() * 60, v: (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 6), ph: Math.random() * 6 }));
+    for (const w of this.wild) {
+      w.x += w.v * Time.dt; if (w.x < -40) w.v = Math.abs(w.v); if (w.x > STAGE.W + 40) w.v = -Math.abs(w.v);
+      const big = w.id === 'stego' || w.id === 'tricera' || w.id === 'mammoth', spr = SPRITES[w.id + '_walk'] ? w.id + '_walk' : w.id + '_idle';
+      Gfx.sprite(spr, w.x, STAGE.HZ + 12, { anchor: 'bc', scale: big ? 0.34 : 0.42, frame: Math.floor(this.t * 5 + w.ph), flip: w.v < 0, tint: this.BI.far ? this.BI.far.haze : '#a8bcdc', tintAmount: 0.3 });
+    }
     const mid = [[96, STAGE.GY + 2, P.mid[0]], [590, STAGE.GY + 4, P.mid[1 % P.mid.length]]];
     for (const [x, y, s] of mid) Gfx.sprite(s, x, y, Object.assign({ anchor: 'bc' }, this.BI.tint || {}));
     const ctx = Gfx.ctx;

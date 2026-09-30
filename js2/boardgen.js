@@ -25,7 +25,7 @@ const BIOMES = {
   1: {
     key: 'fern', name: 'FERN VALLEY', sub: 'home, and the road out of it', len: 34,
     base: 'grass', ground: 'meadow', music: 'map', weather: 'pollen',
-    features: [{ type: 'river', at: 0.2 }, { type: 'rocks', at: 0.46, w: 120 }, { type: 'river', at: 0.7 }, { type: 'bones', at: 0.88, w: 70 }],
+    features: [{ type: 'river', at: 0.07, w: 1.1 }, { type: 'river', at: 0.2 }, { type: 'river', at: 0.33, w: 0.8 }, { type: 'rocks', at: 0.46, w: 120 }, { type: 'river', at: 0.58, w: 1.3 }, { type: 'river', at: 0.7 }, { type: 'bones', at: 0.88, w: 70 }, { type: 'river', at: 0.96, w: 0.9 }],
     forks: [['stone', 'grass'], ['wet', 'grass'], ['grass', 'bone']],
     weights: { path: 13, berries: 7, meat: 2, gem: 6, card: 6, charm: 6, trap: 4, rocks: 2, battle: 17, event: 11, npc: 6, choice: 6, totem: 2, vine: 2 },
     dinos: ['boar', 'raptor'], nDinos: 2,
@@ -43,7 +43,7 @@ const BIOMES = {
   2: {
     key: 'jungle', name: 'DRIZZLE JUNGLE', sub: 'it has been raining here since the ice melted', len: 38,
     base: 'grass', ground: 'jungle', music: 'event', weather: 'rain',
-    features: [{ type: 'river', at: 0.14, w: 1.3 }, { type: 'cave', at: 0.4, w: 90 }, { type: 'river', at: 0.56 }, { type: 'river', at: 0.84, w: 1.2 }],
+    features: [{ type: 'river', at: 0.14, w: 1.3 }, { type: 'river', at: 0.27, w: 0.9 }, { type: 'cave', at: 0.4, w: 90 }, { type: 'river', at: 0.56 }, { type: 'river', at: 0.7, w: 1.4 }, { type: 'river', at: 0.84, w: 1.2 }],
     forks: [['wet', 'grass'], ['dark', 'wet'], ['grass', 'wet']],
     weights: { path: 12, berries: 8, meat: 2, gem: 6, card: 6, charm: 6, trap: 5, rocks: 1, battle: 18, event: 11, npc: 5, choice: 6, totem: 2, vine: 4, geyser: 2 },
     dinos: ['raptor', 'ptero', 'stego'], nDinos: 3,
@@ -61,7 +61,7 @@ const BIOMES = {
   3: {
     key: 'badlands', name: 'BONEBAKE BADLANDS', sub: 'where the big ones came to die', len: 40,
     base: 'sand', ground: 'sand', music: 'village', weather: 'heat',
-    features: [{ type: 'bones', at: 0.16, w: 150 }, { type: 'tar', at: 0.34 }, { type: 'vents', at: 0.52, w: 100 }, { type: 'bones', at: 0.7, w: 160 }, { type: 'tar', at: 0.86 }],
+    features: [{ type: 'bones', at: 0.16, w: 150 }, { type: 'tar', at: 0.34 }, { type: 'vents', at: 0.52, w: 100 }, { type: 'river', at: 0.61, w: 0.8 }, { type: 'bones', at: 0.72, w: 150 }, { type: 'tar', at: 0.86 }],
     forks: [['bone', 'sand'], ['hot', 'stone'], ['sand', 'bone']],
     weights: { path: 12, berries: 4, meat: 3, gem: 7, card: 6, charm: 6, trap: 6, rocks: 3, battle: 18, event: 11, npc: 5, choice: 6, totem: 2, vine: 1, tar: 3 },
     dinos: ['lizard', 'tarblob', 'raptor'], nDinos: 3,
@@ -79,7 +79,7 @@ const BIOMES = {
   4: {
     key: 'peaks', name: 'FROSTFANG PEAKS', sub: 'the cold road over the top of the world', len: 40,
     base: 'stone', ground: 'snow', music: 'rest', weather: 'snow',
-    features: [{ type: 'ice', at: 0.18 }, { type: 'river', at: 0.36, w: 0.8 }, { type: 'ice', at: 0.54 }, { type: 'cave', at: 0.7, w: 110 }, { type: 'ice', at: 0.88 }],
+    features: [{ type: 'ice', at: 0.18 }, { type: 'river', at: 0.36, w: 0.8 }, { type: 'ice', at: 0.54 }, { type: 'river', at: 0.62, w: 0.7 }, { type: 'cave', at: 0.7, w: 110 }, { type: 'ice', at: 0.88 }],
     forks: [['ice', 'stone'], ['dark', 'ice'], ['stone', 'ice']],
     weights: { path: 12, berries: 3, meat: 4, gem: 7, card: 6, charm: 7, trap: 5, rocks: 4, battle: 18, event: 11, npc: 5, choice: 6, totem: 2, vine: 1 },
     dinos: ['mammothw', 'ptero', 'raptor'], nDinos: 3,
