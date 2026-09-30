@@ -87,7 +87,9 @@ const Game = {
     const gems = (c.gemsEarned || 0) + (win.bonusGems || 0) + (c.kind === 'normal' ? 1 : 0);
     bd.win = null;
     this.save();
-    this.goWith('slats', () => new RewardScene({ gems, cards, relics, kind: c.kind, boss: c.kind === 'boss' ? BIOMES[bd.biome].boss.name : null }));
+    // the clearing as it was left: who fell where, and how
+    const field = { act: c.act, meX: c.me.x, dead: c.enemies.map(e => ({ spr: e.actor.sprite, x: e.actor.x, y: e.actor.y, scale: e.actor.scale, gibbed: !!e.gibbed, ko: !!e.ko, charred: !!e.charred })) };
+    this.goWith('slats', () => new RewardScene({ gems, cards, relics, kind: c.kind, boss: c.kind === 'boss' ? BIOMES[bd.biome].boss.name : null, field }));
   },
   afterReward(o) {
     const r = this.run;

@@ -316,83 +316,50 @@ const Cards = {
       ctx.globalAlpha = o.alpha ?? 1;
     }
     const dead = o.playable === false;
-    // ---- the rock
-    ctx.save();
-    this.slab(x + 3, y + 6, w, h, { seed: c.uid || 1 });
-    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fill();          // its shadow
-    ctx.restore();
-    ctx.save();
-    this.slab(x, y, w, h, { seed: c.uid || 1 });
-    ctx.fillStyle = dead ? '#4d4a5c' : STONE.face; ctx.fill();
-    ctx.clip();
-    // speckle, grain and two cracks, all fixed to this card
-    const jit = i => ((Math.sin((i + (c.uid || 1)) * 12.9898) * 43758.5453) % 1 + 1) % 1;
-    for (let i = 0; i < 90; i++) {
-      const px = x + 2 + jit(i) * (w - 4), py = y + 2 + jit(i + 200) * (h - 4);
-      Gfx.rectA(px, py, 1 + (i % 3), 1 + (i % 2), i % 3 ? STONE.mid : STONE.lit, 0.35);
-    }
-    for (let k = 0; k < 2; k++) {
-      let cx2 = x + 6 + jit(k * 9) * (w - 12), cy2 = y + 4;
-      for (let i = 0; i < 12; i++) {
-        const nx = cx2 + (jit(k * 30 + i) - 0.5) * 12, ny = cy2 + h / 12;
-        Gfx.line(cx2, cy2, nx, ny, '#3b3048', 1);
-        Gfx.line(cx2 + 1, cy2, nx + 1, ny, STONE.lit, 1);
-        cx2 = nx; cy2 = ny;
-      }
-    }
-    Gfx.rectA(x, y, w, 4, STONE.lit, 0.4);                    // the lit top face
-    Gfx.rectA(x, y + h - 5, w, 5, '#120c16', 0.35);
-    ctx.restore();
-    ctx.save();
-    this.slab(x, y, w, h, { seed: c.uid || 1 });
-    ctx.strokeStyle = STONE.ink; ctx.lineWidth = 2; ctx.stroke();
-    ctx.restore();
-
-    // ---- the carved picture window, pigment rubbed into the recess; it
-    // gives up height to the rules when there are a lot of them
     const L = this.layout(c, s, o.combat);
-    const ax = x + 7, ay = y + 25, aw = w - 14, ah = L.ah;
-    this.carve(ax, ay, aw, ah, T.wash);
-    for (let i = 0; i < 18; i++)                              // chisel marks inside it
-      Gfx.rectA(ax + 2 + jit(i + 60) * (aw - 4), ay + 2 + jit(i + 90) * (ah - 4), 2, 1, T.pig, 0.34);
-    ctx.save(); ctx.beginPath(); ctx.rect(ax + 1, ay + 1, aw - 2, ah - 2); ctx.clip();
-    Gfx.sprite(c.def.art || 'art_note', ax + aw / 2, ay + ah / 2 + 2, { anchor: 'c', scale: Math.max(1, Math.round(s * 1.2)) });
-    ctx.restore();
-
-    // ---- the cost: a coloured pebble set into the corner
-    Gfx.circle(x + 13, y + 14, 13, STONE.ink);
-    Gfx.circle(x + 13, y + 14, 11, dead ? '#3b3048' : T.pig);
-    Gfx.circle(x + 11, y + 12, 6, dead ? '#574a66' : T.glow);
-    Gfx.circle(x + 13, y + 14, 8, dead ? '#2e2b38' : T.wash);
-    Gfx.text(String(c.cost), x + 13, y + 9, { color: dead ? '#7a6d8a' : '#ffffff', align: 'center', scale: 1.1, outline: true });
-
-    // ---- the type, chipped into the top right
-    Gfx.text(T.name + (c.def.riff ? ' ♪' : ''), x + w - 8, y + 10, { color: '#241c2e', align: 'right', scale: 1 });
-    Gfx.text(T.name + (c.def.riff ? ' ♪' : ''), x + w - 8, y + 9, { color: T.glow, align: 'right', scale: 1 });
-
-    // ---- the name, carved across a sunken band
-    this.carve(x + 5, y + ah + 29, w - 10, 17, STONE.mid);
-    // the big font if the name fits, the narrow old one if it does not
-    let nm = c.name, nf = Gfx.measure(nm, 1) > w - 14 ? 'classic' : 'main';
-    while (Gfx.measure(nm, 1, nf) > w - 14 && nm.length > 4) nm = nm.slice(0, -1);
-    Gfx.text(nm, x + w / 2, y + ah + 34, { color: '#120c16', align: 'center', font: nf });
-    Gfx.text(nm, x + w / 2, y + ah + 33, { color: c.up ? '#a8e878' : '#e8dfc6', align: 'center', font: nf });
-
-    // ---- the rules, chalked onto the rough part of the face
-    const ty = y + ah + 51;
-    ctx.save(); ctx.beginPath(); ctx.rect(x + 5, ty - 2, w - 10, h - (ty - y) - 4); ctx.clip();
+    // ---- the painting, edge to edge
+    Gfx.rectA(x + 3, y + 6, w, h, '#000000', 0.45);
+    const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(CardArt.get(c), x, y, w, h);
+    ctx.imageSmoothingEnabled = sm;
+    if (dead) Gfx.rectA(x, y, w, h, '#120c16', 0.5);
+    // ---- the name, on a dark band across the top
+    const nb = 19;
+    Gfx.rectA(x + 5, y + 5, w - 10, nb, '#0c0810', 0.78);
+    Gfx.rect(x + 5, y + 5 + nb, w - 10, 1, T.glow);
+    let nm = c.name, nf = Gfx.measure(nm, 1) > w - 40 ? 'classic' : 'main';
+    while (Gfx.measure(nm, 1, nf) > w - 40 && nm.length > 4) nm = nm.slice(0, -1);
+    Gfx.text(nm, x + w / 2 + 12, y + 10, { color: '#120c16', align: 'center', font: nf });
+    Gfx.text(nm, x + w / 2 + 11, y + 9, { color: c.up ? '#a8e878' : '#fffaea', align: 'center', font: nf });
+    // ---- the rules, on a dark panel along the bottom that grows to fit them
+    const pt = y + h - L.ph;
+    Gfx.rectA(x + 4, pt, w - 8, L.ph - 4, '#0c0810', 0.84);
+    Gfx.rect(x + 4, pt, w - 8, 1, T.glow);
+    // its type, on a tag at the top of the panel
+    const tag = T.name + (c.def.riff ? ' ♪' : ''), tw2 = Gfx.measure(tag, 1) + 12;
+    Gfx.rect(x + w / 2 - tw2 / 2, pt - 6, tw2, 13, '#08060c'); Gfx.rect(x + w / 2 - tw2 / 2 + 1, pt - 5, tw2 - 2, 11, T.pig);
+    Gfx.text(tag, x + w / 2, pt - 4, { color: T.glow, align: 'center', font: 'classic' });
+    const ty = pt + 10;
     L.lines.forEach((ln, i) => {
-      Gfx.rich(ln, x + 9, ty + i * L.lh, { color: '#241c2e', onLight: true, font: L.font });
-      Gfx.rich(ln, x + 9, ty - 1 + i * L.lh, { color: '#fffaea', font: L.font, tags: { s: '#ffdcb0' } });   // conditions stand off the grey rock
+      Gfx.rich(ln, x + 10, ty + 1 + i * L.lh, { color: '#08060c', onLight: true, font: L.font });
+      Gfx.rich(ln, x + 9, ty + i * L.lh, { color: '#fffaea', font: L.font, tags: { s: '#ffdcb0' } });
     });
-    ctx.restore();
-    // tucked into the corners of the picture, clear of the rules: the flame
-    // for a card that burns up, the swatch of ground it cares about
-    if (c.def.exhaust && !c.v.noExhaust) Gfx.sprite('icon_fire', ax + aw - 9, ay + 10, { anchor: 'c', scale: 0.8, tint: '#ffa832', tintAmount: 0.5 });
-    if (c.def.terrain && TERRAIN[c.def.terrain]) { const T = TERRAIN[c.def.terrain]; Gfx.rect(ax + 3, ay + ah - 10, 22 * s, 7, STONE.ink); Gfx.rect(ax + 4, ay + ah - 9, 20 * s, 5, T.col); }
-    if (c.echoCopy) { ctx.globalAlpha = (o.alpha ?? 1) * 0.28; this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.fillStyle = '#86e8d2'; ctx.fill(); ctx.globalAlpha = o.alpha ?? 1; }
-    if (o.hover || o.selected) { ctx.save(); this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.strokeStyle = o.selected ? '#ffe98a' : '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore(); }
-    else if (o.playable) { ctx.save(); this.slab(x, y, w, h, { seed: c.uid || 1 }); ctx.globalAlpha = (o.alpha ?? 1) * 0.75; ctx.strokeStyle = '#a8e878'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); }
+    // ---- the frame, by rarity
+    Pix.draw(CardArt.frame(c.def.rarity || 'common', Math.round(CARD_W / 2), Math.round(CARD_H / 2)), x, y, { ax: 0, ay: 0, scale: s });
+    // ---- the cost: a stone in the top corner
+    Pix.draw(CardArt.gem(dead ? 'dead' : c.def.type), x + 13 * s, y + 14 * s, { scale: s });
+    Gfx.text(String(c.cost), x + 13 * s, y + 14 * s - 6, { color: dead ? '#7a6d8a' : '#ffffff', align: 'center', scale: 1.1, outline: true });
+    // tucked into the corners: the flame for a card that burns up, the
+    // swatch of ground it cares about
+    if (c.def.exhaust && !c.v.noExhaust) Gfx.sprite('icon_fire', x + w - 12, y + nb + 12, { anchor: 'c', scale: 0.8, tint: '#ffa832', tintAmount: 0.5 });
+    if (c.def.terrain && TERRAIN[c.def.terrain]) Pix.draw(BoardIcons.ground(c.def.terrain), x + 16, pt - 14);
+    if (c.echoCopy) Gfx.rectA(x, y, w, h, '#86e8d2', 0.24);
+    if (o.hover || o.selected || o.playable) {
+      const col = o.selected ? '#ffe98a' : o.hover ? '#ffffff' : '#a8e878';
+      ctx.globalAlpha = (o.alpha ?? 1) * (o.hover || o.selected ? 1 : 0.8);
+      Gfx.rect(x - 2, y - 2, w + 4, 2, col); Gfx.rect(x - 2, y + h, w + 4, 2, col); Gfx.rect(x - 2, y, 2, h, col); Gfx.rect(x + w, y, 2, h, col);
+      ctx.globalAlpha = o.alpha ?? 1;
+    }
     if (o.alpha !== undefined) ctx.globalAlpha = 1;
     return { x, y, w, h };
   },
@@ -400,30 +367,22 @@ const Cards = {
   // big letters and the full picture if they fit, then a shorter picture,
   // then the small letters.
   layout(c, s = 1, combat) {
-    const w = Math.round(CARD_W * s), h = Math.round(CARD_H * s), desc = this.desc(c, combat), tw = w - 18;
-    const full = Math.round(52 * s), least = Math.round(30 * s);
-    const room = ah => h - (ah + 51) - 5;
-    let lines = Gfx.wrap(desc, tw, 1), lh = 11, font;
-    if (lines.length * lh > room(least)) { lines = Gfx.wrap(desc, tw, 1, 'small'); lh = 9; font = 'small'; }
-    const ah = clamp(full - Math.max(0, lines.length * lh - room(full)), least, full);
-    return { ah, lines, lh, font, fits: lines.length * lh <= room(ah) };
+    const w = Math.round(CARD_W * s), h = Math.round(CARD_H * s), desc = this.desc(c, combat), tw = w - 20;
+    const most = Math.round(h * 0.56);
+    let lines = Gfx.wrap(desc, tw, 1), lh = 12, font;
+    if (lines.length * lh + 16 > most) { lines = Gfx.wrap(desc, tw, 1, 'classic'); lh = 10; font = 'classic'; }
+    if (lines.length * lh + 16 > most) { lines = Gfx.wrap(desc, tw, 1, 'small'); lh = 9; font = 'small'; }
+    const ph = Math.max(Math.round(48 * s), lines.length * lh + 18);
+    return { ph, lines, lh, font, fits: ph <= most + 4, ah: h - ph };
   },
   zoom(c, cx, cy, o = {}) {
     const s = 1.5, w = CARD_W * s, h = CARD_H * s;
     return this.draw(c, clamp(cx - w / 2, 6, W - w - 6), clamp(cy - h / 2, 6, H - h - 6), Object.assign({ scale: s, hover: true }, o));
   },
   back(x, y, s = 1) {
-    const w = Math.round(CARD_W * s), h = Math.round(CARD_H * s);
-    const ctx = Gfx.ctx;
-    ctx.save(); this.slab(x, y, w, h, { seed: 7 });
-    ctx.fillStyle = STONE.mid; ctx.fill(); ctx.clip();
-    for (let i = 0; i < 70; i++) {
-      const j = k => ((Math.sin((k + 7) * 12.9898) * 43758.5453) % 1 + 1) % 1;
-      Gfx.rectA(x + 2 + j(i) * (w - 4), y + 2 + j(i + 90) * (h - 4), 2, 1, i % 3 ? STONE.dark : STONE.face, 0.4);
-    }
-    ctx.restore();
-    ctx.save(); this.slab(x, y, w, h, { seed: 7 });
-    ctx.strokeStyle = STONE.ink; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
-    Gfx.sprite('art_note', x + w / 2, y + h / 2, { anchor: 'c', scale: Math.max(1, s) });
-  }
+    // the back of every card: tanned hide, a burnt ammonite, the frame
+    Gfx.rectA(x + 3, y + 5, Math.round(CARD_W * s), Math.round(CARD_H * s), '#000000', 0.4);
+    Pix.draw(CardArt.back(), x, y, { ax: 0, ay: 0, scale: s });
+    Pix.draw(CardArt.frame('starter', Math.round(CARD_W / 2), Math.round(CARD_H / 2)), x, y, { ax: 0, ay: 0, scale: s });
+  },
 };

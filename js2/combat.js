@@ -77,7 +77,7 @@ const Backdrops = {
   front(act, t, cam) {
     const b = clamp(act, 1, BIOME_COUNT), P = BIOMES[b].props.front, px = cam ? cam.x - W / 2 : 0;
     for (let i = 0; i < 5; i++) {
-      const x = [-60, 90, 820, 980, 1100][i] - px * 0.3, y = 560 + (i % 2) * 14;
+      const x = [-70, 70, 890, 1030, 1160][i] - px * 0.3, y = 610 + (i % 2) * 14;
       Gfx.sprite(P[i % P.length], x, y, { anchor: 'bc', scale: 3.2, flip: i > 1, rot: Math.sin(t * 0.9 + i) * 0.02, tint: '#08060c', tintAmount: 0.62 });
     }
   },
