@@ -171,6 +171,9 @@ const Gore = (() => {
 // ---------------------------------------------------------------------------
 const Fatality = {
   *run(S, e) {
+    // a click or SPACE hurries it along; the test runs skip it outright
+    const wait = function* (t) { let k = 0; while (k < t && !(S.fatal && S.fatal.skip)) { yield 0; k += Time.dt; } };
+    if (Game.testFast) { e.gibbed = true; Gore.gib(e.actor.sprite, e.actor.frame, e.actor.scale, true, e.actor.x, e.actor.y, Gore.colOf(e), 3, 3, 1); return; }
     const a = e.actor, me = S.me, col = Gore.colOf(e), id = (S.heroDef && S.heroDef.id) || 'bronk';
     const spr = a.sprite, frame = a.frame, sc = a.scale, fy = a.y;
     Toon.drop(a);
@@ -182,7 +185,7 @@ const Fatality = {
     AudioSys.sfx('roar', { pitch: 38, len: 1.2, vol: 0.8 });
     yield* Co.over(0.5, k => { S.fatal.dark = k * 0.72; });
     S.fatal.word = { text: 'FINISH IT!', t: 0, col: '#ef6a5e' };
-    yield 0.9;
+    yield* wait(0.9);
     S.fatal.word = null;
     // walk up to it
     const home = me.x, to = a.x - Gfx.spr(spr).w * sc * 0.45 - 40;
@@ -202,7 +205,7 @@ const Fatality = {
       Gore.halve(spr, frame, sc, true, a.x, fy, col);
       Gore.spray(a.x, fy - Gfx.spr(spr).h * sc * 0.5, { n: 60, col, speed: 420, spread: Math.PI });
       Gore.splash(8, col);
-      yield 1.2;
+      yield* wait(1.2);
     } else if (id === 'vela') {
       // one note on the Tusk Horn, held until something gives
       me.play(Heroes.has(id, 'play') ? 'play' : 'idle'); AudioSys.sfx('horn', { vol: 1 });
@@ -212,36 +215,36 @@ const Fatality = {
       e.gibbed = true;
       Gore.gib(spr, frame, sc, true, a.x, fy, col, 4, 4, 1.3);
       Gore.splash(12, col);
-      yield 1.3;
+      yield* wait(1.3);
     } else if (id === 'pebble') {
       // a drum solo on its skull
       for (let i = 0; i < 6; i++) {
         me.squash(0.15); AudioSys.sfx('hit', { vol: 0.8 }); Juice.shake(4, 0.08); e.hitT = 0.08; a.sy = 0.9;
         Gore.spray(neck.x, neck.y - 20, { n: 5, col, speed: 180, dir: -Math.PI / 2 - 0.6 });
-        yield 0.12; a.sy = 1;
+        yield* wait(0.12); a.sy = 1;
       }
       AudioSys.sfx('bighit'); Juice.shake(16, 0.5); Juice.stop(0.2); Juice.flash('#ffffff', 0.4, 5);
       e.gibbed = true;
       Profile.add('beheads');
       const n2 = Gore.behead(spr, frame, sc, true, a.x, fy, col);
-      for (let i = 0; i < 24; i++) { Gore.spray(n2.neckX, n2.neckY, { n: 6, col, speed: 420, dir: -Math.PI / 2, spread: 0.35 }); yield 0.05; }
+      for (let i = 0; i < 24; i++) { Gore.spray(n2.neckX, n2.neckY, { n: 6, col, speed: 420, dir: -Math.PI / 2, spread: 0.35 }); yield* wait(0.05); }
       Gore.splash(6, col);
-      yield 0.6;
+      yield* wait(0.6);
     } else {
       // roxy: the sky answers the flute
       me.play(Heroes.has(id, 'play') ? 'play' : 'idle'); AudioSys.sfx('whistle');
-      yield 0.5;
+      yield* wait(0.5);
       S.fatal.bolt = { x: a.x, t: 0 };
       AudioSys.sfx('thunder'); AudioSys.sfx('zap'); Juice.flash('#e8f4ff', 0.8, 3); Juice.shake(18, 0.6);
       e.charred = 1;
       for (let i = 0; i < 20; i++) { Particles.spawn(a.x + rnd(-30, 30), fy - rnd(10, 80), { n: 1, color: ['#3b3048', '#574a66', '#ffa832'], speed: 40, angle: -Math.PI / 2, spread: 0.6, gravity: -30, life: 1.4, size: 6, sizeEnd: 14 }); }
-      yield 0.8;
+      yield* wait(0.8);
       S.fatal.bolt = null;
       AudioSys.sfx('crunch');
       e.gibbed = true;
       Gore.gib(spr, frame, sc, true, a.x, fy, ['#120c16', '#241c2e', '#3b3048', '#574a66'], 3, 3, 0.5);
       Gore.spray(a.x, fy - 30, { n: 30, col, speed: 200, spread: Math.PI });
-      yield 1.1;
+      yield* wait(1.1);
     }
     me.play('idle');
     // FATALITY
@@ -249,7 +252,7 @@ const Fatality = {
     S.fatal.word = { text: 'FATALITY', t: 0, col: '#c2333c', big: true };
     if (S.run && S.run.stats) S.run.stats.fatalities = (S.run.stats.fatalities || 0) + 1;
     if (typeof Profile !== 'undefined') Profile.add('fatalities', 1);
-    yield 1.8;
+    yield* wait(1.8);
     S.fatal.word = null;
     yield* Co.over(0.4, k => { S.fatal.dark = 0.72 * (1 - k); });
     S.fatal = null;

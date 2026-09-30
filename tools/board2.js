@@ -16,7 +16,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.goto('http://127.0.0.1:8765/index.html');
   // the tests fight straight away: no creeping about in the bushes first
   await page.waitForFunction(() => typeof Game !== 'undefined');
-  await page.evaluate(() => { Game.skipEncounters = true; });
+  await page.evaluate(() => { Game.skipEncounters = true; Game.testFast = true; });
   await page.waitForFunction(() => typeof Game !== 'undefined' && Game.scene);
   await page.mouse.click(480, 270); await page.waitForTimeout(300);
   const ev = fn => page.evaluate(fn);
@@ -63,7 +63,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
     });
     moved++;
     // play out whatever happens: panels, overlays, fights, rewards
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 240; i++) {
       await page.waitForTimeout(200);
       const st = await ev(() => {
         const s = Game.scene, n = s.constructor.name;

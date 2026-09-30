@@ -83,12 +83,36 @@ heals you after the fight.
 - **Money is ammonite shells.** Dig them out of ammonite beds, win them in
   fights, spend them with Trunks the mammoth. The road is fight-heavy: most
   lands have a dozen fights on them, and an elite halfway along.
+- **Every card is a painting.** Full-art cards: a whole scene for each one,
+  edge to edge, with the game's own characters acting out the card, in a
+  frame for its rarity. After a fight the reward is taken in the clearing
+  where you fought, and the cards you can learn are dealt off a deck, flip,
+  and paint themselves in.
+- **The land is alive.** Rivers wind across the boards, herds graze between
+  the tiles and scatter when you come close, pteros cross overhead with their
+  shadows under them, fish jump, and the animals of each land wander behind
+  every event scene.
 - **Events are little films.** Landing on a stranger, a mystery, a
   crossroads, a cave, a big dino, a secret or a campfire cuts to a close-up
   set in that land: the family walks on, the stranger walks on from the far
   side or the dino snores, they talk in bubbles, you choose from big carved
   buttons, and whatever happens is acted out (the bite, the heal, shells flying
   across, a relic held up, beasts running on to square up).
+- **Fights start in the wild.** You walk into a clearing in the land itself
+  (its own trees, its own animals wandering by) and the beasts have not seen
+  you. Sneak up (hold to creep while they look away, freeze when one turns),
+  hide in a bush and jump them, charge in for a free hit, or throw a rock
+  for a headshot. Get there unseen and it is an ambush; get caught and they
+  are on you.
+- **It is a fight, and it is bloody.** Hits spray blood that stains the
+  ground, big ones splash the camera lens, and heavy blows are beatdowns:
+  the camera goes in, two jabs, the real one, knockback. The dead stay where
+  they fell, on their backs in a pool with flies over them; some come apart
+  or lose their heads. The last beast standing sways, waiting, for its
+  FATALITY: Bronk splits it with the Rib-Axe, Vela's horn blows it apart,
+  Pebble drums its head off, Roxy calls down lightning and it crumbles. (A
+  click hurries it along. Bosses are only knocked out: they are at the
+  campfire later.)
 - **Fights are a deck of cards.** Three energy a turn, Block, statuses and
   enemy intents you can read ahead of time. Cards marked RIFF cut to your
   instrument, you play on the beat with A S D F, and how well you play sets
@@ -118,6 +142,14 @@ Roxy's Rain Dance, and A/D or the arrow keys look along the road. In fights: 1-9
 a card, click a prop to use it, E ends the turn, A S D F plays during a riff
 (hold it for the horn), ESC opens the menu.
 On touch: tap ROLL, tap a tile, and tap a card once to read it and again to play it.
+
+## The title stone
+
+Poke the band for a solo, stir the fire, or spot Grandma in the bushes.
+BEASTS opens the Bestiary (every beast a silhouette until you meet it, with
+how many you have put down) and TROPHIES the trophy wall: fourteen of them,
+with your runs, homecomings, fights, kills and fatalities. The game remembers
+all of it between stories.
 
 ## The lands
 
@@ -194,6 +226,10 @@ js2/rhythm.js     the riff: timing, scoring and the chant
 js2/instruments.js the seven instruments: layouts, twists, art and voices
 js2/arena.js      the fight's set pieces, framing and usable props
 js2/antics.js     how each hero throws the die, and reacts to it and to tiles
+js2/gore.js       blood, stains, pieces, and the four fatalities
+js2/cardart.js    the painted card scenes, frames, backs and cost stones
+js2/wildlife.js   the herds, pteros and fish on the board
+js2/profile.js    what the game remembers, the trophies, the bestiary
 js2/minigames.js  the swing, tug and catch tests of skill
 js2/shell.js      the ammonite shell, painted
 js2/cards.js      cards, enchantments and the card renderer

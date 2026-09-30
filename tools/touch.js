@@ -19,7 +19,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.goto('http://127.0.0.1:8765/index.html');
   // the tests fight straight away: no creeping about in the bushes first
   await page.waitForFunction(() => typeof Game !== 'undefined');
-  await page.evaluate(() => { Game.skipEncounters = true; });
+  await page.evaluate(() => { Game.skipEncounters = true; Game.testFast = true; });
   await page.waitForFunction(() => typeof Game !== 'undefined' && Game.scene);
   // game pixels -> page pixels
   const box = await ev(() => { const r = document.getElementById('game').getBoundingClientRect(); return { x: r.x, y: r.y, k: r.width / W }; });

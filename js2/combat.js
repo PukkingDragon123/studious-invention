@@ -831,6 +831,7 @@ class Combat {
     for (const c of this.hand) if (c.dealT > 0) c.dealT -= dt;
     for (const k in this.relicFlash) this.relicFlash[k] -= dt;
     if (this.banner) { this.banner.t += dt; if (this.banner.t > this.banner.life) this.banner = null; }
+    if (this.fatal && (this.fatal.t += dt) > 0.8 && (Input.clicks.length || Input.pressed('Space', 'Enter', 'Escape'))) this.fatal.skip = true;
     if (this.enc) {
       this.enc.t += dt;
       for (const k of Input.keys) if (/^Digit[1-4]$/.test(k.code) && this.enc.t > 0.4 && this.enc.choice < 0) this.enc.choice = +k.code.slice(5) - 1;

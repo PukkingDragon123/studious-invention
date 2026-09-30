@@ -93,6 +93,7 @@ const Game = {
     this.goWith('slats', () => new RewardScene({ gems, cards, relics, kind: c.kind, boss: c.kind === 'boss' ? BIOMES[bd.biome].boss.name : null, field }));
   },
   afterReward(o) {
+    if (o._left) return; o._left = true;            // once: a double click must not restart the way out
     const r = this.run;
     if (o.kind !== 'boss') { this.toBoard(); return; }
     // a land is won: whoever the boss was holding comes home
