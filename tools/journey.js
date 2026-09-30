@@ -18,6 +18,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const scene = () => ev(() => Game.scene.constructor.name);
   const until = async (fn, ms = 20000, arg) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ev(fn, arg)) return true; await page.waitForTimeout(200); } return false; };
   await page.goto('http://127.0.0.1:8765/index.html');
+  // the tests fight straight away: no creeping about in the bushes first
+  await page.waitForFunction(() => typeof Game !== 'undefined');
+  await page.evaluate(() => { Game.skipEncounters = true; });
   await page.waitForFunction(() => typeof Game !== 'undefined' && Game.scene);
   await page.mouse.click(480, 270); await page.waitForTimeout(400);
   await ev(h => { Game.newRun(h); Game.run.tips = { board: true, combat: true }; Game.startBoard(); }, HERO);

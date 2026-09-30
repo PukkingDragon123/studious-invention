@@ -92,7 +92,7 @@ function lightCombat(C) {
   Post.grade(C.act, true);
   Light.point(C.me.x, C.me.y - 60, 240, { color: '#ffe08a', power: 0.5, glow: 0.1 });
   for (const e of C.enemies) if (e.alive) Light.point(e.actor.x, e.actor.y - 50, 210, { color: '#ffd6a0', power: 0.4, glow: 0.06 });
-  for (const tx of Backdrops.TORCHES) Light.point(tx, 250, 210, { color: '#ffa832', flicker: 0.1, power: 0.6, glow: 0.2 });
+  Light.point(W / 2, 120, 700, { color: '#fff4d8', power: 0.35, glow: 0.04 });   // the open sky over the clearing
 }
 function gradeCombat(C) { }
 

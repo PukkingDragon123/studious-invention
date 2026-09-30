@@ -9,80 +9,38 @@ const CAM_DY = 96;            // the camera sits lower, so the fighters stand cl
 const ACTOR_SCALE = 2;
 
 const Backdrops = {
-  TORCHES: [84, 880],
-  // a hollow log on its side with a hide stretched over the end, on top of a
-  // bigger one: the stone age's idea of a speaker stack
-  speaker(x, y, pulse, b) {
-    const k = 1 + pulse * pulse * 0.08;
-    for (const [dy, w, h] of [[0, 52, 34], [-34, 44, 28]]) {
-      const yy = y + dy;
-      Gfx.round(x - w / 2 - 1, yy - h - 1, w + 2, h + 2, 6, '#120c16');
-      Gfx.round(x - w / 2, yy - h, w, h, 5, '#5c3a20');
-      Gfx.round(x - w / 2, yy - h, w, 5, 3, '#85562f');
-      for (let i = 0; i < 3; i++) Gfx.rect(x - w / 2 + 6 + i * (w - 12) / 2, yy - h + 2, 2, h - 4, '#3a2415');
-      const r = (h / 2 - 4) * (dy ? 1 : k);
-      Gfx.circle(x, yy - h / 2, r + 2, '#241109');
-      Gfx.circle(x, yy - h / 2, r, '#e8dfc6');
-      Gfx.circle(x - r * 0.3, yy - h / 2 - r * 0.3, r * 0.35, '#fffaea');
-      Gfx.circle(x, yy - h / 2, r * 0.35, '#c4b89a');
-    }
-    if (pulse > 0.85) for (let i = 0; i < 2; i++) Particles.spawn(x + rnd(-10, 10), y - 50, { n: 1, color: ['#fffaea', '#ffe98a'], speed: 30, angle: -Math.PI / 2, spread: 0.8, gravity: -10, life: 0.6, size: 2, shape: 'note' });
+  // Not a stage any more: a clearing in the land itself. The far country
+  // behind, then two rows of the land's own trees swaying, the animals of the
+  // place wandering along between them, the trail you are fighting on, the
+  // undergrowth round its edge, and big leaves in front of the camera.
+  WANDER: {
+    1: ['stego', 'compy', 'dodo', 'compy', 'tricera'], 2: ['dodo', 'compy', 'boar', 'compy'], 3: ['stego', 'lizard', 'compy'],
+    4: ['mammoth', 'boar', 'compy'], 5: ['lizard', 'compy', 'raptor'],
   },
-  // bones, feathers and skull lanterns strung between the torches
-  garland(t, b) {
-    const [x0, x1] = Backdrops.TORCHES, y0 = 250, sag = 44, n = 30;
-    const at = u => ({ x: lerp(x0, x1, u), y: y0 + Math.sin(u * Math.PI) * sag + Math.sin(t * 1.3 + u * 6) * 1.5 });
-    for (let i = 0; i < 80; i++) { const p0 = at(i / 80), p1 = at((i + 1) / 80); Gfx.line(p0.x, p0.y, p1.x, p1.y, '#3a2415', 2); }
-    const FEATH = { 1: ['#ef6a5e', '#ffe98a'], 2: ['#2cb3a2', '#a8e878'], 3: ['#ffa832', '#e8dfc6'], 4: ['#6aa9ee', '#fffaea'], 5: ['#c2333c', '#e06a1b'] }[b];
-    for (let i = 1; i < n; i++) {
-      const u = i / n, p = at(u), sw = Math.sin(t * 2 + i) * 2;
-      if (i % 5 === 0) {
-        // a skull with a flame inside
-        Gfx.line(p.x, p.y, p.x + sw, p.y + 8, '#3a2415', 1);
-        Gfx.round(p.x - 6 + sw, p.y + 8, 12, 10, 4, '#8a7f68');
-        Gfx.round(p.x - 5 + sw, p.y + 8, 10, 8, 3, '#e8dfc6');
-        Gfx.rect(p.x - 3 + sw, p.y + 11, 2, 2, '#ffa832'); Gfx.rect(p.x + 1 + sw, p.y + 11, 2, 2, '#ffa832');
-        Gfx.rect(p.x - 2 + sw, p.y + 15, 4, 1, '#241c2e');
-        if (window.Post) Post.light(p.x + sw, p.y + 12, 46, '#ffa832', 0.45 + Math.sin(t * 7 + i) * 0.08);
-      } else if (i % 2) {
-        Gfx.line(p.x, p.y, p.x + sw, p.y + 5, '#3a2415', 1);
-        Gfx.rect(p.x - 1 + sw, p.y + 5, 3, 9, FEATH[i % 4 === 1 ? 0 : 1]);
-        Gfx.rect(p.x + sw, p.y + 5, 1, 9, '#120c16');
-      } else {
-        Gfx.rect(p.x - 4, p.y + 1, 8, 3, '#e8dfc6'); Gfx.rect(p.x - 5, p.y, 2, 5, '#fffaea'); Gfx.rect(p.x + 3, p.y, 2, 5, '#fffaea');
-      }
+  hash: (i, s) => { const x = Math.sin(i * 127.1 + s * 311.7) * 43758.5453; return x - Math.floor(x); },
+  treeRow(b, t, px, depth, y, sc, tint, amt, seed, gap) {
+    const P = BIOMES[b].props, list = P.back, off = px * depth;
+    for (let i = -8; i < 30; i++) {
+      const x = i * gap + Backdrops.hash(i, seed) * gap * 0.6 - off;
+      if (x < -200 + px * 0 - 400 || x > 1500) continue;
+      const spr = list[Math.floor(Backdrops.hash(i, seed + 1) * list.length)];
+      const k = 0.85 + Backdrops.hash(i, seed + 2) * 0.35;
+      Gfx.sprite(spr, x, y + Backdrops.hash(i, seed + 3) * 6, { anchor: 'bc', scale: sc * k, flip: Backdrops.hash(i, seed + 4) > 0.5, rot: Math.sin(t * 0.7 + i) * 0.012, tint, tintAmount: amt });
     }
   },
-  // the low stone stage the family plays on, with a hunt painted on its face
-  dais(b) {
-    const x0 = -40, x1 = 360, top = 420, face = 434, bot = 454;
-    const rock = { 1: ['#3b3048', '#574a66', '#7a6d8a', '#a79bb4'], 2: ['#1e2a2a', '#2e4040', '#445a58', '#6a8480'], 3: ['#5c3a20', '#85562f', '#a4663a', '#c48a56'], 4: ['#4a5670', '#6a7896', '#8c9ab8', '#c0cce0'], 5: ['#1a1016', '#2a1c24', '#3c2a34', '#5a4250'] }[b];
-    Gfx.rectA(x0, bot, x1 - x0, 6, '#000000', 0.35);
-    Gfx.round(x0, face, x1 - x0, bot - face, 4, rock[0]);
-    Gfx.round(x0, face, x1 - x0, bot - face - 3, 4, rock[1]);
-    for (let x = x0 + 8; x < x1 - 8; x += 22) Gfx.rect(x + ((x * 7) % 9), face + 3, 2, bot - face - 6, rock[0]);
-    Gfx.round(x0 - 4, top, x1 - x0 + 8, face - top + 2, 6, rock[0]);
-    Gfx.round(x0 - 3, top, x1 - x0 + 6, face - top, 5, rock[2]);
-    Gfx.round(x0 - 1, top, x1 - x0 + 2, 4, 3, rock[3]);
-    for (let x = x0 + 10; x < x1; x += 31) Gfx.rect(x, top + 5 + (x % 3), 7, 1, rock[1]);
-    // ochre on the face: hands, a mammoth, two hunters with spears
-    const ctx = Gfx.ctx; ctx.globalAlpha = 0.8;
-    const O = '#c2333c', O2 = '#9c3510';
-    for (const hx of [x0 + 30, x0 + 300]) { Gfx.rect(hx, face + 7, 6, 5, O); for (let f = 0; f < 4; f++) Gfx.rect(hx - 1 + f * 2, face + 4, 1, 3, O); Gfx.rect(hx + 6, face + 7, 2, 1, O); }
-    Gfx.rect(x0 + 120, face + 6, 22, 8, O2); Gfx.rect(x0 + 138, face + 4, 8, 6, O2); Gfx.rect(x0 + 146, face + 8, 2, 6, O2);
-    for (let l = 0; l < 4; l++) Gfx.rect(x0 + 122 + l * 5, face + 14, 2, 4, O2);
-    for (const sx of [x0 + 176, x0 + 196]) { Gfx.rect(sx, face + 6, 2, 2, O); Gfx.rect(sx, face + 8, 1, 6, O); Gfx.rect(sx - 2, face + 10, 5, 1, O); Gfx.line(sx - 6, face + 5, sx + 6, face + 13, O, 1); }
-    ctx.globalAlpha = 1;
+  wanderers(b, t, px) {
+    if (!Backdrops._w || Backdrops._wb !== b) {
+      Backdrops._wb = b;
+      Backdrops._w = Backdrops.WANDER[b].map((id, i) => ({ id, x: -200 + i * 330 + Math.random() * 120, v: (Math.random() < 0.5 ? -1 : 1) * (14 + Math.random() * 16), s: 0.55 + Math.random() * 0.25 }));
+    }
+    for (const w of Backdrops._w) {
+      w.x += w.v * Time.dt;
+      if (w.x > 1350) w.v = -Math.abs(w.v); if (w.x < -350) w.v = Math.abs(w.v);
+      const walk = SPRITES[w.id + '_walk'] ? w.id + '_walk' : w.id + '_idle';
+      const big = w.id === 'stego' || w.id === 'tricera' || w.id === 'mammoth';
+      Gfx.sprite(walk, w.x - px * 0.7, 318, { anchor: 'bc', scale: big ? w.s : w.s * 1.3, frame: Math.floor(t * 6 + w.x), flip: w.v < 0, tint: BIOMES[b].far.haze, tintAmount: 0.45 });
+    }
   },
-  // bits of the land lying about on the fighting ground
-  litter(b) {
-    const L = { 1: ['v_fern', 'v_rock', 'v_flowers', 'v_mushroom'], 2: ['v_fern', 'v_bush_jungle', 'v_mushroom', 'v_rock'], 3: ['v_bones', 'v_skull', 'v_rock_bare', 'v_pot'], 4: ['v_rock_bare', 'v_bones', 'v_rock', 'v_stump'], 5: ['v_skull', 'v_bones', 'v_rock_bare', 'v_rock_bare'] }[b];
-    // only far back, where nobody stands and no name has to be read
-    const spots = [[410, 356], [505, 346], [612, 340], [948, 372], [18, 356], [372, 350], [790, 338]];
-    spots.forEach(([x, y], i) => Gfx.sprite(L[i % L.length], x, y, { anchor: 'bc', scale: 1, tint: '#120c16', tintAmount: 0.3, flip: i % 2 === 1 }));
-  },
-  // the same far country as the board you were just standing on, at the
-  // fighters' pixel size, over a pit floor of the land's own ground
   draw(act, t, cam) {
     const px = (cam ? cam.x - W / 2 : 0), b = clamp(act, 1, BIOME_COUNT), B = BIOMES[b];
     World.skyRamp(-600, 1800, -400, 360, B.sky);
@@ -94,42 +52,19 @@ const Backdrops = {
     Vista.drawAt(Ls[2], null, px, -600, 1800, 200, 2);
     const hz = { 1: '#c0d8ee', 2: '#7aa89a', 3: '#f0c890', 4: '#dce6f4', 5: '#6e2a24' }[b];
     Gfx.rectA(-600, 230, 2400, 70, hz, 0.14);
-    // the locals, on the bank, bobbing to it
-    const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : t * 2;
-    Gfx.rect(-600, 296, 2400, 30, { 1: '#2f4a1e', 2: '#102a16', 3: '#5c3a20', 4: '#6a7ea8', 5: '#241c2e' }[b]);
-    // log-drum speaker stacks on the bank, thumping on the beat
-    const pulse = 1 - (beat % 1);
-    for (const sx of [236, 724]) Backdrops.speaker(sx - px * 0.5, 324, pulse, b);
-    // the crowd: every beast in the land, bouncing to it
-    const CROWD = ['compy_idle', 'dodo_idle', 'raptor_idle', 'compy_idle', 'boar_idle', 'dodo_idle', 'lizard_idle', 'compy_idle'];
-    for (let i = 0; i < 18; i++) {
-      const x = -300 + i * 86 + (i % 3) * 18 - px * 0.5;
-      if (Math.abs(x - 236 + px * 0.5) < 40 || Math.abs(x - 724 + px * 0.5) < 40) continue;
-      const bb = Math.abs(Math.sin((beat + i * 0.31) * Math.PI)) * (i % 2 ? 7 : 4);
-      Gfx.sprite(CROWD[i % CROWD.length], x, 322 - bb, { anchor: 'bc', tint: '#120c16', tintAmount: 0.8, alpha: 0.85, frame: Math.floor(beat + i), flip: i % 2 === 0, scale: CROWD[i % CROWD.length] === 'compy_idle' ? 1 : 0.8 });
-    }
+    // the wood: a far row in the haze, the animals of the place, a near row
+    Backdrops.treeRow(b, t, px, 0.45, 300, 1.4, B.far.haze, 0.55, 7, 70);
+    Backdrops.wanderers(b, t, px);
+    Backdrops.treeRow(b, t, px, 0.7, 326, 2, '#120c16', 0.22, 19, 110);
+    // the trail through the clearing
     Vista.pit(b, -600, 1800, 322, 2);
-    Backdrops.garland(t, b);
-    Backdrops.dais(b);
-    Backdrops.litter(b);
     Gfx.rect(-600, 322, 2400, 3, { 1: '#85562f', 2: '#27632f', 3: '#a4663a', 4: '#c0d0e8', 5: '#4d4a5c' }[b]);
-    Gfx.rectA(-600, 325, 2400, 6, '#000000', 0.3);
-    const prop = { 1: 'v_bush', 2: 'v_bush_jungle', 3: 'v_rock_bare', 4: 'v_rock_bare', 5: 'v_rock_bare' }[b];
-    for (let i = 0; i < 14; i++) Gfx.sprite(prop, -500 + i * 160 - px * 0.7, 350, { anchor: 'bc', scale: 0.8, alpha: 0.5, tint: '#120c16', tintAmount: 0.3 });
-    // two torches marking the edge of the fighting ground: this is a stage
-    for (const tx of Backdrops.TORCHES) {
-      Gfx.shadow(tx, 344, 30, 0.3);
-      Gfx.rect(tx - 5, 262, 10, 84, '#241109');
-      Gfx.rect(tx - 4, 262, 8, 84, '#5c3a20');
-      Gfx.rect(tx - 4, 262, 3, 84, '#85562f');
-      for (let k = 0; k < 3; k++) Gfx.rect(tx - 6, 280 + k * 20, 12, 3, '#3a2415');
-      Gfx.round(tx - 11, 250, 22, 16, 5, '#241c2e');
-      Gfx.round(tx - 9, 251, 18, 5, 2, '#574a66');
-      for (const i of [0, 2, 1])
-        World.flame(tx + (i - 1) * 4, 254, (i === 1 ? 30 : 20) + Math.abs(Math.sin(t * 6.3 + i + tx)) * 12, i === 1 ? 10 : 6,
-          Math.sin(t * 4.1 + i * 2) * 3, ['#e06a1b', '#ffa832', '#ffe98a', '#9c3510'], i + tx);
-      if (chance(0.3)) Particles.fire(tx + rnd(-4, 4), 236, 1);
-      if (window.Post) Post.light(tx, 240, 150, '#ffa832', 0.8);
+    Gfx.rectA(-600, 325, 2400, 8, '#000000', 0.25);
+    // the undergrowth round the back of it
+    const mid = B.props.mid;
+    for (let i = 0; i < 16; i++) {
+      const x = -300 + i * 104 + Backdrops.hash(i, 3) * 60 - px * 0.9;
+      Gfx.sprite(mid[i % mid.length], x, 344 + Backdrops.hash(i, 5) * 10, { anchor: 'bc', scale: 1.5, flip: i % 2 === 1, tint: '#120c16', tintAmount: 0.15 });
     }
     const cx = () => cam ? cam.x + rnd(-W / 2, W / 2) : rnd(0, W);
     if (b === 5) for (let i = 0; i < 3; i++) if (chance(0.35)) Particles.spawn(cx(), 460, { n: 1, color: ['#e06a1b', '#ffa832', '#574a66'], speed: 24, gravity: -36, life: 3.4, size: 3, sizeEnd: 0 });
@@ -137,12 +72,20 @@ const Backdrops = {
     if (b === 4) if (chance(0.5)) Particles.spawn(cx(), 100, { n: 1, color: ['#ffffff', '#e8f0ff'], speed: 10, vx: -30, vy: 60, gravity: 0, life: 6, size: 3, drag: 1 });
     if (b === 1) if (chance(0.2)) Particles.spawn(cx(), rnd(120, 300), { n: 1, color: ['#fffaea', '#ffe98a'], speed: 8, vx: 12, gravity: -4, life: 4, size: 2 });
     if (b === 3) if (chance(0.15)) Particles.spawn(cx(), rnd(300, 400), { n: 1, color: ['#e2b86e', '#c89a58'], speed: 40, vx: 120, gravity: -10, life: 2, size: 3 });
-  }
+  },
+  // leaves and rocks right in front of the camera, at the bottom corners
+  front(act, t, cam) {
+    const b = clamp(act, 1, BIOME_COUNT), P = BIOMES[b].props.front, px = cam ? cam.x - W / 2 : 0;
+    for (let i = 0; i < 5; i++) {
+      const x = [-60, 90, 820, 980, 1100][i] - px * 0.3, y = 560 + (i % 2) * 14;
+      Gfx.sprite(P[i % P.length], x, y, { anchor: 'bc', scale: 3.2, flip: i > 1, rot: Math.sin(t * 0.9 + i) * 0.02, tint: '#08060c', tintAmount: 0.62 });
+    }
+  },
 };
 
 class Combat {
   constructor(ids, o = {}) {
-    this.ids = ids; this.kind = o.kind || 'normal'; this.act = o.act || (Game.run ? Game.run.act : 1);
+    this.ids = ids; this.opts = o; this.kind = o.kind || 'normal'; this.act = o.act || (Game.run ? Game.run.act : 1);
     this.advantage = o.advantage || 'even';       // how the fight opened, out in the valley
     this.run = Game.run;
     this.rng = new RNG((this.run ? this.run.seed : 1) + (this.run ? this.run.fights * 977 : 0) + 31);
@@ -174,10 +117,19 @@ class Combat {
     Arena.setup(this);
     Gore.clear(); Gore.setGround(STAGE_Y + 4);
     this.hype = this.run.startHype || 0;
-    // who got the jump on whom, out in the grass, decides how turn one goes
+    const boss = this.enemies.some(e => e.def.boss);
+    // a fight that has not started yet: you come upon them in the wild first
+    this.encounterOn = !boss && this.advantage === 'even' && this.opts.encounter !== false && !Game.skipEncounters;
+    this.applyAdvantage();
+    AudioSys.play(boss ? (['blaze', 'boss1', 'boss2', 'boss3', 'boss3'][this.act - 1] || 'blaze') : this.kind === 'elite' ? 'battle3' : `battle${Math.min(3, Math.ceil(this.act * 0.6))}`, { intensity: this.kind === 'normal' ? 1 : 2, fade: 0.35 });
+    Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
+    this.co = Co.run(this.intro(), this);
+  }
+  // who got the jump on whom, out in the grass, decides how turn one goes
+  applyAdvantage() {
     if (this.advantage === 'ambush') {
       for (const e of this.enemies) e.st.vuln = (e.st.vuln || 0) + 2;
-      this.energy = this.maxEnergy + 1;
+      this.energyBonus = (this.energyBonus || 0) + 1;
       this.hype += 15;
       this.flags.ambush = true;
     } else if (this.advantage === 'ambushed') {
@@ -185,10 +137,174 @@ class Combat {
       for (const e of this.enemies) e.st.str = (e.st.str || 0) + 1;
       this.flags.ambushed = true;
     }
-    const boss = this.enemies.some(e => e.def.boss);
-    AudioSys.play(boss ? (['blaze', 'boss1', 'boss2', 'boss3', 'boss3'][this.act - 1] || 'blaze') : this.kind === 'elite' ? 'battle3' : `battle${Math.min(3, Math.ceil(this.act * 0.6))}`, { intensity: this.kind === 'normal' ? 1 : 2, fade: 0.35 });
-    Game.worldToScreen = (x, y) => this.cam.toScreen(x, y);
-    this.co = Co.run(this.intro(), this);
+  }
+  // ------------------------------------------------------------- encounter
+  // You walk into a clearing and there they are, and they have not seen you.
+  // What you do now decides how the fight opens.
+  *encounter() {
+    this.phase = 'encounter'; this.busy = true;
+    const me = this.me, home = me.x, foes = this.alive(), lead = foes[0];
+    for (const e of foes) { e.lookAway = true; e.hold = true; e.actor.x = e.tx; }
+    Juice.letterbox(true);
+    this.cam.zoom = 1.12; this.cam.lookAt(W / 2 - 20, 300 + CAM_DY * 0.6, true);
+    me.x = -90; me.play(Heroes.has(this.heroDef.id, 'walk') ? 'walk' : 'idle');
+    yield* Co.over(1.2, k => { me.x = lerp(-90, 120, k); if (chance(0.2)) Particles.dust(me.x - 6, me.y, 1); });
+    me.play('idle');
+    Emotes.show(me, '!', 0.9); AudioSys.sfx('detect');
+    yield 0.4;
+    this.enc = { choice: -1, t: 0, opts: [
+      { id: 'sneak', label: 'SNEAK UP', icon: 'art_foot', desc: 'Creep closer while they look away. Get there and it is an {g}ambush{/}.' },
+      { id: 'hide', label: 'HIDE', icon: 'v_bush', desc: 'Into the bushes. If they walk past, you jump them: {g}ambush{/}.' },
+      { id: 'charge', label: 'CHARGE', icon: 'art_club', desc: 'Straight in swinging: a {y}free hit{/}, then a fair fight.' },
+      { id: 'throw', label: 'THROW A ROCK', icon: 'v_rock', desc: 'Aim for the head: {y}big damage{/}, and it might {c}stun{/}.' },
+    ] };
+    yield () => this.enc.choice >= 0 || this.enc.t > 14;
+    const pick = this.enc.choice >= 0 ? this.enc.opts[this.enc.choice].id : 'charge';
+    this.enc = null; AudioSys.sfx('select');
+    const res = yield* this['enc_' + pick](lead, foes);
+    this.advantage = res; this.applyAdvantage();
+    for (const e of foes) { e.lookAway = false; e.hold = false; }
+    me.play(Heroes.has(this.heroDef.id, 'walk') ? 'walk' : 'idle');
+    const from = me.x;
+    yield* Co.over(0.45, k => { me.x = lerp(from, home, Ease.inOutQuad(k)); });
+    me.play('idle'); me.z = 0; me.sy = 1;
+    this.sneak = null; this.bush = null; this.encRock = null;
+  }
+  *enc_sneak(lead, foes) {
+    const me = this.me, x0 = me.x, x1 = lead.actor.x - Gfx.spr(lead.actor.sprite).w * lead.actor.scale * 0.5 - 50;
+    const S = this.sneak = { dist: 0, look: 0, warn: 0, calm: rnd(1, 1.8), seen: 0, t: 0 };
+    let result = null;
+    while (!result) {
+      yield 0;
+      const dt = Time.dt; S.t += dt;
+      if (S.look > 0) { S.look -= dt; if (S.look <= 0) { S.calm = rnd(0.8, 1.9); for (const e of foes) e.lookAway = true; } }
+      else if (S.warn > 0) { S.warn -= dt; if (S.warn <= 0) { S.look = rnd(0.7, 1.3); lead.lookAway = false; AudioSys.sfx('detect', { vol: 0.5 }); } }
+      else { S.calm -= dt; if (S.calm <= 0) { S.warn = 0.55; Emotes.show(lead.actor, '?', 0.5); lead.actor.stretch(0.1); } }
+      const moving = Input.isDown('Space', 'KeyD', 'ArrowRight') || Input.down;
+      if (moving) {
+        S.dist = Math.min(1, S.dist + dt * 0.3);
+        me.x = lerp(x0, x1, S.dist);
+        if (me.clipName !== 'walk' && Heroes.has(this.heroDef.id, 'walk')) me.play('walk');
+        me.sy = 0.82; if (chance(dt * 6)) Particles.dust(me.x - 6, me.y, 1);
+        if (S.look > 0) S.seen += dt; else S.seen = Math.max(0, S.seen - dt * 0.5);
+      } else { if (me.clipName === 'walk') me.play('idle'); me.sy = 0.82; }
+      if (S.seen > 0.18 || S.t > 14) result = 'ambushed';
+      else if (S.dist >= 1) result = 'ambush';
+    }
+    me.sy = 1;
+    if (result === 'ambush') {
+      // over the last rock and onto its back
+      AudioSys.sfx('whoosh'); me.stretch(0.3);
+      const from = me.x;
+      yield* Co.over(0.3, k => { me.x = lerp(from, lead.actor.x - 40, k); me.z = Math.sin(k * Math.PI) * 60; });
+      me.z = 0;
+      Toon.word(lead.actor.x, lead.actor.top - 10, 'SURPRISE!', { size: 1.6, col: '#a8e878', life: 1 });
+      yield* this.dealDamage(lead, 6 + this.act * 2, { heavy: true });
+    } else yield* this.spotted(foes);
+    return result;
+  }
+  *enc_hide(lead, foes) {
+    const me = this.me;
+    this.bush = { x: me.x + 16, shake: 0 };
+    AudioSys.sfx('whoosh'); me.squash(0.3);
+    yield* Co.over(0.25, k => { me.sy = 1 - k * 0.45; });
+    // they come looking
+    const p = 0.5 + (this.touchedAny('grass') ? 0.15 : 0) + (this.touchedAny('dark') ? 0.1 : 0);
+    const ok = this.rng.chance(p);
+    for (const e of foes) { e.lookAway = false; Emotes.show(e.actor, '?', 1.4); }
+    const starts = foes.map(e => e.actor.x);
+    yield* Co.over(1.5, k => { foes.forEach((e, i) => { e.actor.x = starts[i] - 120 * Ease.inOutQuad(k) + Math.sin(k * 20 + i) * 3; }); if (chance(0.06)) AudioSys.sfx('squeak', { vol: 0.3 }); this.bush.shake = Math.sin(k * 30) * (k > 0.7 ? 1 : 0.2); });
+    yield 0.4;
+    let result;
+    if (ok) {
+      // they give up and turn away, and you come out of the leaves at them
+      for (const e of foes) e.lookAway = true;
+      yield 0.5;
+      me.sy = 1; me.stretch(0.4); AudioSys.sfx('bighit');
+      Toon.word(me.x + 40, me.top - 20, 'BOO!', { size: 1.8, col: '#a8e878', life: 1 });
+      this.bush = null;
+      yield* this.dealDamage(lead, 5 + this.act * 2, { heavy: true });
+      result = 'ambush';
+    } else {
+      // a snout comes through the leaves
+      AudioSys.sfx('roar', lead.def.roar || {}); Emotes.show(lead.actor, '!', 1);
+      this.bush.shake = 3; yield 0.3;
+      this.bush = null; me.sy = 1;
+      yield* Co.over(0.4, k => { me.z = Math.sin(k * Math.PI) * 50; me.x -= 1.2; });
+      me.z = 0; Toon.stars(me, 1.4);
+      this.damagePlayer(3 + this.act, { from: lead });
+      result = 'ambushed';
+    }
+    const now = foes.map(e => e.actor.x);
+    yield* Co.over(0.5, k => foes.forEach((e, i) => { e.actor.x = lerp(now[i], e.tx, k); }));
+    return result;
+  }
+  *enc_charge(lead, foes) {
+    const me = this.me;
+    AudioSys.sfx('growl'); me.stretch(0.3);
+    Toon.word(me.x + 20, me.top - 20, 'RAAAAH!', { size: 1.8, col: '#ffa832', life: 0.9 });
+    for (const e of foes) { e.lookAway = false; Emotes.show(e.actor, '!', 0.8); }
+    yield 0.3;
+    if (this.heroDef.id === 'bronk') this.gainRage(2);
+    yield* this.dealDamage(lead, 4 + this.act, { heavy: true });
+    return 'even';
+  }
+  *enc_throw(lead, foes) {
+    const me = this.me;
+    me.squash(0.3); AudioSys.sfx('pickup');
+    yield 0.25;
+    me.stretch(0.3); AudioSys.sfx('whoosh');
+    const x0 = me.x + 20, y0 = me.top + 10, x1 = lead.actor.x, y1 = lead.actor.top + 20;
+    this.encRock = { x: x0, y: y0, r: 0 };
+    yield* Co.over(0.5, k => { this.encRock.x = lerp(x0, x1, k); this.encRock.y = lerp(y0, y1, k) - Math.sin(k * Math.PI) * 90; this.encRock.r = k * 12; });
+    this.encRock = null;
+    const head = this.rng.chance(0.35);
+    AudioSys.sfx('bighit'); Juice.shake(10, 0.25); Juice.stop(0.08);
+    this.damageEnemy(lead, this.calcDamage(7 + this.act * 2 + (head ? 4 : 0), lead, {}));
+    if (head && lead.alive) { this.stun(lead, 1); Toon.word(x1, y1 - 30, 'HEADSHOT!', { size: 1.6, col: '#ffe98a', life: 1 }); }
+    for (const e of foes) { e.lookAway = false; if (e !== lead) Emotes.show(e.actor, '!', 0.8); }
+    yield 0.5;
+    return 'even';
+  }
+  *spotted(foes) {
+    for (const e of foes) { e.lookAway = false; Emotes.show(e.actor, '!', 1); e.actor.stretch(0.2); }
+    AudioSys.sfx('roar', foes[0].def.roar || {}); Juice.shake(6, 0.4);
+    Toon.word(this.me.x + 20, this.me.top - 16, 'UH OH', { size: 1.4, col: '#ef6a5e', life: 0.9 });
+    yield 0.7;
+  }
+  drawEncounter() {
+    const E = this.enc;
+    if (E) {
+      // four choices, carved on planks
+      const n = E.opts.length, bw = 214, gap = 10, x0 = W / 2 - (n * bw + (n - 1) * gap) / 2, y = H - 186;
+      E.opts.forEach((o, i) => {
+        const x = x0 + i * (bw + gap), k = Ease.outBack(clamp(E.t * 4 - i * 0.3, 0, 1)); if (k <= 0) return;
+        const yy = y + (1 - k) * 60, hov = UI.hovered(x, yy, bw, 112);
+        PixUI.panel(hov ? 'woodhot' : 'wood', x, yy - (hov ? 4 : 0), bw, 112, { seed: i + 3, hot: hov });
+        Gfx.sprite(o.icon, x + 44, yy + 34 - (hov ? 4 : 0), { anchor: 'c', scale: o.icon.startsWith('art_') ? 1.5 : 1.2 });
+        PixUI.panel('stone', x + 8, yy + 8 - (hov ? 4 : 0), 22, 22, { seed: i, cut: 2, moss: false });
+        Gfx.text(String(i + 1), x + 19, yy + 12 - (hov ? 4 : 0), { color: '#5c3a20', align: 'center', font: 'rock' });
+        Gfx.text(o.label, x + 76, yy + 24 - (hov ? 4 : 0), { color: '#ffe0a8', scale: 1.4 });
+        Gfx.wrap(o.desc, bw - 24, 1).forEach((L, j) => Gfx.rich(L, x + 12, yy + 62 + j * 13 - (hov ? 4 : 0), { color: '#e8dfc6' }));
+        UI.hit(x, yy, bw, 112, () => { if (E.choice < 0 && E.t > 0.4) E.choice = i; });
+      });
+      PixUI.panel('obsidian', W / 2 - 110, 70, 220, 30, { seed: 5 });
+      Gfx.text("THEY HAVEN'T SEEN YOU", W / 2, 78, { color: '#ffe98a', align: 'center', font: 'rock' });
+    }
+    if (this.sneak) {
+      const S = this.sneak, lead = this.alive()[0];
+      if (lead) {
+        // the eye over the one that might turn round
+        const p = this.cam.toScreen(lead.actor.x, lead.actor.top - 30), open = S.look > 0 ? 1 : S.warn > 0 ? 0.5 : 0;
+        PixUI.panel(open === 1 ? 'red' : 'obsidian', p.x - 26, p.y - 16, 52, 32, { seed: 2 });
+        if (open === 0) Gfx.rect(p.x - 14, p.y - 1, 28, 3, '#a79bb4');
+        else { Gfx.rect(p.x - 14, p.y - 6 * open, 28, 12 * open, '#fffaea'); Gfx.rect(p.x - 4, p.y - 5 * open, 8, 10 * open, open === 1 ? '#c2333c' : '#120c16'); }
+      }
+      PixUI.panel('obsidian', W / 2 - 150, H - 110, 300, 44, { seed: 7 });
+      Gfx.text(Input.touch ? 'HOLD TO CREEP' : 'HOLD SPACE TO CREEP', W / 2, H - 104, { color: '#ffe98a', align: 'center', font: 'rock' });
+      Gfx.rect(W / 2 - 130, H - 84, 260, 8, '#241109'); Gfx.rect(W / 2 - 130, H - 84, Math.round(260 * S.dist), 8, '#a8e878');
+      if (S.seen > 0) Gfx.rect(W / 2 - 130, H - 76, Math.round(260 * clamp(S.seen / 0.18, 0, 1)), 4, '#ef6a5e');
+    }
   }
   exit() { Co.stop(this.co); Game.worldToScreen = null; Juice.letterbox(false); Backdrops.scene = null; }
   spawn(id, initial) {
@@ -223,6 +339,7 @@ class Combat {
   // -------------------------------------------------------------------- flow
   *intro() {
     this.busy = true;
+    if (this.encounterOn) { yield* this.encounter(); this.phase = 'intro'; }
     Juice.letterbox(true);
     this.cam.zoom = 1.7; this.cam.lookAt(W - 240, 350 + CAM_DY * 0.5, true);
     yield 0.35;
@@ -703,12 +820,16 @@ class Combat {
       e.hitT = Math.max(0, e.hitT - dt); e.shake = Math.max(0, e.shake - dt * 24);
       if (e.spawnT > 0) e.spawnT = Math.max(0, e.spawnT - dt * 2.2);
       if (!e.alive) e.dieT += dt;
-      if (e.tx !== undefined && e.alive) e.actor.x = damp(e.actor.x, e.tx, 7, dt);
+      if (e.tx !== undefined && e.alive && !e.hold) e.actor.x = damp(e.actor.x, e.tx, 7, dt);
       e.actor.play(e.def.boss ? 'boss' : 'idle');
     }
     for (const c of this.hand) if (c.dealT > 0) c.dealT -= dt;
     for (const k in this.relicFlash) this.relicFlash[k] -= dt;
     if (this.banner) { this.banner.t += dt; if (this.banner.t > this.banner.life) this.banner = null; }
+    if (this.enc) {
+      this.enc.t += dt;
+      for (const k of Input.keys) if (/^Digit[1-4]$/.test(k.code) && this.enc.t > 0.4 && this.enc.choice < 0) this.enc.choice = +k.code.slice(5) - 1;
+    }
     this.handSlide = damp(this.handSlide, (this.riff || this.phase === 'won' || this.phase === 'lost') ? 1 : 0, 9, dt);
     // beat-synced camera bop
     const beat = AudioSys.song ? (AudioSys.now() - AudioSys.songStart) / AudioSys.beatDur() : this.t * 2;
@@ -757,10 +878,14 @@ class Combat {
     list.push({ y: this.me.y + 1, f: () => this.drawHeroActor() });
     list.sort((a, b) => a.y - b.y);
     for (const it of list) it.f();
+    // the bush you are hiding in, and the rock in the air
+    if (this.bush) Gfx.sprite('v_bush', this.bush.x + (this.bush.shake ? rnd(-this.bush.shake, this.bush.shake) : 0), STAGE_Y + 8, { anchor: 'bc', scale: 2.6 });
+    if (this.encRock) Gfx.sprite('v_rock', this.encRock.x, this.encRock.y, { anchor: 'c', scale: 0.7, rot: this.encRock.r });
     Gore.drawChunks();
     Arena.drawProps(this, true);
     Particles.draw(Gfx.ctx, true);
     Emotes.draw(); Toon.draw();
+    Backdrops.front(this.act, this.t, this.cam);
     Arena.drawFront(this);
     FX.draw(true);
     if (Settings.lighting !== false) lightCombat(this);
@@ -773,9 +898,12 @@ class Combat {
     FX.draw(false);
     Fatality.draw(this);
     if (this.riff) this.riff.draw();
-    this.drawHud();
-    if (!this.riff) Arena.drawUI(this);
-    if (!this.riff) this.drawHand();
+    if (this.phase === 'encounter') this.drawEncounter();
+    else {
+      this.drawHud();
+      if (!this.riff) Arena.drawUI(this);
+      if (!this.riff) this.drawHand();
+    }
     if (this.selected) this.drawTargeting();
     Popups.draw(false);
     Toon.draw(true);
@@ -841,8 +969,9 @@ class Combat {
     const y = a.y - (e.spawnT > 0 ? e.spawnT * 80 : 0) + (e.def.flying ? -56 + Math.sin(this.t * 2.6 + a.x) * 8 : 0);
     Gfx.shadow(a.x, a.y, Gfx.spr(a.sprite).w * a.scale * 0.55, 0.3);
     const hov = this.selected && !this.riff && this.enemyAt(Input.mx, Input.my) === e;
-    if (hov) Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: true, tint: '#ffe98a', tintAmount: 1, sx: 1.06, sy: 1.06, alpha: 0.55 });
-    Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: true, tint: e.hitT > 0 ? '#ffffff' : null, sx: a.sx, sy: a.sy });
+    if (hov) Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: !e.lookAway, tint: '#ffe98a', tintAmount: 1, sx: 1.06, sy: 1.06, alpha: 0.55 });
+    Gfx.sprite(a.sprite, a.x + sx, y, { anchor: 'bc', scale: a.scale, frame: a.frame, flip: !e.lookAway, tint: e.hitT > 0 ? '#ffffff' : null, sx: a.sx, sy: a.sy });
+    if (this.phase === 'encounter') return;          // no bars or intents while they do not know you are there
     // name, bar, intent
     const top = y - Gfx.spr(a.sprite).h * a.scale;
     const bw = clamp(Gfx.spr(a.sprite).w * a.scale * 0.62, 78, 180);

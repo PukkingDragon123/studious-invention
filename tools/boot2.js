@@ -15,6 +15,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const ev = (f, a) => page.evaluate(f, a);
   const scene = () => ev(() => Game.scene.constructor.name);
   await page.goto('http://127.0.0.1:8765/index.html');
+  // the tests fight straight away: no creeping about in the bushes first
+  await page.waitForFunction(() => typeof Game !== 'undefined');
+  await page.evaluate(() => { Game.skipEncounters = true; });
   await page.waitForFunction(() => typeof Game !== 'undefined' && Game.scene);
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${OUT}/01_boot.png` });
