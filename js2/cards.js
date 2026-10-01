@@ -327,10 +327,10 @@ const Cards = {
     const nb = 19;
     Gfx.rectA(x + 5, y + 5, w - 10, nb, '#0c0810', 0.78);
     Gfx.rect(x + 5, y + 5 + nb, w - 10, 1, T.glow);
-    let nm = c.name, nf = Gfx.measure(nm, 1) > w - 40 ? 'classic' : 'main';
-    while (Gfx.measure(nm, 1, nf) > w - 40 && nm.length > 4) nm = nm.slice(0, -1);
-    Gfx.text(nm, x + w / 2 + 12, y + 10, { color: '#120c16', align: 'center', font: nf });
-    Gfx.text(nm, x + w / 2 + 11, y + 9, { color: c.up ? '#a8e878' : '#fffaea', align: 'center', font: nf });
+    let nm = c.name, nf = Gfx.measure(nm, 1) > w - 32 ? 'classic' : 'main';
+    while (Gfx.measure(nm, 1, nf) > w - 32 && nm.length > 4) nm = nm.slice(0, -1);
+    Gfx.text(nm, x + w / 2 + 10, y + 10, { color: '#120c16', align: 'center', font: nf });
+    Gfx.text(nm, x + w / 2 + 9, y + 9, { color: c.up ? '#a8e878' : '#fffaea', align: 'center', font: nf });
     // ---- the rules, on a dark panel along the bottom that grows to fit them
     const pt = y + h - L.ph;
     Gfx.rectA(x + 4, pt, w - 8, L.ph - 4, '#0c0810', 0.84);

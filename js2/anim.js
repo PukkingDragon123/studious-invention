@@ -9,12 +9,12 @@
 // body finally leaves the ground a bit.
 // bob is pixels of vertical travel; squish is how much the bounce squashes.
 const BOB = {
-  idle: 0.4, walk: 1.1, run: 1.8, dash: 2.2, eat: 1.0, play: 1.6, sing: 1.4,
+  idle: 0.4, walk: 1.4, run: 1.8, dash: 2.2, eat: 1.0, play: 1.6, sing: 1.4,
   cook: 0.8, cry: 1.2, shock: 1.2, hurt: 0, sleep: 0.25, drive: 0.8,
   roar: 1.2, boss: 1.4, trader: 0.6, shower: 0.8, fly: 2.6, kick: 2.0,
 };
 const SQUISH = {
-  idle: 0.008, walk: 0.012, run: 0.02, dash: 0.03, play: 0.02, sing: 0.018,
+  idle: 0.008, walk: 0.024, run: 0.02, dash: 0.03, play: 0.02, sing: 0.018,
   eat: 0.014, cry: 0.016, shock: 0.016, roar: 0.02, fly: 0.03, kick: 0.025,
 };
 
@@ -58,7 +58,7 @@ class Actor {
     this.shadow = o.shadow !== false; this.shadowW = o.shadowW || 0;
     this.visible = true; this.speed = o.speed || 120; this.onFrame = null;
     // the life in them: a breath, a lean into the walk, a squash on turning
-    this.seed = Math.random() * 10; this._lx = this.x; this.vx = 0; this.lean = 0; this._face = this.facing; this.fidgetT = 3 + Math.random() * 5;
+    this.seed = Math.random() * 10; this._lx = this.x; this.vx = 0; this.lean = 0; this.leanV = 0; this._face = this.facing; this.fidgetT = 3 + Math.random() * 5;
     // a fighter's stance, the groove when it plays, a knock when it is hit
     this.stance = !!o.stance; this.groove = 0; this.tilt = 0; this.tiltV = 0;
     this.alive = o.alive !== false;
@@ -122,7 +122,8 @@ class Actor {
     // how fast it is going, from how far it went
     if (dt > 0) { const v = (this.x - this._lx) / dt; this.vx = damp(this.vx, clamp(v, -600, 600), 10, dt); }
     this._lx = this.x;
-    this.lean = damp(this.lean, clamp(this.vx / 900, -0.1, 0.1), 8, dt);
+    // the lean is sprung: it leans into a start, and overshoots and settles on a stop
+    this.leanV += ((clamp(this.vx / 700, -0.13, 0.13) - this.lean) * 110 - this.leanV * 13) * dt; this.lean += this.leanV * dt;
     if (this.facing !== this._face) { this._face = this.facing; this.sx = 0.72; this.sy = 1.08; }   // a turn is a squash
     const idle = !this.clipName || this.clipName === 'idle' || this.clipName === 'sit';
     if (idle && this.alive && Math.abs(this.vx) < 5 && this.z === 0) {
@@ -141,7 +142,10 @@ class Actor {
     // breathing when it is standing about, leaning when it moves
     const moving = Math.abs(this.vx) > 8, idle = !moving && this.z === 0 && this.alive;
     const breath = idle ? Math.sin(Time.t * 2.3 + this.seed) * 0.016 : 0;
-    const sway = moving ? Math.sin(Time.t * 12 + this.seed) * 0.025 : 0;
+    // the hips roll with the stride: one rock per footfall, in time with the frames
+    const c = this.clip, n = c ? Math.max(1, Gfx.frames(c.spr)) : 1;
+    const stride = moving && c && c.loop !== false ? this.t * Math.PI * 2 / n : Time.t * 12;
+    const sway = moving ? Math.sin(stride) * 0.04 : 0;
     let dx = 0, dy = 0, qx = 1, qy = 1, tr = 0;
     // fighting stance: up on the toes, bouncing, the weight rocking foot to foot
     if (this.stance && idle && this.clipName === 'idle') {

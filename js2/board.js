@@ -510,9 +510,17 @@ class BoardScene {
     yield* this.land();
   }
   hopTo(a, b, dur, arc) {
+    // a real hop: crouch, spring up stretched and leaning into it, come
+    // down stretched, land in a squash (stepFx), all eased
+    const me = this.me, big = arc > 20 ? 1.6 : 1;
+    me.squash(0.12 * big);
     return Co.over(dur, k => {
-      this.me.x = lerp(a.x, b.x, k); this.me.y = lerp(a.y, b.y, k) + 2;
-      this.me.z = Math.sin(k * Math.PI) * arc;
+      const e = k * k * (3 - 2 * k) * 0.55 + k * 0.45, v = Math.cos(k * Math.PI);
+      me.x = lerp(a.x, b.x, e); me.y = lerp(a.y, b.y, e) + 2;
+      me.z = Math.sin(k * Math.PI) * arc;
+      if (k > 0.12) { me.sy = 1 + Math.abs(v) * 0.09 * big; me.sx = 1 - Math.abs(v) * 0.06 * big; }
+      me.rot = me.facing * Math.sin(k * Math.PI) * 0.09;
+      if (k >= 1) me.rot = 0;
     });
   }
   *walk(route, how) {
@@ -522,8 +530,8 @@ class BoardScene {
       const a = this.T[route[i - 1]], b = this.T[route[i]];
       this.me.facing = b.x >= a.x ? 1 : -1;
       const fly = how === 'vine' || how === 'geyser';
-      yield* this.hopTo(a, b, fly ? 0.22 : 0.26, how === 'geyser' ? 90 : how === 'vine' ? 30 : 9);
-      this.me.z = 0;
+      yield* this.hopTo(a, b, fly ? 0.22 : 0.27, how === 'geyser' ? 90 : how === 'vine' ? 30 : 12);
+      this.me.z = 0; this.me.rot = 0;
       const terr = this.terrainOf(b);
       this.touch(terr, 1);
       if (terr === 'grass' && this.hasRelic('moss_boots')) this.heal(1);
@@ -760,6 +768,7 @@ class BoardScene {
     Dialogue.update();
     this.me.update(dt);
     Wildlife.update(this, dt);
+    BoardDress.update(this, dt);
     for (const b of this.band) b.a.update(dt);
     for (const D of this.dinoActors) D.a.update(dt);
     this.die.update(dt); if (this.die2) this.die2.update(dt);
@@ -869,6 +878,7 @@ class BoardScene {
     BoardSky.draw(this, L, R, camL);
     BoardBake.draw(L, R);
     BoardSky.liquids(this, L, R);
+    BoardDress.drawFlat(this, L, R);
     // tiles, back to front
     const vis = this.T.filter(t => t.x > L - 60 && t.x < R + 60);
     vis.sort((a, b) => a.y - b.y);
@@ -884,9 +894,11 @@ class BoardScene {
     for (const b of this.band) list.push({ y: b.a.y, f: () => b.a.draw() });
     list.push({ y: this.me.y + 0.5, f: () => this.drawHero() });
     Wildlife.collect(this, list, L, R);
+    BoardDress.collect(this, list, L, R);
     list.sort((a, b) => a.y - b.y);
     for (const it of list) it.f();
     Wildlife.drawOver(this);
+    BoardDress.drawAir(this, L, R);
     Particles.draw(ctx, true); FX.draw(true);
     if (this.dieShow && !this.riff) { this.die.draw(); if (this.die2) this.die2.draw(); }
     Floaters.draw(); Emotes.draw(); Toon.draw(false);
@@ -990,7 +1002,13 @@ class BoardScene {
     if (paint && K && K.icon) {
       const cy = t.y - lift - 1, rx = t.big ? 17 : 12, ry = t.big ? 8 : 6;
       BoardArt.pad(Math.round(t.x), Math.round(cy), rx, ry, paint);
-      Gfx.sprite(K.icon, Math.round(t.x), Math.round(cy - 5 - (t.big ? 3 : 0)), { anchor: 'c' });
+      // the icon floats over its tile, bobbing, its shadow breathing under it
+      const here = this.bd.pos === t.id && this.phase !== 'move' && this.phase !== 'world';
+      if (!here) {
+        const ph = this.t * 2.3 + t.x * 0.037, bob = Math.sin(ph) * 2.5, up = (t.big ? 21 : 18) + (reach ? 3 : 0) + (hov ? 3 : 0);
+        Gfx.shadow(t.x, cy + 1, 10 - bob * 0.6, used ? 0.15 : 0.3);
+        Gfx.sprite(K.icon, Math.round(t.x), Math.round(cy - up + bob), { anchor: 'c', scale: hov ? 1.65 : 1.5, rot: Math.sin(ph * 0.5) * 0.06, alpha: used ? 0.55 : 1 });
+      }
     } else if (kind === 'secret' || (t.kind === 'secret' && !used && this.hasRelic('grandmas_glasses'))) {
       if (Math.sin(this.t * 3 + t.x) > 0.8) Gfx.rect(t.x - 1, t.y - 8, 2, 2, '#ffe98a');
     }

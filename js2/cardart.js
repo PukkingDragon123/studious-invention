@@ -74,23 +74,26 @@ const CardArt = (() => {
   const spark = (x, y, c = '#fffaea') => { Gfx.rect(x - 1, y - 4, 2, 8, c); Gfx.rect(x - 4, y - 1, 8, 2, c); };
   const heroBase = h => Heroes.get(h).base;
   const has = s => !!SPRITES[s];
+  // a figure standing on the ground line, scaled down until its head clears
+  // the name band at the top of the card
+  const fig = (spr, x, y, o = {}) => { const S = Gfx.spr(spr), room = y - 30; Gfx.sprite(spr, x, y, Object.assign({}, o, { scale: Math.min(o.scale || 1, room / S.h) })); };
   // the scenes, by the old picture on the card
   const SCENES = {
-    music(hero) { const b = heroBase(hero); Gfx.sprite(has(b + '_play') ? b + '_play' : b + '_idle', 50, GY + 6, { anchor: 'bc' }); note(14, 30); note(78, 20, '#86e8d2'); note(86, 48, '#ffb0cf'); note(20, 58, '#a8e878'); },
-    club(hero) { Gfx.sprite('raptor_idle', 92, GY + 4, { anchor: 'bc', flip: true, rot: -0.18 }); Gfx.sprite(heroBase(hero) + '_idle', 22, GY + 10, { anchor: 'bc' }); for (let i = 0; i < 9; i++) drop(60 + hash(i, 3) * 30, 20 + hash(i, 4) * 40); spark(64, 34); },
-    boulder() { Gfx.sprite('compy_idle', 52, GY + 2, { anchor: 'bc', flip: true }); Gfx.sprite('v_rock', 50, 30, { anchor: 'c', scale: 1.5, rot: 0.4 }); for (let i = 0; i < 5; i++) Gfx.rect(30 + i * 9, 4 + (i % 2) * 6, 3, 10, '#c4b89a'); },
-    bolt() { let x = 40, y = 0; while (y < GY - 20) { const nx = x + (hash(y, 7) - 0.5) * 22, ny = y + 10; for (let k = 0; k < 5; k++) Gfx.rect(Math.round(x + (nx - x) * k / 5) - 2, y + k * 2, 5, 3, k % 2 ? '#ffffff' : '#a8d8ff'); x = nx; y = ny; } Gfx.sprite('raptor_idle', 60, GY + 4, { anchor: 'bc', flip: true, tint: '#ffffff', tintAmount: 0.5 }); },
-    fire() { Gfx.sprite('lizard_idle', 52, GY + 2, { anchor: 'bc', flip: true }); for (let i = 0; i < 5; i++) World.flame(14 + i * 19, GY - 4, 28 + hash(i, 2) * 26, 8, 0, ['#9c3510', '#e06a1b', '#ffa832', '#ffe08a'], i); },
-    crowd(hero) { const L = ['compy_idle', 'dodo_idle', 'raptor_idle', 'dodo_idle', 'compy_idle']; L.forEach((s, i) => Gfx.sprite(s, 8 + i * 22, GY + 8 - (i % 2) * 4, { anchor: 'bc', scale: 0.5 + (i % 2) * 0.1, tint: '#120c16', tintAmount: 0.75, flip: i % 2 === 0 })); Gfx.sprite(heroBase(hero) + '_idle', 52, GY + 8, { anchor: 'bc', scale: 0.5 }); for (let i = 0; i < 4; i++) note(12 + i * 26, 20 + (i % 2) * 10); },
-    foot() { Gfx.sprite('stego_idle', 58, GY + 4, { anchor: 'bc', rot: -0.06 }); for (let i = 0; i < 4; i++) Pix.draw(ToonArt.puff(i % 3), 14 + i * 24, GY - 2, { scale: 0.9 }); },
-    feast() { Gfx.sprite('v_meat', 52, GY - 2, { anchor: 'bc', scale: 1.2 }); for (let i = 0; i < 4; i++) Gfx.sprite('ti_berries', 16 + i * 24, GY + 2 - (i % 2) * 4, { anchor: 'bc' }); spark(20, 26); spark(84, 34, '#ffe98a'); },
-    wall(hero) { Gfx.sprite(heroBase(hero) + '_idle', 52, GY - 4, { anchor: 'bc' }); PixUI.panel('stone', 4, GY - 34, CW - 8, 40, { seed: 4 }); },
-    skull() { Gfx.sprite('v_bones', 30, GY + 2, { anchor: 'bc' }); Gfx.sprite('v_bones', 78, GY + 4, { anchor: 'bc', flip: true }); Gfx.sprite('v_skull', 52, GY - 4, { anchor: 'bc', scale: 1.3 }); for (let i = 0; i < 2; i++) Gfx.rect(44 + i * 12, GY - 30, 4, 4, '#ef6a5e'); },
-    moon() { Gfx.sprite('v_cave', 52, GY + 6, { anchor: 'bc' }); Gfx.rect(46, GY - 22, 3, 3, '#ffe98a'); Gfx.rect(56, GY - 22, 3, 3, '#ffe98a'); },
+    music(hero) { const b = heroBase(hero); fig(has(b + '_play') ? b + '_play' : b + '_idle', 50, GY + 6, { anchor: 'bc' }); note(14, 30); note(78, 20, '#86e8d2'); note(86, 48, '#ffb0cf'); note(20, 58, '#a8e878'); },
+    club(hero) { fig('raptor_idle', 92, GY + 4, { anchor: 'bc', flip: true, rot: -0.18 }); fig(heroBase(hero) + '_idle', 22, GY + 10, { anchor: 'bc' }); for (let i = 0; i < 9; i++) drop(60 + hash(i, 3) * 30, 20 + hash(i, 4) * 40); spark(64, 34); },
+    boulder() { fig('compy_idle', 52, GY + 2, { anchor: 'bc', flip: true }); Gfx.sprite('v_rock', 50, 30, { anchor: 'c', scale: 1.5, rot: 0.4 }); for (let i = 0; i < 5; i++) Gfx.rect(30 + i * 9, 4 + (i % 2) * 6, 3, 10, '#c4b89a'); },
+    bolt() { let x = 40, y = 0; while (y < GY - 20) { const nx = x + (hash(y, 7) - 0.5) * 22, ny = y + 10; for (let k = 0; k < 5; k++) Gfx.rect(Math.round(x + (nx - x) * k / 5) - 2, y + k * 2, 5, 3, k % 2 ? '#ffffff' : '#a8d8ff'); x = nx; y = ny; } fig('raptor_idle', 60, GY + 4, { anchor: 'bc', flip: true, tint: '#ffffff', tintAmount: 0.5 }); },
+    fire() { fig('lizard_idle', 52, GY + 2, { anchor: 'bc', flip: true }); for (let i = 0; i < 5; i++) World.flame(14 + i * 19, GY - 4, 28 + hash(i, 2) * 26, 8, 0, ['#9c3510', '#e06a1b', '#ffa832', '#ffe08a'], i); },
+    crowd(hero) { const L = ['compy_idle', 'dodo_idle', 'raptor_idle', 'dodo_idle', 'compy_idle']; L.forEach((s, i) => fig(s, 8 + i * 22, GY + 8 - (i % 2) * 4, { anchor: 'bc', scale: 0.5 + (i % 2) * 0.1, tint: '#120c16', tintAmount: 0.75, flip: i % 2 === 0 })); fig(heroBase(hero) + '_idle', 52, GY + 8, { anchor: 'bc', scale: 0.5 }); for (let i = 0; i < 4; i++) note(12 + i * 26, 20 + (i % 2) * 10); },
+    foot() { fig('stego_idle', 58, GY + 4, { anchor: 'bc', rot: -0.06 }); for (let i = 0; i < 4; i++) Pix.draw(ToonArt.puff(i % 3), 14 + i * 24, GY - 2, { scale: 0.9 }); },
+    feast() { fig('v_meat', 52, GY - 2, { anchor: 'bc', scale: 1.2 }); for (let i = 0; i < 4; i++) fig('ti_berries', 16 + i * 24, GY + 2 - (i % 2) * 4, { anchor: 'bc' }); spark(20, 26); spark(84, 34, '#ffe98a'); },
+    wall(hero) { fig(heroBase(hero) + '_idle', 52, GY - 4, { anchor: 'bc' }); PixUI.panel('stone', 4, GY - 34, CW - 8, 40, { seed: 4 }); },
+    skull() { fig('v_bones', 30, GY + 2, { anchor: 'bc' }); fig('v_bones', 78, GY + 4, { anchor: 'bc', flip: true }); fig('v_skull', 52, GY - 4, { anchor: 'bc', scale: 1.3 }); for (let i = 0; i < 2; i++) Gfx.rect(44 + i * 12, GY - 30, 4, 4, '#ef6a5e'); },
+    moon() { fig('v_cave', 52, GY + 6, { anchor: 'bc' }); Gfx.rect(46, GY - 22, 3, 3, '#ffe98a'); Gfx.rect(56, GY - 22, 3, 3, '#ffe98a'); },
     spiral() { Pix.draw(Ammonite.paint(30, 'ammonite30'), 52, 46, { scale: 1.1 }); for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28; Gfx.rect(Math.round(52 + Math.cos(a) * 40), Math.round(46 + Math.sin(a) * 34), 3, 3, '#ffb0cf'); } },
-    star(hero) { for (let k = 0; k < 3; k++) for (let i = 0; i < 6; i++) Gfx.rect(20 + k * 30 + i * 5, 8 + k * 10 + i * 3, 4 - (i >> 1), 3, i ? '#ffe98a' : '#ffffff'); Gfx.sprite(heroBase(hero) + '_idle', 52, GY + 20, { anchor: 'bc', scale: 0.7 }); },
+    star(hero) { for (let k = 0; k < 3; k++) for (let i = 0; i < 6; i++) Gfx.rect(20 + k * 30 + i * 5, 8 + k * 10 + i * 3, 4 - (i >> 1), 3, i ? '#ffe98a' : '#ffffff'); fig(heroBase(hero) + '_idle', 52, GY + 20, { anchor: 'bc', scale: 0.7 }); },
     wave() { for (let x = 0; x < CW; x += 4) { const hgt = 30 + Math.sin(x * 0.09) * 14; Gfx.rect(x, GY - hgt, 4, hgt, x % 8 ? '#1d3d72' : '#2a5090'); Gfx.rect(x, GY - hgt, 4, 3, '#a8d8ff'); } Gfx.sprite('dodo_idle', 54, GY - 30, { anchor: 'c', rot: 1.4 }); },
-    heart(hero) { Gfx.sprite(heroBase(hero) + '_idle', 52, GY + 6, { anchor: 'bc' }); for (let i = 0; i < 4; i++) Gfx.sprite('icon_heart', 16 + i * 24, 20 + (i % 2) * 12, { anchor: 'c', scale: 1.2 }); },
+    heart(hero) { fig(heroBase(hero) + '_idle', 52, GY + 6, { anchor: 'bc' }); for (let i = 0; i < 4; i++) Gfx.sprite('icon_heart', 16 + i * 24, 20 + (i % 2) * 12, { anchor: 'c', scale: 1.2 }); },
   };
   const BY_ART = {
     art_strum: 'music', art_note: 'music', art_bass: 'music', art_drum: 'music', art_horn: 'music', art_flute: 'music',

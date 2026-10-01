@@ -134,6 +134,9 @@ const MATERIAL = {
   water: ['#10285e', '#16387a', '#1f4c98', '#2c64b6', '#4a86d2', '#7cb0ea'],
   foam: ['#a8d8ff', '#d8f0ff', '#ffffff'],
   bank: ['#2a2016', '#3a2c1c', '#4a3a24'],
+  mud: ['#1a130c', '#261c12', '#33261a', '#43331f'],
+  shore: ['#5a4630', '#6e5838', '#866c46', '#a08656', '#bca068'],
+  shallow: ['#1f4c98', '#2c64b6', '#3a7ec0', '#5a9ccc'],
   lava: ['#3f0e10', '#6e1a10', '#a82e10', '#dc5a18', '#ff9a30', '#ffe08a'],
   crust: ['#140a0e', '#221014', '#34161a'],
   ice: ['#3e66a0', '#5682bc', '#76a2d6', '#9ec2ea', '#c4e0f8', '#eaf6ff'],
@@ -515,6 +518,7 @@ const BoardBake = (() => {
             if (r.f.type === 'river') {
               const edge = r.w - dx;
               ramp = M.water; lv = 1.4 + (1 - dx / r.w) * 2.4 + (n2 - 0.5) * 1.2;
+              if (edge < 6) { ramp = M.shallow; lv = 3.2 - edge * 0.45 + (n2 - 0.5) * 1.2; if (hash(X >> 1, Y, 33) > 0.9) c = M.shore[1]; }   // the shallows, sand showing through
               if (edge < 2.2) { c = M.foam[edge < 1 ? 1 : 0]; }
               else if (((Y + Math.round(n1 * 20)) % 9 === 0) && hash(X >> 3, Y, 3) > 0.55) c = M.foam[0];      // the current, in dashes
             } else {
@@ -523,6 +527,17 @@ const BoardBake = (() => {
               if (edge < 2.5) { ramp = M.crust; lv = 1; }
               else if (n1 > 0.62 && n2 > 0.5) { ramp = M.crust; lv = 2; }                                   // crust floating on it
             }
+            break;
+          } else if (r.f.type === 'river' && dx < r.w + 14 + (n3 - 0.5) * 8) {
+            // the bank: wet mud at the water, then sand and pebbles, then lush grass
+            const e = dx - r.w;
+            if (e < 3) { ramp = M.mud; lv = e / 1.1 + (n2 - 0.5) * 1.2; c = null; }
+            else if (e < 9 + (n1 - 0.5) * 8) {
+              ramp = M.shore; lv = 1 + (e - 3) * 0.32 + (n2 - 0.5) * 1.8; c = null;
+              const hp = hash(X >> 1, Y >> 1, 31);
+              if (hp > 0.9) c = hp > 0.97 ? M.rock[4] : M.rock[(X + Y) & 1 ? 3 : 2];          // pebbles
+              else if (hp < 0.04) c = M.mud[1];
+            } else if (ramp === P.ramp) lv += 0.9;
             break;
           } else if (dx < r.w + 5) { ramp = r.f.type === 'river' ? M.bank : M.crust; lv = (dx - r.w) / 2.2; c = null; }
         }
@@ -543,6 +558,12 @@ const BoardBake = (() => {
         if (!c) {
           // flowers, tufts and pebbles on open ground
           if (ramp === P.ramp) {
+            // blades of grass, in clumps where the ground is lush, tips catching the light
+            const thr = n3 > 0.58 ? 0.94 : n3 > 0.45 ? 0.972 : 0.988;
+            for (let k = 0; k < 4 && !c; k++) {
+              const hr = hash(X + (k > 1 && (X & 1) ? 1 : 0), Y + k, 41);
+              if (hr > thr && k < 2 + ((hr * 977 | 0) % 3)) c = k === 0 ? pickR(ramp, 1) : k === 1 ? P.tuft[0] : P.tuft[1];
+            }
             const hs = hash(X >> 1, Y >> 1, 11);
             if (hs > 0.992) c = P.specks[(X * 7 + Y) % P.specks.length];
             else if (hs < 0.03 && (Y & 1)) c = P.tuft[(X & 1)];

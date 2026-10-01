@@ -91,7 +91,14 @@ heals you after the fight.
 - **The land is alive.** Rivers wind across the boards, herds graze between
   the tiles and scatter when you come close, pteros cross overhead with their
   shadows under them, fish jump, and the animals of each land wander behind
-  every event scene.
+  every event scene. Every board is thick with ferns, grass, flowers,
+  mushrooms, logs and pebbles that sway in the wind and rustle as you walk
+  through. The rivers have muddy, pebbly banks lined with reeds and cattails,
+  and lily pads and wet rocks with the current foaming round them. Butterflies
+  and bees work the flowers, dragonflies hunt over the water, frogs plop into
+  the river as you pass, skinks dart off, birds peck about and take flight,
+  and beetles and snails go about their business. The tile icons float and
+  bob over their tiles.
 - **Events are little films.** Landing on a stranger, a mystery, a
   crossroads, a cave, a big dino, a secret or a campfire cuts to a close-up
   set in that land: the family walks on, the stranger walks on from the far
@@ -239,6 +246,7 @@ js2/antics.js     how each hero throws the die, and reacts to it and to tiles
 js2/gore.js       blood, stains, pieces, and the four fatalities
 js2/cardart.js    the painted card scenes, frames, backs and cost stones
 js2/wildlife.js   the herds, pteros and fish on the board
+js2/boarddress.js plants, river banks, bugs and small creatures on the board
 js2/profile.js    what the game remembers, the trophies, the bestiary
 js2/minigames.js  the swing, tug and catch tests of skill
 js2/shell.js      the ammonite shell, painted
