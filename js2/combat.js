@@ -153,14 +153,22 @@ class Combat {
     me.play('idle');
     Emotes.show(me, '!', 0.9); AudioSys.sfx('detect');
     yield 0.4;
-    this.enc = { choice: -1, t: 0, opts: [
-      { id: 'sneak', label: 'SNEAK UP', icon: 'art_foot', desc: 'Creep closer while they look away. Get there and it is an {g}ambush{/}.' },
-      { id: 'hide', label: 'HIDE', icon: 'v_bush', desc: 'Into the bushes. If they walk past, you jump them: {g}ambush{/}.' },
-      { id: 'charge', label: 'CHARGE', icon: 'art_club', desc: 'Straight in swinging: a {y}free hit{/}, then a fair fight.' },
-      { id: 'throw', label: 'THROW A ROCK', icon: 'v_rock', desc: 'Aim for the head: {y}big damage{/}, and it might {c}stun{/}.' },
-    ] };
+    // you start out knowing only how to walk up and say hello; the tricks
+    // come with experience - fights won, over every run you have ever had
+    const won = (Profile.data.fights || 0);
+    const ALL = [
+      { id: 'walk', label: 'WALK UP', icon: 'art_foot', desc: 'Just walk over. They see you coming: a {y}fair fight{/}.' },
+      { id: 'hello', label: 'SAY HELLO', icon: 'art_heart', desc: 'Wave! Maybe they are {g}charmed{/}... maybe they {r}jump you{/}.' },
+      { id: 'charge', label: 'CHARGE', icon: 'art_club', need: 2, desc: 'Straight in swinging: a {y}free hit{/}, then a fair fight.' },
+      { id: 'hide', label: 'HIDE', icon: 'v_bush', need: 4, desc: 'Into the bushes. If they walk past, you jump them: {g}ambush{/}.' },
+      { id: 'throw', label: 'THROW A ROCK', icon: 'v_rock', need: 7, desc: 'Aim for the head: {y}big damage{/}, and it might {c}stun{/}.' },
+      { id: 'sneak', label: 'SNEAK UP', icon: 'art_foot', need: 10, desc: 'Creep closer while they look away. Get there and it is an {g}ambush{/}.' },
+    ];
+    const open = ALL.filter(o => !o.need || won >= o.need), next = ALL.find(o => o.need && won < o.need);
+    if (next) open.push(Object.assign({}, next, { locked: true, desc: `{r}LOCKED{/} - win ${next.need - won} more fight${next.need - won > 1 ? 's' : ''} to learn it.` }));
+    this.enc = { choice: -1, t: 0, opts: open };
     yield () => this.enc.choice >= 0 || this.enc.t > 14;
-    const pick = this.enc.choice >= 0 ? this.enc.opts[this.enc.choice].id : 'charge';
+    const pick = this.enc.choice >= 0 ? this.enc.opts[this.enc.choice].id : 'walk';
     this.enc = null; AudioSys.sfx('select');
     const res = yield* this['enc_' + pick](lead, foes);
     if (res === 'ambush') Profile.unlock('ambusher');
@@ -241,6 +249,37 @@ class Combat {
     yield* Co.over(0.5, k => foes.forEach((e, i) => { e.actor.x = lerp(now[i], e.tx, k); }));
     return result;
   }
+  *enc_walk(lead, foes) {
+    const me = this.me, from = me.x;
+    me.play(Heroes.has(this.heroDef.id, 'walk') ? 'walk' : 'idle');
+    yield* Co.over(0.6, k => { me.x = from + 50 * k; });
+    me.play('idle');
+    for (const e of foes) { e.lookAway = false; Emotes.show(e.actor, '!', 0.8); }
+    AudioSys.sfx('detect');
+    yield 0.4;
+    return 'even';
+  }
+  *enc_hello(lead, foes) {
+    const me = this.me;
+    Toon.word(me.x + 20, me.top - 20, 'HELLO!', { size: 1.8, col: '#ffb0cf', life: 1 });
+    AudioSys.sfx('buff');
+    for (let i = 0; i < 3; i++) { me.hop(160); me.stretch(0.12); yield 0.22; }
+    for (const e of foes) { e.lookAway = false; Emotes.show(e.actor, '?', 1); }
+    yield 0.6;
+    if (this.rng.chance(0.35)) {
+      // ...and they do not know what to make of it
+      for (const e of foes) { Toon.hearts(e.actor, 1.4); if (e.alive) this.applyEnemy(e, 'weak', 1, true); }
+      Toon.word(lead.actor.x, lead.actor.top - 10, 'CHARMED?', { size: 1.6, col: '#a8e878', life: 1.1 });
+      AudioSys.sfx('cheer', { vol: 0.5 });
+      yield 0.8;
+      return 'even';
+    }
+    // ...they do
+    yield* this.spotted(foes);
+    this.damagePlayer(2 + this.act, { from: lead });
+    yield 0.3;
+    return 'ambushed';
+  }
   *enc_charge(lead, foes) {
     const me = this.me;
     AudioSys.sfx('growl'); me.stretch(0.3);
@@ -279,17 +318,24 @@ class Combat {
     const E = this.enc;
     if (E) {
       // four choices, carved on planks
-      const n = E.opts.length, bw = 214, gap = 10, x0 = W / 2 - (n * bw + (n - 1) * gap) / 2, y = H - 186;
+      const n = E.opts.length, gap = 10, bw = Math.min(214, Math.floor((W - 30 - (n - 1) * gap) / n)), x0 = W / 2 - (n * bw + (n - 1) * gap) / 2, y = H - 186;
       E.opts.forEach((o, i) => {
         const x = x0 + i * (bw + gap), k = Ease.outBack(clamp(E.t * 4 - i * 0.3, 0, 1)); if (k <= 0) return;
-        const yy = y + (1 - k) * 60, hov = UI.hovered(x, yy, bw, 112);
+        const yy = y + (1 - k) * 60, hov = !o.locked && UI.hovered(x, yy, bw, 112);
+        if (o.locked) {
+          PixUI.panel('obsidian', x, yy, bw, 112, { seed: i + 3 });
+          Gfx.sprite(o.icon, x + 44, yy + 34, { anchor: 'c', scale: o.icon.startsWith('art_') ? 1.5 : 1.2, tint: '#08060c', tintAmount: 0.85 });
+          Gfx.text(o.label, x + 76, yy + 24, { color: '#7a6d8a', scale: o.label.length > 9 && bw < 200 ? 1 : 1.4 });
+          Gfx.wrap(o.desc, bw - 24, 1).forEach((L, j) => Gfx.rich(L, x + 12, yy + 62 + j * 13, { color: '#a79bb4' }));
+          return;
+        }
         PixUI.panel(hov ? 'woodhot' : 'wood', x, yy - (hov ? 4 : 0), bw, 112, { seed: i + 3, hot: hov });
         Gfx.sprite(o.icon, x + 44, yy + 34 - (hov ? 4 : 0), { anchor: 'c', scale: o.icon.startsWith('art_') ? 1.5 : 1.2 });
         PixUI.panel('stone', x + 8, yy + 8 - (hov ? 4 : 0), 22, 22, { seed: i, cut: 2, moss: false });
         Gfx.text(String(i + 1), x + 19, yy + 12 - (hov ? 4 : 0), { color: '#5c3a20', align: 'center', font: 'rock' });
-        Gfx.text(o.label, x + 76, yy + 24 - (hov ? 4 : 0), { color: '#ffe0a8', scale: 1.4 });
+        Gfx.text(o.label, x + 76, yy + 24 - (hov ? 4 : 0), { color: '#ffe0a8', scale: o.label.length > 9 && bw < 200 ? 1 : 1.4 });
         Gfx.wrap(o.desc, bw - 24, 1).forEach((L, j) => Gfx.rich(L, x + 12, yy + 62 + j * 13 - (hov ? 4 : 0), { color: '#e8dfc6' }));
-        UI.hit(x, yy, bw, 112, () => { if (E.choice < 0 && E.t > 0.4) E.choice = i; });
+        UI.hit(x, yy, bw, 112, () => { if (E.choice < 0 && E.t > 0.4 && !o.locked) E.choice = i; });
       });
       PixUI.panel('obsidian', W / 2 - 110, 70, 220, 30, { seed: 5 });
       Gfx.text("THEY HAVEN'T SEEN YOU", W / 2, 78, { color: '#ffe98a', align: 'center', font: 'rock' });
@@ -312,6 +358,8 @@ class Combat {
   exit() { Co.stop(this.co); Game.worldToScreen = null; Juice.letterbox(false); Backdrops.scene = null; }
   spawn(id, initial) {
     const e = Enemies.make(id, this.rng, this.act);
+    // a little tougher than they were
+    e.maxHp = Math.round(e.maxHp * 1.2); e.hp = e.maxHp;
     e.actor.y = STAGE_Y; e.spawnT = initial ? 0 : 1;
     // as big as it is meant to be, unless that would push its head (and what
     // it is about to do) up under the top bar
@@ -529,18 +577,11 @@ class Combat {
     AudioSys.sfx('card');
     this.playing = card;
     let r = null;
-    // every card is played on the instrument now, each kind its own way
-    const perform = !Game.testFast || card.def.riff;
-    if (perform) r = yield* this.riffCo(card, target);
-    // a card that is not a riff at heart still plays better for playing well:
-    // its numbers are scaled by how you did, then put back
-    const saved = {};
-    if (r && !card.def.riff) {
-      const f = clamp(r.mult, 0.6, 1.35);
-      for (const k of ['dmg', 'block', 'heal', 'hype']) if (typeof card.v[k] === 'number') { saved[k] = card.v[k]; card.v[k] = Math.max(1, Math.round(card.v[k] * f)); }
-    }
-    yield* card.def.effect(this, card, target, card.def.riff ? r : null);
-    Object.assign(card.v, saved);
+    // only the big moves go to the instrument; the rest are just done
+    if (card.def.riff) r = yield* this.riffCo(card, target);
+    else yield* this.moveCo(card, target);
+    yield* card.def.effect(this, card, target, r);
+    this.moveStyle = null;
     if (card.def.echo && !card.echoCopy) this.echoNext.push({ id: card.id, up: card.up });
     if (this.powers.rkid) this.gainBlock(this.powers.rkid);
     if (Relics.has('skull_bongos') && this.played % 3 === 0) { const e = this.randomEnemy(); if (e) { this.flashRelic(RELICS.skull_bongos); this.damageEnemy(e, 4, { src: 'relic' }); AudioSys.sfx('hit'); } }
@@ -639,7 +680,34 @@ class Combat {
     }
   }
   selfHarm(n) { this.hp = Math.max(1, this.hp - n); Popups.add(this.me.x, this.me.cy - 20, `-${n}`, '#ef6a5e', { scale: 1.6 }); this.gainRage(n > 0 ? 1 : 0); }
-  previewEnemyDamage(e, base) { let d = base + e.st.str; if (e.st.weak > 0) d *= 0.75; if (this.player.st.vuln > 0) d *= 1.5; d -= Relics.mod('reduce'); return Math.max(0, Math.floor(d)); }
+  previewEnemyDamage(e, base) { let d = Math.round(base * 1.2) + e.st.str; if (e.st.weak > 0) d *= 0.75; if (this.player.st.vuln > 0) d *= 1.5; d -= Relics.mod('reduce'); return Math.max(0, Math.floor(d)); }
+  // A card that is not a riff is simply done - but done with a show. Its
+  // name slams up like a fighting game, and the hero moves the way the card
+  // reads: a headbutt rears back and snaps forward, a belly flop goes up and
+  // comes down on them, a club swing spins, a guard plants and braces, a
+  // rally whips the crowd up. dealDamage reads moveStyle for the attack.
+  *moveCo(card, target) {
+    const d = card.def, art = d.art || '', me = this.me;
+    const ms = d.moveStyle || (d.type === 'attack' ? (/skull|bolt/.test(art) ? 'butt' : /foot/.test(art) ? 'flop' : /club|boulder/.test(art) ? 'swing' : 'rush') : d.type === 'skill' ? 'brace' : 'cheer');
+    this.moveStyle = ms;
+    if (Game.testFast) return;
+    const col = { attack: '#ffa832', skill: '#6aa9ee', rally: '#ffb0cf', power: '#b177e6' }[d.type] || '#ffe98a';
+    Toon.word(W / 2, 190, card.name.toUpperCase() + '!', { size: 2.2, col, life: 0.95 });
+    AudioSys.sfx(d.type === 'attack' ? 'whoosh' : 'buff', { vol: 0.7 });
+    if (ms === 'brace') {
+      // feet planted, chest out, the stone rising in front
+      me.squash(0.22); yield 0.08; me.stretch(0.12);
+      Particles.dust(me.x + 20, STAGE_Y, 10); Juice.shake(4, 0.12);
+      for (let i = 0; i < 10; i++) Particles.spawn(me.x + 30, me.y - 20 - i * 6, { n: 1, color: ['#6aa9ee', '#a8d8ff', '#ffffff'], speed: 60, angle: 0, spread: 0.6, life: 0.4, size: 3, sizeEnd: 0, gravity: 0 });
+      yield 0.12;
+    } else if (ms === 'cheer') {
+      // a jump, both fists up, and the valley roars
+      me.hop(320); me.stretch(0.2);
+      for (let i = 0; i < 14; i++) Particles.confetti(me.x + rnd(-40, 40), me.top - 10, 1);
+      AudioSys.sfx('cheer', { vol: 0.5 });
+      yield 0.3;
+    } else yield 0.06;
+  }
   *dealDamage(t, amount, o = {}) {
     if (!t || !t.alive) { t = this.randomEnemy(); if (!t) return 0; }
     const home = this.me.x, heavy = o.heavy || amount >= 12;
@@ -647,11 +715,29 @@ class Combat {
     const cine = !o.quick && !this.riff;
     if (cine) { this.cam.lookAt(lerp(home, t.actor.x, 0.62), t.actor.cy + 30); this.cam.zoomTo(heavy ? 1.5 : 1.22); }
     if (!o.projectile) {
-      // the wind-up: rock back, crouch, then go
-      if (!o.quick) { this.me.squash(heavy ? 0.2 : 0.12); yield* Co.over(heavy ? 0.1 : 0.07, k => { this.me.x = home - (heavy ? 16 : 9) * Ease.outQuad(k); }); }
-      const from = this.me.x;
-      this.me.stretch(0.16);
-      yield* Co.over(o.quick ? 0.09 : 0.13, k => { this.me.x = lerp(from, t.actor.x - 90, Ease.inQuad(k)); });
+      // the wind-up: rock back, crouch, then go - each move its own way
+      const me = this.me, ms = o.quick ? null : this.moveStyle, f = me.facing;
+      if (!o.quick) {
+        me.squash(heavy || ms === 'flop' ? 0.24 : 0.12);
+        yield* Co.over(heavy || ms ? 0.13 : 0.07, k => { me.x = home - (heavy || ms ? 18 : 9) * Ease.outQuad(k); if (ms === 'butt') me.rot = -0.4 * f * Ease.outQuad(k); if (ms === 'swing') me.rot = -0.5 * f * k; });
+      }
+      const from = me.x, tx = t.actor.x - 90;
+      me.stretch(0.16);
+      if (ms === 'flop') {
+        // up, over, and down belly-first on top of it
+        AudioSys.sfx('whoosh');
+        yield* Co.over(0.36, k => { me.x = lerp(from, tx + 30, k); me.z = Math.sin(k * Math.PI) * 95; me.rot = f * Ease.inQuad(k) * 1.45; me.sy = 1 + Math.cos(k * Math.PI) * 0.12; });
+        me.z = 0; me.squash(0.4); Juice.shake(12, 0.25);
+        Particles.dust(t.actor.x - 20, STAGE_Y, 14); Particles.dust(t.actor.x + 30, STAGE_Y, 10);
+      } else if (ms === 'butt') {
+        // the head comes forward like a rock off a cliff
+        yield* Co.over(0.12, k => { me.x = lerp(from, tx + 12, Ease.inQuad(k)); me.rot = lerp(-0.4, 0.55, Ease.inQuad(k)) * f; });
+        if (typeof Toon !== 'undefined') Toon.stars(t.actor, 1.6);
+      } else if (ms === 'swing') {
+        // a full spin into it
+        yield* Co.over(0.2, k => { me.x = lerp(from, tx, Ease.inQuad(k)); me.rot = (-0.5 + k * (Math.PI * 2 + 0.5)) * f; });
+        me.rot = 0;
+      } else yield* Co.over(o.quick ? 0.09 : 0.13, k => { me.x = lerp(from, tx, Ease.inQuad(k)); });
       if (heavy && !o.quick) {
         // two quick ones first, then the real one
         for (let i = 0; i < 2; i++) {
@@ -674,13 +760,30 @@ class Combat {
     Juice.shake(o.heavy ? 11 : 6, 0.22);
     Juice.punch(o.heavy ? 0.05 : 0.025);
     if (t.alive || t.fatalPending) t.actor.x += heavy ? 34 : 14;          // knocked back; it slides home
-    if (!o.projectile) yield* Co.over(0.2, k => { this.me.x = lerp(t.actor.x - 90, home, Ease.outBack(k)); });
-    this.me.x = home;
+    if (!o.projectile) { const rx = this.me.x, r0 = this.me.rot; yield* Co.over(this.moveStyle === 'flop' ? 0.3 : 0.2, k => { this.me.x = lerp(rx, home, Ease.outBack(k)); this.me.rot = r0 * (1 - k); this.me.z = this.moveStyle === 'flop' ? Math.sin(k * Math.PI) * 30 : 0; }); }
+    this.me.x = home; this.me.rot = 0; this.me.z = 0;
     if (cine) { this.cam.zoomTo(1); this.cam.lookAt(W / 2, 288 + CAM_DY); }
     yield o.quick ? 0.06 : 0.14;
     return dmg;
   }
   *dealAll(amount, o = {}) {
+    const me = this.me, home = me.x, foes = this.alive();
+    if (this.moveStyle === 'flop' && foes.length && !Game.testFast) {
+      // up over the lot of them, and down in the middle, belly first
+      const mid = foes.reduce((a, e) => a + e.actor.x, 0) / foes.length - 40, f = me.facing;
+      me.squash(0.25); yield 0.1; AudioSys.sfx('whoosh');
+      yield* Co.over(0.42, k => { me.x = lerp(home, mid, k); me.z = Math.sin(k * Math.PI) * 120; me.rot = f * Ease.inQuad(k) * 1.5; });
+      me.z = 0; me.squash(0.45); Juice.shake(14, 0.35); Juice.stop(0.08); AudioSys.sfx('bighit');
+      for (const e of foes) Particles.dust(e.actor.x, STAGE_Y, 12);
+      Particles.dust(mid, STAGE_Y, 20);
+      for (const e of this.alive()) { this.damageEnemy(e, this.calcDamage(amount, e, o), o); e.actor.hop && e.actor.hop(180); }
+      yield 0.25;
+      const rx = me.x;
+      yield* Co.over(0.35, k => { me.x = lerp(rx, home, Ease.outQuad(k)); me.z = Math.sin(k * Math.PI) * 40; me.rot = f * 1.5 * (1 - k); });
+      me.x = home; me.z = 0; me.rot = 0;
+      yield 0.1;
+      return;
+    }
     this.me.stretch(0.2);
     FX.ring(W / 2, 300, { scale: 3, fps: 14 });
     yield 0.12;
@@ -855,7 +958,7 @@ class Combat {
     if (this.fatal && (this.fatal.t += dt) > 0.8 && (Input.clicks.length || Input.pressed('Space', 'Enter', 'Escape'))) this.fatal.skip = true;
     if (this.enc) {
       this.enc.t += dt;
-      for (const k of Input.keys) if (/^Digit[1-4]$/.test(k.code) && this.enc.t > 0.4 && this.enc.choice < 0) this.enc.choice = +k.code.slice(5) - 1;
+      for (const k of Input.keys) if (/^Digit[1-6]$/.test(k.code) && this.enc.t > 0.4 && this.enc.choice < 0) { const i = +k.code.slice(5) - 1, o = this.enc.opts[i]; if (o && !o.locked) this.enc.choice = i; }
     }
     this.handSlide = damp(this.handSlide, (this.riff || this.phase === 'won' || this.phase === 'lost') ? 1 : 0, 9, dt);
     // beat-synced camera bop

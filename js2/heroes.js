@@ -392,3 +392,16 @@ Object.assign(RELICS, {
   frost_fang: { name: 'Frostfang', tier: 'boss', spr: 'relic_frostfang', desc: 'The first beast to act each fight is {c}Stunned{/} instead.',
     onCombatStart: c => { const e = c.alive()[0]; if (e) c.stun(e, 1); } },
 });
+
+// Only the big moves are played on the instrument. A cheap everyday hit -
+// a headbang, a bone crunch, a rock dropped on a head - is just done, with a
+// proper beating to watch; the riff is saved for the cards that cost you
+// something, the rare ones, and each hero's own signature tune.
+for (const [id, d] of Object.entries(CARDS)) {
+  if (!d.riff) continue;
+  const big = d.cost >= 2 || ['rare', 'band', 'special'].includes(d.rarity) || (d.rarity === 'starter' && /strum|horn|drum|flute|note|bolt/.test(d.art || '')) || d.inst;
+  if (big) continue;
+  delete d.riff;
+  const desc = d.desc;
+  d.desc = (v, c) => desc(v, c).replace(/^Riff\.\s*/, '');
+}

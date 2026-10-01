@@ -41,10 +41,10 @@ const CH_APPROACH = 1.05;                // how long the ring takes to close
 const CH_WIN = [0.10, 0.18, 0.28];       // perfect / good / late, in seconds
 
 const RATINGS = [
-  { name: 'SICK!', win: 0.055, mult: 1.0, col: '#86e8d2', heal: 0.030, score: 350 },
-  { name: 'GOOD', win: 0.105, mult: 0.75, col: '#a8e878', heal: 0.022, score: 200 },
-  { name: 'BAD', win: 0.150, mult: 0.48, col: '#ffa832', heal: 0.006, score: 100 },
-  { name: 'AWFUL', win: 0.190, mult: 0.22, col: '#ef6a5e', heal: -0.006, score: 50 },
+  { name: 'SICK!', win: 0.075, mult: 1.0, col: '#86e8d2', heal: 0.030, score: 350 },
+  { name: 'GOOD', win: 0.14, mult: 0.75, col: '#a8e878', heal: 0.022, score: 200 },
+  { name: 'BAD', win: 0.19, mult: 0.48, col: '#ffa832', heal: 0.006, score: 100 },
+  { name: 'AWFUL', win: 0.24, mult: 0.22, col: '#ef6a5e', heal: -0.006, score: 50 },
 ];
 
 class Riff {
@@ -69,8 +69,8 @@ class Riff {
     // no vocal line at all until you have got the hang of strumming.
     const played = (typeof Game !== 'undefined' && Game.run && Game.run.riffsPlayed) || 0;
     this.played = played;
-    this.lesson = played < 3 ? 2 : played < 7 ? 1 : 0;
-    const ew = [1, 1.2, 1.55][this.lesson], et = [1, 1.1, 1.25][this.lesson];
+    this.lesson = played < 4 ? 2 : played < 10 ? 1 : 0;
+    const ew = [1, 1.15, 1.35][this.lesson], et = [1.12, 1.22, 1.35][this.lesson];
     // THE TEACHER. The band plays your phrase first - every note of it, on
     // the same strings, with the same sounds - and then it is your turn. It
     // does this for the first riffs of a run, the first time you play any
@@ -161,14 +161,17 @@ class Riff {
     // density: thin the phrase out for the easy cards
     let density = o.density ?? 1;
     if (this.lesson) density = 0;
-    if (density === 0) {
-      const keep = []; let last = -9;
-      for (const e of evs) { const rel = e.step - this.startBar * 16; if (rel % 2) continue; if (e.step - last < 2) continue; keep.push(e); last = e.step; }
+    {
+      // room to breathe: a quarter note apart on the easy cards, an eighth on
+      // the rest, and only seasoned hands get the fast runs
+      const gap = density === 0 ? 4 : density >= 2 && this.played >= 12 ? 1 : 2;
+      const keep = []; let last = -99;
+      for (const e of evs) { const rel = e.step - this.startBar * 16; if (gap > 1 && rel % 2) continue; if (e.step - last < gap) continue; keep.push(e); last = e.step; }
       evs = keep.length >= 3 ? keep : evs;
     }
     // a proper workout once you know how: a note on every beat at least, and
     // on the off-beats too for the hard ones
-    const want = density >= 2 ? 7 : density >= 1 ? 5 : 3;
+    const want = density >= 2 ? 5 : density >= 1 ? 4 : 3;
     if (!this.lesson && evs.length < want * bars) {
       const have = new Set(evs.map(e => e.step)), stride = density >= 2 && this.played >= 10 ? 2 : 4;
       for (let i = 0; i < bars * 16; i += stride) {

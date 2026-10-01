@@ -374,15 +374,26 @@ const AudioSys = {
   // one note of whichever instrument is being played, straight into the song
   playInst(voice, midi, dur, vel = 1) {
     if (!this.ready) return;
-    // no more than a handful of your own notes ringing at once: past that the
-    // oldest are still sounding and nobody can hear a new one anyway
-    const now = this.now();
-    this._voices = (this._voices || []).filter(e => e > now);
-    if (this._voices.length >= 6) return;
-    this._voices.push(now + Math.min(1.2, dur + 0.3));
-    const fn = this[voice] && voice !== 'lead' ? this[voice] : null;
-    if (fn) fn.call(this, this.now(), midi, dur, vel, this.songGain || this.musicBus);
-    else this.lead(this.now(), midi, dur, vel, this.songGain || this.musicBus);
+    const fn = this[voice] && voice !== 'lead' ? this[voice] : this.lead;
+    this.voiceNote((t, g) => fn.call(this, t, midi, dur, vel, g), dur);
+  },
+  // Every note you play gets its own little gain on the way out. It starts a
+  // hair in the future, so its attack is never already in the past when the
+  // audio thread reaches it (that jump to full volume was the click), and
+  // when too many are ringing the oldest is faded out to make room rather
+  // than the new one going silent. Your notes stay out of the song's echo.
+  voiceNote(play, dur) {
+    const c = this.ctx, t = c.currentTime + 0.012;
+    this._voices = (this._voices || []).filter(v => v.end > c.currentTime);
+    while (this._voices.length >= 6) {
+      const v = this._voices.shift(), gp = v.g.gain;
+      gp.cancelScheduledValues(t); gp.setValueAtTime(gp.value, t); gp.linearRampToValueAtTime(0.0001, t + 0.03);
+    }
+    const g = c.createGain(); g.gain.setValueAtTime(1, t); g.connect(this.songGain || this.musicBus);
+    const end = t + Math.min(1.6, dur + 0.5);
+    this._voices.push({ end, g });
+    play(t, g);
+    setTimeout(() => { try { g.disconnect(); } catch (e) { } }, (end - c.currentTime) * 1000 + 400);
   },
 
   // --- sequencer -----------------------------------------------------------
@@ -498,15 +509,15 @@ const AudioSys = {
     }
     return out;
   },
-  playLeadNote(midi, dur, vel = 1) { if (this.ready && (this._voices || []).filter(e => e > this.now()).length < 6) this.lead(this.now(), midi, dur, vel, this.songGain || this.musicBus); },
+  playLeadNote(midi, dur, vel = 1) { if (this.ready) this.voiceNote((t, g) => this.lead(t, midi, dur, vel, g), dur); },
   // the player's own voice, pitched wherever they are actually holding the chant
-  singNow(midi, dur = 0.3, vel = 1, vowel = 'ah') { if (this.ready) this.chant(this.now(), midi, dur, vel, this.songGain || this.musicBus, vowel); },
-  playChordNow(midis, dur, vel = 1) { if (this.ready) this.chord(this.now(), midis, dur, vel, this.songGain || this.musicBus); },
+  singNow(midi, dur = 0.3, vel = 1, vowel = 'ah') { if (this.ready) this.voiceNote((t, g) => this.chant(t, midi, dur, vel, g, vowel), dur); },
+  playChordNow(midis, dur, vel = 1) { if (this.ready) this.voiceNote((t, g) => this.chord(t, midis, dur, vel, g), dur); },
 
   // --- SFX -----------------------------------------------------------------
   sfx(name, p = {}) {
     if (!this.ready) return;
-    const c = this.ctx, t = c.currentTime, d = this.sfxBus;
+    const c = this.ctx, t = c.currentTime + 0.01, d = this.sfxBus;
     const tone = (type, f0, f1, dur, vol, delay = 0, dst = d) => {
       const o = c.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t + delay); if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + delay + dur);
       const g = c.createGain(); g.gain.setValueAtTime(0.0001, t + delay); g.gain.linearRampToValueAtTime(vol, t + delay + 0.005); g.gain.exponentialRampToValueAtTime(0.001, t + delay + dur);

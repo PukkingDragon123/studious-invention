@@ -8,7 +8,7 @@ const CARD_W = 104, CARD_H = 142;
 // changes the pigment rubbed into the carving, never the shape - a tablet is a
 // tablet. stone/lit/dark are the rock itself, pig/glow are the paint.
 const TYPES = {
-  attack: { name: 'RIFF', pig: '#9c3510', glow: '#ffa832', wash: '#5c1607' },
+  attack: { name: 'ATTACK', pig: '#9c3510', glow: '#ffa832', wash: '#5c1607' },
   skill: { name: 'MOVE', pig: '#1d3d72', glow: '#6aa9ee', wash: '#101f3d' },
   rally: { name: 'RALLY', pig: '#a03a68', glow: '#ffb0cf', wash: '#58203c' },
   power: { name: 'POWER', pig: '#4b2070', glow: '#b177e6', wash: '#281040' },
@@ -336,7 +336,7 @@ const Cards = {
     Gfx.rectA(x + 4, pt, w - 8, L.ph - 4, '#0c0810', 0.84);
     Gfx.rect(x + 4, pt, w - 8, 1, T.glow);
     // its type, on a tag at the top of the panel
-    const tag = T.name + (c.def.riff ? ' ♪' : ''), tw2 = Gfx.measure(tag, 1) + 12;
+    const tag = c.def.riff ? 'RIFF ♪' : T.name, tw2 = Gfx.measure(tag, 1) + 12;
     Gfx.rect(x + w / 2 - tw2 / 2, pt - 6, tw2, 13, '#08060c'); Gfx.rect(x + w / 2 - tw2 / 2 + 1, pt - 5, tw2 - 2, 11, T.pig);
     Gfx.text(tag, x + w / 2, pt - 4, { color: T.glow, align: 'center', font: 'classic' });
     const ty = pt + 10;

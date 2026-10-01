@@ -107,9 +107,12 @@ heals you after the fight.
   across, a relic held up, beasts running on to square up).
 - **Fights start in the wild.** You walk into a clearing in the land itself
   (its own trees, its own animals wandering by) and the beasts have not seen
-  you. Sneak up (hold to creep while they look away, freeze when one turns),
-  hide in a bush and jump them, charge in for a free hit, or throw a rock
-  for a headshot. Get there unseen and it is an ambush; get caught and they
+  you. At first all you know is to walk up, or to say hello (sometimes
+  they are charmed; usually they jump you). The tricks are learned by
+  winning fights, across every run: charge in for a free hit (2 wins), hide
+  in a bush and jump them (4), throw a rock for a headshot (7), and sneak up,
+  holding to creep while they look away (10). The next one to learn is
+  shown, locked. Get there unseen and it is an ambush; get caught and they
   are on you.
 - **It is a fight, and it is bloody.** Hits spray blood that stains the
   ground, big ones splash the camera lens, and heavy blows are beatdowns:
@@ -121,10 +124,14 @@ heals you after the fight.
   click hurries it along. Bosses are only knocked out: they are at the
   campfire later.)
 - **Fights are a deck of cards.** Three energy a turn, Block, statuses and
-  enemy intents you can read ahead of time. Every card is played on your
-  instrument, on the beat with A S D F, and how well you play scales what it
-  does. Cards marked RIFF are the big numbers; for the rest, the card's kind
-  sets how it is played:
+  enemy intents you can read ahead of time. Only the big moves - cards
+  marked RIFF: the ones that cost 2 or more, the rare ones, and each hero's
+  signature tune - are played on your instrument, on the beat with A S D F,
+  and how well you play sets the damage. Everything else is just done, and
+  acted out: its name slams up like a fighting game, a headbutt rears back
+  and snaps forward, a belly flop goes up and comes down on top of them, a
+  club swing spins, a guard plants and braces, a rally jumps for the crowd.
+  How a riff is played depends on the card:
   - **SMASH** (attacks): fewer notes, all on the strong beats, each one a
     two-lane chord you hit at once.
   - **GUARD** (skills): long holds, and skull bombs you must leave alone.
