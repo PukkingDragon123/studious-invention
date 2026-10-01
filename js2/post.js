@@ -27,7 +27,7 @@ const Post = (() => {
   let gl = null, prog = null, cv = null, texW = null, texU = null, loc = {};
   let uiCanvas = null, uiCtx = null, worldCtx = null, uiUsed = false;
   const lights = [], boxes = [];
-  const NEUTRAL = { amb: [1, 1, 1], tint: [1, 1, 1], ta: 0, lift: [0, 0, 0], sat: 1.04, con: 1.03, vig: 0.28, grain: 0.025 };
+  const NEUTRAL = { amb: [1, 1, 1], tint: [1, 1, 1], ta: 0, lift: [0, 0, 0], sat: 1.24, con: 1.06, vig: 0.24, grain: 0.012 };
   let G = Object.assign({}, NEUTRAL);
 
   const VS = `attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
@@ -61,7 +61,7 @@ void main() {
     float f = clamp(1.0 - length(ap - L.xy) / L.z, 0.0, 1.0);
     f = f * f * (3.0 - 2.0 * f);
     lit += uLC[i] * f * L.w;
-    add += uLC[i] * f * f * f * L.w * 0.22;
+    add += uLC[i] * f * f * f * L.w * 0.05;
   }
   for (int i = 0; i < ${MAXB}; i++) {
     if (i >= uNB) break;
@@ -237,11 +237,11 @@ void main() {
       if (fight) P.set({ vig: g.vig + 0.08 });
     },
     LANDS: {
-      1: { amb: [1, 0.99, 0.96], tint: '#ffe0b0', ta: 0.18, lift: [0.02, 0.01, 0.04], sat: 1.08, con: 1.04, vig: 0.26, grain: 0.022 },
-      2: { amb: [0.8, 0.92, 0.88], tint: '#9ae4c8', ta: 0.24, lift: [0, 0.03, 0.04], sat: 1.05, con: 1.06, vig: 0.36, grain: 0.03 },
-      3: { amb: [1, 0.94, 0.84], tint: '#ffb070', ta: 0.26, lift: [0.05, 0.02, 0], sat: 1.12, con: 1.07, vig: 0.32, grain: 0.03 },
-      4: { amb: [0.9, 0.95, 1.05], tint: '#c8dcff', ta: 0.24, lift: [0.01, 0.03, 0.07], sat: 0.94, con: 1.05, vig: 0.3, grain: 0.025 },
-      5: { amb: [0.66, 0.56, 0.6], tint: '#ff7a4a', ta: 0.3, lift: [0.07, 0.01, 0.02], sat: 1.12, con: 1.1, vig: 0.44, grain: 0.035 },
+      1: { amb: [1, 0.99, 0.96], tint: '#ffe0b0', ta: 0.13, lift: [0.006, 0.003, 0.012], sat: 1.32, con: 1.04, vig: 0.22, grain: 0.011 },
+      2: { amb: [0.8, 0.92, 0.88], tint: '#9ae4c8', ta: 0.17, lift: [0, 0.009, 0.012], sat: 1.29, con: 1.06, vig: 0.31, grain: 0.015 },
+      3: { amb: [1, 0.94, 0.84], tint: '#ffb070', ta: 0.18, lift: [0.015, 0.006, 0], sat: 1.36, con: 1.07, vig: 0.27, grain: 0.015 },
+      4: { amb: [0.9, 0.95, 1.05], tint: '#c8dcff', ta: 0.17, lift: [0.003, 0.009, 0.021], sat: 1.18, con: 1.05, vig: 0.26, grain: 0.013 },
+      5: { amb: [0.66, 0.56, 0.6], tint: '#ff7a4a', ta: 0.21, lift: [0.021, 0.003, 0.006], sat: 1.36, con: 1.1, vig: 0.37, grain: 0.018 },
     },
   };
   return P;

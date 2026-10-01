@@ -93,7 +93,7 @@ const Vista = (() => {
           c = ramp[i < 0 ? 0 : i >= ramp.length ? ramp.length - 1 : i];
         }
         // haze: the foot of the range fades into the air
-        const hz = Math.min(1, Math.pow(Math.max(0, (y - h * 0.35) / (h * 0.65)), 1.3) * o.hazeK);
+        const hz = Math.min(1, Math.pow(Math.max(0, (y - h * 0.35) / (h * 0.65)), 1.3) * o.hazeK * 0.5);
         if (hz > 0) {
           const q = hz + dith(x, y) * 0.12;
           c = lerpC(c, haze, Math.max(0, Math.min(1, Math.round(q * 4) / 4)));
@@ -146,7 +146,7 @@ const Vista = (() => {
         lv += (hash(x * 3 + (y >> 1), seed + 2) - 0.5) * 1.1;        // leaf texture
         const i = Math.floor(lv + dith(x, y) * 0.8 + 0.5);
         let c = ramp[i < 0 ? 0 : i >= ramp.length ? ramp.length - 1 : i];
-        if (haze) c = lerpC(c, haze, o.hazeK || 0);
+        if (haze) c = lerpC(c, haze, (o.hazeK || 0) * 0.5);
         O.px[y * LW + x] = pack(c);
       }
     }
@@ -184,7 +184,7 @@ const Vista = (() => {
         const pw = Math.abs(x - (o.path + Math.sin(y * 0.08) * 20 + d * 0.8));
         if (o.path != null && pw < 2 + d * 0.05 && d > 3) c = hex(o.pathCol);
         else { const i = Math.floor(lv + dith(x, y) * 0.8 + 0.5); c = ramp[i < 0 ? 0 : i >= ramp.length ? ramp.length - 1 : i]; }
-        c = lerpC(c, haze, o.hazeK * (0.6 + 0.4 * (1 - y / h)));
+        c = lerpC(c, haze, o.hazeK * 0.5 * (0.6 + 0.4 * (1 - y / h)));
         O.px[y * LW + x] = pack(c);
       }
     }
@@ -196,7 +196,7 @@ const Vista = (() => {
         const dx = (x - cx) / (r * 1.3), dy = (y - cy) / r;
         if (dx * dx + dy * dy > 1) continue;
         const lit = -dx * 0.6 - dy * 0.8 > 0.3;
-        const c = lerpC(ramp[lit ? 3 : 0], haze, o.hazeK * 0.8);
+        const c = lerpC(ramp[lit ? 3 : 0], haze, o.hazeK * 0.4);
         const X = ((x % LW) + LW) % LW;
         if (y >= 0 && y < h) O.px[y * LW + X] = pack(c);
       }

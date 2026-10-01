@@ -31,7 +31,7 @@ const BIOMES = {
     dinos: ['boar', 'raptor'], nDinos: 2,
     boss: { ids: ['blaze'], name: 'BLAZE', sub: 'the family cook, gone feral', spr: 'blaze_boss', rescue: 1 },
     sky: ['#2b5aa6', '#3f74c0', '#5a92d6', '#7eb0e6', '#a8cff2', '#d4ecfa'],
-    far: { seed: 111, base: 0.74, amp: 92, mid: 3.2, ramp: ['#3b4a7a', '#4a5c8c', '#5b6e9e', '#6d82b0', '#8298c2', '#9cb0d4'], snow: ['#a4b4d8', '#c8d4ec', '#e8eef9', '#ffffff'], snowLine: 0.42, haze: '#c0d4ee', hazeK: 0.85 },
+    far: { seed: 111, base: 0.74, amp: 92, mid: 3.2, ramp: ['#3b4a7a', '#4a5c8c', '#5b6e9e', '#6d82b0', '#8298c2', '#9cb0d4'], snow: ['#a4b4d8', '#c8d4ec', '#e8eef9', '#ffffff'], snowLine: 0.42, haze: '#c0d4ee', hazeK: 0.30 },
     mid: { seed: 212, base: 0.66, amp: 64, mid: 2.8, ramp: ['#3a3a5c', '#48476a', '#57557a', '#686589', '#7a7699', '#8e89a9'], haze: '#a8bcdc', hazeK: 0.5, volcano: { x: 760, w: 70, h: 64 } },
     near: { kind: 'woods', seed: 313, base: 0.7, amp: 20, mid: 2.6, r0: 9, r1: 19, tall: 1, gap: 0.9, band: 12, ramp: ['#123a20', '#1a4c28', '#235f30', '#2f773a', '#3f9446', '#5aae52'] },
     props: {
@@ -49,7 +49,7 @@ const BIOMES = {
     dinos: ['raptor', 'ptero', 'stego'], nDinos: 3,
     boss: { ids: ['horace'], name: 'HORACE', sub: 'a triceratops who has had enough', spr: 'tricera_idle', rescue: 2 },
     sky: ['#17333a', '#1f4648', '#2a5a58', '#3a716a', '#548a7e', '#76a494'],
-    far: { seed: 121, base: 0.7, amp: 86, mid: 3, ramp: ['#1e3a44', '#264852', '#305660', '#3c666e', '#4a767c', '#5c888c'], snow: [], haze: '#7aa49a', hazeK: 0.95 },
+    far: { seed: 121, base: 0.7, amp: 86, mid: 3, ramp: ['#1e3a44', '#264852', '#305660', '#3c666e', '#4a767c', '#5c888c'], snow: [], haze: '#7aa49a', hazeK: 0.33 },
     mid: { seed: 222, base: 0.62, amp: 70, mid: 2.8, ramp: ['#16302e', '#1c3c38', '#244a42', '#2e584c', '#3a6858', '#4a7a66'], haze: '#6a9a8a', hazeK: 0.6, volcano: { x: 640, w: 90, h: 80 } },
     near: { kind: 'woods', seed: 323, base: 0.74, amp: 26, mid: 2.4, r0: 14, r1: 28, tall: 1.2, gap: 0.8, band: 10, ramp: ['#08221a', '#0e3022', '#15402c', '#1e5236', '#296640', '#387c4a'] },
     props: {
@@ -67,7 +67,7 @@ const BIOMES = {
     dinos: ['lizard', 'tarblob', 'raptor'], nDinos: 3,
     boss: { ids: ['tarking'], name: 'THE TAR KING', sub: 'he rose out of the pit and never stopped', spr: 'tarblob_idle', rescue: 3 },
     sky: ['#5c2a2a', '#8a3a2a', '#b8582e', '#d67a3a', '#eaa052', '#f4c67a'],
-    far: { seed: 131, base: 0.74, amp: 60, mid: 3, ramp: ['#6a3a3a', '#7c4640', '#8e5448', '#a06450', '#b2765a', '#c48a66'], snow: [], haze: '#e8a878', hazeK: 0.9 },
+    far: { seed: 131, base: 0.74, amp: 60, mid: 3, ramp: ['#6a3a3a', '#7c4640', '#8e5448', '#a06450', '#b2765a', '#c48a66'], snow: [], haze: '#e8a878', hazeK: 0.32 },
     mid: { seed: 232, base: 0.66, amp: 54, mid: 2.6, ramp: ['#4a2420', '#5c2e26', '#6e3a2c', '#824634', '#96543c', '#aa6446'], haze: '#d88c62', hazeK: 0.55, volcano: { x: 560, w: 120, h: 104 } },
     near: { kind: 'dunes', seed: 333, base: 0.62, amp: 30, ramp: ['#7a4428', '#92542e', '#aa6636', '#c07a40', '#d4904c', '#e6aa5e'] },
     props: {
@@ -85,7 +85,7 @@ const BIOMES = {
     dinos: ['mammothw', 'ptero', 'raptor'], nDinos: 3,
     boss: { ids: ['rexmond'], name: 'REXMOND', sub: "Grandma's other grandson. He heard.", spr: 'trex_idle', rescue: 0 },
     sky: ['#4a5a8a', '#5c6e9e', '#7084b2', '#8a9cc4', '#a8b8d8', '#cad6ea'],
-    far: { seed: 141, base: 0.8, amp: 130, mid: 3.4, ramp: ['#46507e', '#56628e', '#68749e', '#7c88ae', '#929ec0', '#aab4d2'], snow: ['#b8c4e0', '#d4dcee', '#eef2fa', '#ffffff'], snowLine: 0.7, haze: '#c8d4ea', hazeK: 0.7 },
+    far: { seed: 141, base: 0.8, amp: 130, mid: 3.4, ramp: ['#46507e', '#56628e', '#68749e', '#7c88ae', '#929ec0', '#aab4d2'], snow: ['#b8c4e0', '#d4dcee', '#eef2fa', '#ffffff'], snowLine: 0.7, haze: '#c8d4ea', hazeK: 0.24 },
     mid: { seed: 242, base: 0.7, amp: 100, mid: 3, ramp: ['#384068', '#444e78', '#525c88', '#626c98', '#747ea8', '#8892b8'], snow: ['#a8b4d4', '#c8d2e8', '#e4eaf6', '#ffffff'], snowLine: 0.55, haze: '#b0bcdc', hazeK: 0.45, volcano: { x: 480, w: 150, h: 130 } },
     near: { kind: 'woods', seed: 343, base: 0.74, amp: 22, mid: 2.6, r0: 7, r1: 14, tall: 1.9, gap: 0.8, band: 12, ramp: ['#1a2c38', '#223a46', '#2c4a54', '#385a64', '#9aaec8', '#e8f0fa'] },
     props: {
@@ -104,7 +104,7 @@ const BIOMES = {
     dinos: ['trex', 'lizard', 'raptor'], nDinos: 3,
     boss: { ids: ['grandma'], name: 'GRANDMA REX', sub: 'she only wanted her boy back', spr: 'grandma_idle', rescue: 0, final: true },
     sky: ['#1a0a14', '#2e0e18', '#4a1418', '#6e1e18', '#94301a', '#b8481e'],
-    far: { seed: 151, base: 0.76, amp: 80, mid: 3, ramp: ['#241420', '#301a28', '#3c2030', '#4a2838', '#583040', '#6a3a48'], snow: [], haze: '#8a3a2e', hazeK: 0.8 },
+    far: { seed: 151, base: 0.76, amp: 80, mid: 3, ramp: ['#241420', '#301a28', '#3c2030', '#4a2838', '#583040', '#6a3a48'], snow: [], haze: '#8a3a2e', hazeK: 0.28 },
     mid: { seed: 252, base: 0.72, amp: 70, mid: 2.6, ramp: ['#1a1018', '#22141e', '#2c1a26', '#38202e', '#462838', '#563042'], haze: '#6e2a24', hazeK: 0.45, volcano: { x: 420, w: 230, h: 176 } },
     near: { kind: 'dunes', seed: 353, base: 0.62, amp: 24, ramp: ['#140e14', '#1e1520', '#281c2a', '#342434', '#402c40', '#4e3650'] },
     props: {
@@ -120,15 +120,15 @@ const BIOME_COUNT = 5;
 // ground paints, one per land, and the special ground the features lay down
 const GROUND = {
   meadow: { ramp: ['#1b3f20', '#245228', '#2f6830', '#3c7f38', '#4f9642', '#68ae4e'], path: ['#3f2716', '#553620', '#6c472a', '#835a36', '#9c7046'], worn: '#4a3a1c',
-    specks: ['#ffb0cf', '#ffe98a', '#fffaea', '#c8a8f0'], tuft: ['#5aa84a', '#86c85e'], haze: [168, 200, 224], hazeK: 0.5 },
+    specks: ['#ffb0cf', '#ffe98a', '#fffaea', '#c8a8f0'], tuft: ['#5aa84a', '#86c85e'], haze: [168, 200, 224], hazeK: 0.17 },
   jungle: { ramp: ['#0b2014', '#102c1a', '#173c22', '#1f4e2a', '#2a6232', '#387a3e'], path: ['#2a1c10', '#382616', '#4a331e', '#5e4228', '#735334'], worn: '#2c2412',
-    specks: ['#ff7ab8', '#ffa832', '#86e8d2'], tuft: ['#3d8442', '#5aa84a'], haze: [100, 150, 140], hazeK: 0.62 },
+    specks: ['#ff7ab8', '#ffa832', '#86e8d2'], tuft: ['#3d8442', '#5aa84a'], haze: [100, 150, 140], hazeK: 0.22 },
   sand: { ramp: ['#704024', '#8a522e', '#a4663a', '#bc7c46', '#d49454', '#e8b068'], path: ['#5c3a20', '#6e4828', '#825832', '#98693e', '#ad7c4c'], worn: '#6a4428',
-    specks: ['#fffaea', '#e8dfc6', '#c4b89a'], tuft: ['#9a9a4a', '#b8b25a'], haze: [240, 196, 140], hazeK: 0.55 },
+    specks: ['#fffaea', '#e8dfc6', '#c4b89a'], tuft: ['#9a9a4a', '#b8b25a'], haze: [240, 196, 140], hazeK: 0.19 },
   snow: { ramp: ['#7086b0', '#889ec4', '#a4b8d8', '#c0d0e8', '#d8e4f4', '#f0f6ff'], path: ['#4a4658', '#58546a', '#68647c', '#7a768e', '#8e8aa2'], worn: '#8a92aa',
-    specks: ['#ffffff', '#a8d8ff'], tuft: ['#6a7a70', '#8a9a88'], haze: [216, 228, 244], hazeK: 0.45 },
+    specks: ['#ffffff', '#a8d8ff'], tuft: ['#6a7a70', '#8a9a88'], haze: [216, 228, 244], hazeK: 0.16 },
   ash: { ramp: ['#150f16', '#1d1520', '#271c2a', '#312434', '#3d2c40', '#4b364e'], path: ['#2a1818', '#382020', '#482a28', '#583430', '#6a403a'], worn: '#3a1e18',
-    specks: ['#e06a1b', '#ffa832', '#7d1d2b'], tuft: ['#4a3a4a', '#5c4a58'], haze: [120, 56, 50], hazeK: 0.5 },
+    specks: ['#e06a1b', '#ffa832', '#7d1d2b'], tuft: ['#4a3a4a', '#5c4a58'], haze: [120, 56, 50], hazeK: 0.17 },
 };
 const MATERIAL = {
   water: ['#10285e', '#16387a', '#1f4c98', '#2c64b6', '#4a86d2', '#7cb0ea'],

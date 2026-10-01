@@ -38,7 +38,7 @@ const Backdrops = {
       if (w.x > 1350) w.v = -Math.abs(w.v); if (w.x < -350) w.v = Math.abs(w.v);
       const walk = SPRITES[w.id + '_walk'] ? w.id + '_walk' : w.id + '_idle';
       const big = w.id === 'stego' || w.id === 'tricera' || w.id === 'mammoth';
-      Gfx.sprite(walk, w.x - px * 0.7, 318, { anchor: 'bc', scale: big ? w.s : w.s * 1.3, frame: Math.floor(t * 6 + w.x), flip: w.v < 0, tint: BIOMES[b].far.haze, tintAmount: 0.45 });
+      Gfx.sprite(walk, w.x - px * 0.7, 318, { anchor: 'bc', scale: big ? w.s : w.s * 1.3, frame: Math.floor(t * 6 + w.x), flip: w.v < 0, tint: BIOMES[b].far.haze, tintAmount: 0.2 });
     }
   },
   draw(act, t, cam) {
@@ -51,9 +51,9 @@ const Backdrops = {
     if (Backdrops.scene) Arena.drawFar(Backdrops.scene, b, t, px);
     Vista.drawAt(Ls[2], null, px, -600, 1800, 200, 2);
     const hz = { 1: '#c0d8ee', 2: '#7aa89a', 3: '#f0c890', 4: '#dce6f4', 5: '#6e2a24' }[b];
-    Gfx.rectA(-600, 230, 2400, 70, hz, 0.14);
+    Gfx.rectA(-600, 230, 2400, 70, hz, 0.04);
     // the wood: a far row in the haze, the animals of the place, a near row
-    Backdrops.treeRow(b, t, px, 0.45, 300, 1.4, B.far.haze, 0.55, 7, 70);
+    Backdrops.treeRow(b, t, px, 0.45, 300, 1.4, B.far.haze, 0.24, 7, 70);
     Backdrops.wanderers(b, t, px);
     Backdrops.treeRow(b, t, px, 0.7, 326, 2, '#120c16', 0.22, 19, 110);
     // the trail through the clearing
@@ -579,7 +579,7 @@ class Combat {
     const cfg = card.def.riff || { bars: 1, density: card.def.type === 'attack' ? 1 : 0, callResponse: style === 'echo' };
     this.riff = new Riff({
       bars: cfg.bars, density: cfg.density, callResponse: cfg.callResponse, style,
-      title: card.name.toUpperCase(), windowMult: windowMul, act: this.act, encore: card.id === 'encore', inst: card.def.inst,
+      title: card.name.toUpperCase(), windowMult: windowMul, act: this.act, encore: card.id === 'encore', inst: card.def.inst, key: card.id,
       onNote: (rating, n) => {
         if (!rating) { this.me.flash('#ef6a5e', 0.1); Juice.shake(3, 0.1); return; }
         this.me.squash(0.12);

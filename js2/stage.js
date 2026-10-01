@@ -259,7 +259,7 @@ class EventStage {
         let lv = 3.2 - (1 - y / h) * 1.4 + n * 0.7;
         const i = clamp(Math.floor(lv + ((BAY[((y & 3) << 2) | (x & 3)] + 0.5) / 16 - 0.5) + 0.5), 0, RR.length - 1);
         let c = RR[i];
-        const k = clamp(1 - y / 36, 0, 1) * (G.hazeK || 0.5);
+        const k = clamp(1 - y / 36, 0, 1) * (G.hazeK || 0.5) * 0.4;
         c = [c[0] + (hz[0] - c[0]) * k, c[1] + (hz[1] - c[1]) * k, c[2] + (hz[2] - c[2]) * k].map(v => v | 0);
         px[y * w + x] = ((255 << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0;
       }

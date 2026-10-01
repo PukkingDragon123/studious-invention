@@ -7171,3 +7171,9 @@ SPRITES.kid_npc_idle = { outline: true, frames: [
 '..........dbbbbd..dbbbbd....ljf.......',
 '..........beddcbb.beddcbb...kjf.......',
 '...........ccbbb...ccbbb....jff.......']]};
+
+// The instruments in the heroes' hands were painted in the palest bone, and
+// at play size they read as a white smear. Old, warm, well-handled bone
+// instead: ivory going to amber, with real shadow in it.
+for (const k of ['bronk_play', 'vela_play', 'kid_a_play', 'kid_b_play'])
+  if (SPRITES[k]) SPRITES[k].pal = Object.assign({}, SPRITES[k].pal, { '$': '#f4dca4', '#': '#d8b070', '@': '#a87c44', '!': '#6a4a26' });

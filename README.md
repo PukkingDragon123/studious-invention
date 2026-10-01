@@ -132,8 +132,14 @@ heals you after the fight.
   - **ECHO** (powers): the band plays a phrase, then you play it back from
     memory, as ghost notes that fade before they land.
   - **STRIKE** (riffs): the full chart, with a chord, a roll and a bomb or two.
-  The timing windows are tight, and only the first few riffs of a run go
-  easy on you. Between phrases you call the chant by clicking circles as
+  The band teaches you: for the first riffs of a run, the first time you
+  play any card, and whenever a riff holds something new, the band plays
+  your exact phrase first (LISTEN...) on the same strings with the same
+  sounds, and then it is YOUR TURN. The note types arrive one at a time over
+  a run - chords, then drum rolls, then skull bombs, then ghost notes - and
+  each is named on a NEW! plank the first time you meet it. Inside every
+  riff it builds too: the opening third is plain single notes. The timing
+  windows are generous, and the first riffs of a run are wider still. Between phrases you call the chant by clicking circles as
   their rings close.
 - **Every instrument plays differently.** Bronk's Rib-Axe slides runes down
   four strings and throws in power chords. Vela's Tusk Horn rolls puffs of
